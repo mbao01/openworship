@@ -1,6 +1,6 @@
 [package]
 name = "ow-search"
-version = "2026.04.1"
+version = "2026.4.1"
 edition = "2021"
 
 [dependencies]
