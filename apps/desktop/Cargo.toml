@@ -15,4 +15,5 @@ tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
 serde = { workspace = true }
 serde_json = { workspace = true }
+ow-display = { path = "../../crates/ow-display" }
 
