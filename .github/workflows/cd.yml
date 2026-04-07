@@ -3,10 +3,10 @@ name: CD – Release
 on:
   push:
     tags:
-      # Pre-release: semver patch increments (0.0.1, 0.0.2, ...)
-      - "0.0.*"
-      # Production: CalVer YYYY.MM.COUNTER (e.g. 2026.4.0)
-      - "[0-9][0-9][0-9][0-9].[0-9]*.[0-9]*"
+      # Single scheme: YYYY.M.COUNTER
+      # Unstable:    0000.0.1, 0000.0.2, ...
+      # Production:  2026.4.0, 2026.4.1, ...
+      - "[0-9]*.[0-9]*.[0-9]*"
 
 permissions:
   contents: write

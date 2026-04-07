@@ -165,11 +165,11 @@ pnpm dev
 Desktop artifacts (.dmg, .exe, .AppImage) are built automatically by the CD workflow when a tag is pushed:
 
 ```bash
-# Pre-release (patch increment)
-git tag 0.0.2
-git push origin 0.0.2
+# Unstable patch release
+git tag 0000.0.2
+git push origin 0000.0.2
 
-# Production (CalVer — first prod release)
+# First production release
 git tag 2026.4.0
 git push origin 2026.4.0
 ```
@@ -197,10 +197,19 @@ cargo tauri build
 
 ## Versioning
 
-| Phase | Format | Example |
-|-------|--------|---------|
-| Pre-release | `0.0.PATCH` | `0.0.1`, `0.0.2` |
-| Production | `YYYY.M.COUNTER` | `2026.4.0`, `2026.4.1` |
+All releases follow a single `YYYY.M.COUNTER` scheme:
+
+| Phase | Year | Example tags |
+|-------|------|--------------|
+| Unstable / pre-release | `0000` | `0000.0.1`, `0000.0.2`, … |
+| Production | real year | `2026.4.0`, `2026.4.1`, … |
+
+> **Note on Cargo / Tauri manifests:** Both Cargo and Tauri v2 enforce strict
+> semver and reject leading zeros (e.g. `0000.0.1` is invalid semver). Internal
+> `Cargo.toml` and `tauri.conf.json` version fields therefore track a parallel
+> semver string (`0.0.1`, `0.0.2`, …) that is bumped in lockstep with the tag.
+> The published release name and artifact filename always use the `YYYY.M.COUNTER`
+> tag — this is what end users see.
 
 ---
 
