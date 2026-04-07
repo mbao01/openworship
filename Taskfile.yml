@@ -1,0 +1,190 @@
+# https://taskfile.dev
+version: "3"
+
+vars:
+  PNPM: pnpm
+  CARGO: cargo
+
+tasks:
+  # ── Default ─────────────────────────────────────────────────────────────────
+  default:
+    desc: List all available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  # ── Setup ────────────────────────────────────────────────────────────────────
+  install:
+    desc: Install all frontend dependencies
+    cmds:
+      - "{{.PNPM}} install"
+
+  # ── Frontend (web) ───────────────────────────────────────────────────────────
+  web:dev:
+    desc: Start the web dev server
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} dev"
+
+  web:build:
+    desc: Build the web app
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} build"
+
+  web:preview:
+    desc: Preview the web build locally
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} preview"
+
+  web:lint:
+    desc: Lint the web app
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} lint"
+
+  web:type-check:
+    desc: Type-check the web app
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} type-check"
+
+  web:test:
+    desc: Run web tests (single run)
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} test"
+
+  web:test:watch:
+    desc: Run web tests in watch mode
+    dir: apps/web
+    cmds:
+      - "{{.PNPM}} test:watch"
+
+  # ── Desktop (Tauri) ──────────────────────────────────────────────────────────
+  desktop:dev:
+    desc: Start Tauri desktop dev mode
+    dir: apps/desktop
+    cmds:
+      - "{{.PNPM}} tauri dev"
+
+  desktop:build:
+    desc: Build the Tauri desktop app (release)
+    dir: apps/desktop
+    cmds:
+      - "{{.PNPM}} tauri build"
+
+  desktop:icon:
+    desc: Generate Tauri app icons from source image
+    dir: apps/desktop
+    cmds:
+      - "{{.PNPM}} tauri icon"
+
+  # ── Rust (workspace) ─────────────────────────────────────────────────────────
+  rust:check:
+    desc: Run cargo check across the workspace
+    cmds:
+      - "{{.CARGO}} check"
+
+  rust:build:
+    desc: Build all Rust workspace members (debug)
+    cmds:
+      - "{{.CARGO}} build"
+
+  rust:build:release:
+    desc: Build all Rust workspace members (release)
+    cmds:
+      - "{{.CARGO}} build --release"
+
+  rust:clippy:
+    desc: Run clippy linter (deny warnings)
+    cmds:
+      - "{{.CARGO}} clippy -- -D warnings"
+
+  rust:test:
+    desc: Run all Rust workspace tests
+    cmds:
+      - "{{.CARGO}} test"
+
+  rust:fmt:
+    desc: Format all Rust code
+    cmds:
+      - "{{.CARGO}} fmt"
+
+  rust:fmt:check:
+    desc: Check Rust formatting (CI-safe, no writes)
+    cmds:
+      - "{{.CARGO}} fmt -- --check"
+
+  rust:doc:
+    desc: Build Rust docs and open in browser
+    cmds:
+      - "{{.CARGO}} doc --open"
+
+  rust:clean:
+    desc: Clean Rust build artifacts
+    cmds:
+      - "{{.CARGO}} clean"
+
+  # ── CI (mirrors GitHub Actions jobs) ─────────────────────────────────────────
+  ci:frontend:
+    desc: Run all frontend CI checks (lint + type-check + test)
+    deps:
+      - web:lint
+      - web:type-check
+      - web:test
+
+  ci:rust:
+    desc: Run all Rust CI checks (check + clippy + test)
+    cmds:
+      - task: rust:check
+      - task: rust:clippy
+      - task: rust:test
+
+  ci:
+    desc: Run full CI suite (frontend + rust)
+    cmds:
+      - task: ci:frontend
+      - task: ci:rust
+
+  # ── Code quality ─────────────────────────────────────────────────────────────
+  lint:
+    desc: Lint everything (frontend + Rust clippy)
+    cmds:
+      - task: web:lint
+      - task: rust:clippy
+
+  fmt:
+    desc: Format everything (Rust only for now)
+    cmds:
+      - task: rust:fmt
+
+  fmt:check:
+    desc: Check formatting (CI-safe)
+    cmds:
+      - task: rust:fmt:check
+
+  test:
+    desc: Run all tests (frontend + Rust)
+    cmds:
+      - task: web:test
+      - task: rust:test
+
+  type-check:
+    desc: Type-check everything
+    cmds:
+      - task: web:type-check
+
+  # ── Cleanup ──────────────────────────────────────────────────────────────────
+  clean:
+    desc: Remove all build artifacts (frontend dist + Rust target)
+    cmds:
+      - rm -rf apps/web/dist
+      - task: rust:clean
+
+  clean:all:
+    desc: Deep clean including node_modules
+    cmds:
+      - task: clean
+      - find . -name node_modules -maxdepth 4 -type d -exec rm -rf {} + 2>/dev/null || true
