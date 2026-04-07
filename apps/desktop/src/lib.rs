@@ -1,5 +1,3 @@
-use tauri_plugin_shell::ShellExt;
-
 mod commands;
 mod state;
 
