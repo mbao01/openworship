@@ -1,0 +1,13 @@
+{
+  "name": "openworship",
+  "private": true,
+  "version": "0.0.1",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm --filter @openworship/web dev",
+    "build": "pnpm --filter @openworship/web build",
+    "lint": "pnpm --filter @openworship/web lint",
+    "type-check": "pnpm --filter @openworship/web type-check",
+    "test": "pnpm --filter @openworship/web test"
+  }
+}
