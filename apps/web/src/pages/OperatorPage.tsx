@@ -1,3 +1,4 @@
+import { ScriptureSearch } from "../components/ScriptureSearch";
 import "../styles/operator.css";
 
 export function OperatorPage() {
@@ -7,9 +8,10 @@ export function OperatorPage() {
         <span className="operator-appname">openworship</span>
       </header>
       <div className="operator-body">
-        <p className="operator-placeholder">
-          Operator UI — Phase 3
-        </p>
+        <div className="operator-panel">
+          <h2 className="operator-panel__heading">Scripture Search</h2>
+          <ScriptureSearch />
+        </div>
       </div>
     </div>
   );

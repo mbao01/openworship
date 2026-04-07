@@ -31,13 +31,185 @@
 .operator-body {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   background: var(--color-obsidian);
+  overflow-y: auto;
+  padding: var(--space-8) var(--space-6);
 }
 
-.operator-placeholder {
-  font-size: 0.875rem;
+/* ─── Main panel ─────────────────────────────────── */
+
+.operator-panel {
+  width: 100%;
+  max-width: 680px;
+}
+
+.operator-panel__heading {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--color-ash);
+  margin: 0 0 var(--space-4) 0;
+}
+
+/* ─── Scripture Search ───────────────────────────── */
+
+.scripture-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.scripture-search__controls {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+/* Input — no box, Iron bottom-border, Gold on focus (per DESIGN.md) */
+.scripture-search__input-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.scripture-search__input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(42, 42, 42, 0.6); /* Iron at 60% */
+  outline: none;
+  padding: var(--space-2) 0;
+  color: var(--color-chalk);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.scripture-search__input::placeholder {
+  color: var(--color-smoke);
+}
+
+.scripture-search__input:focus {
+  border-bottom-color: var(--color-gold);
+  box-shadow: 0 2px 0 -1px rgba(201, 168, 76, 0.15);
+}
+
+.scripture-search__spinner {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--color-smoke);
+  border-top-color: var(--color-gold);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Translation selector */
+.scripture-search__select {
+  background: var(--color-obsidian);
+  border: none;
+  border-bottom: 1px solid rgba(42, 42, 42, 0.6);
+  color: var(--color-ash);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: var(--space-2) var(--space-1);
+  outline: none;
+  cursor: pointer;
+  min-width: 52px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.scripture-search__select:focus {
+  border-bottom-color: var(--color-gold);
+  color: var(--color-chalk);
+}
+
+/* ─── Results list ───────────────────────────────── */
+
+.scripture-search__results {
+  list-style: none;
+  margin: var(--space-2) 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.scripture-search__result {
+  background: var(--color-obsidian);
+  border: 1px solid rgba(42, 42, 42, 0.4);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+  outline: none;
+}
+
+.scripture-search__result:hover,
+.scripture-search__result:focus {
+  background: var(--color-slate);
+  border-color: var(--color-smoke);
+}
+
+.scripture-search__result--live {
+  border-color: var(--color-gold-muted);
+  background: var(--color-slate);
+}
+
+.scripture-search__result-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.scripture-search__reference {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-chalk);
   letter-spacing: 0.04em;
+}
+
+.scripture-search__translation {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-ash);
+  letter-spacing: 0.08em;
+}
+
+.scripture-search__live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  box-shadow: 0 0 4px var(--color-gold);
+  margin-left: auto;
+}
+
+.scripture-search__verse-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-ash);
+}
+
+/* ─── Empty state ────────────────────────────────── */
+
+.scripture-search__empty {
+  font-size: 12px;
+  color: var(--color-smoke);
+  padding: var(--space-4) 0;
+  margin: 0;
 }

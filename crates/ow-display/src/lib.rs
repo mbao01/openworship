@@ -1,44 +1,55 @@
 // Local WebSocket display server — OBS-compatible fullscreen projection.
-// Pushes content events to the browser display page on port 9000.
+// Accepts a broadcast::Sender<ContentEvent> so the desktop app can push
+// verse content to all connected display clients on port 9000.
 
 use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
 use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::broadcast;
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 
 pub const WS_PORT: u16 = 9000;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct ContentEvent {
     pub kind: String,
     pub reference: String,
     pub text: String,
+    pub translation: String,
 }
 
-pub fn hardcoded_verse() -> ContentEvent {
-    ContentEvent {
-        kind: "scripture".into(),
-        reference: "John 3:16".into(),
-        text: "For God so loved the world that he gave his one and only Son, \
-               that whoever believes in him shall not perish but have eternal life."
-            .into(),
+impl ContentEvent {
+    pub fn scripture(
+        reference: impl Into<String>,
+        text: impl Into<String>,
+        translation: impl Into<String>,
+    ) -> Self {
+        Self {
+            kind: "scripture".into(),
+            reference: reference.into(),
+            text: text.into(),
+            translation: translation.into(),
+        }
     }
 }
 
-/// Start the WebSocket display server. Runs indefinitely; spawn as a background task.
-pub async fn start_server() {
+/// Start the WebSocket display server.
+/// Pass a `broadcast::Sender<ContentEvent>` — each accepted client subscribes
+/// to it and receives events pushed from the desktop app.
+pub async fn start_server(tx: broadcast::Sender<ContentEvent>) {
     let addr = SocketAddr::from(([127, 0, 0, 1], WS_PORT));
     let listener = TcpListener::bind(addr)
         .await
         .expect("Failed to bind display WebSocket port 9000");
 
     while let Ok((stream, _)) = listener.accept().await {
-        tokio::spawn(handle_client(stream));
+        let rx = tx.subscribe();
+        tokio::spawn(handle_client(stream, rx));
     }
 }
 
-async fn handle_client(stream: TcpStream) {
+async fn handle_client(stream: TcpStream, mut rx: broadcast::Receiver<ContentEvent>) {
     let ws_stream = match accept_async(stream).await {
         Ok(ws) => ws,
         Err(_) => return,
@@ -46,12 +57,27 @@ async fn handle_client(stream: TcpStream) {
 
     let (mut sender, mut receiver) = ws_stream.split();
 
-    // Send the hardcoded verse immediately on connection.
-    let verse = hardcoded_verse();
-    if let Ok(msg) = serde_json::to_string(&verse) {
-        let _ = sender.send(Message::Text(msg.into())).await;
+    loop {
+        tokio::select! {
+            event = rx.recv() => {
+                match event {
+                    Ok(ev) => {
+                        if let Ok(msg) = serde_json::to_string(&ev) {
+                            if sender.send(Message::Text(msg.into())).await.is_err() {
+                                break;
+                            }
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Closed) => break,
+                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                }
+            },
+            msg = receiver.next() => {
+                match msg {
+                    Some(Ok(_)) => {},
+                    _ => break,
+                }
+            }
+        }
     }
-
-    // Drain incoming messages to keep the connection alive.
-    while let Some(Ok(_)) = receiver.next().await {}
 }

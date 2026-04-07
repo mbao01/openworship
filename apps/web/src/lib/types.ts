@@ -9,3 +9,18 @@ export interface ServiceProject {
   title: string;
   items: ContentItem[];
 }
+
+export interface VerseResult {
+  translation: string;
+  book: string;
+  chapter: number;
+  verse: number;
+  text: string;
+  reference: string;
+}
+
+export interface TranslationInfo {
+  id: string;
+  name: string;
+  abbreviation: string;
+}
