@@ -1,0 +1,7 @@
+[package]
+name = "ow-search"
+version = "2026.04.1"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }

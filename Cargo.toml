@@ -1,3 +1,14 @@
 [workspace]
-members = ["src-tauri"]
+members = [
+    "apps/desktop",
+    "crates/ow-core",
+    "crates/ow-search",
+    "crates/ow-audio",
+    "crates/ow-display",
+    "crates/ow-db",
+]
 resolver = "2"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

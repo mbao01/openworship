@@ -1,6 +1,6 @@
 # Build outputs
 dist/
-src-tauri/target/
+target/
 
 # Node
 node_modules/
@@ -32,4 +32,4 @@ pnpm-debug.log*
 Thumbs.db
 
 # Tauri
-src-tauri/gen/
+apps/desktop/gen/

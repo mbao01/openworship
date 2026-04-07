@@ -3,7 +3,8 @@ name: CD – Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      # CalVer: YYYY.MM.COUNTER (e.g. 2026.04.1)
+      - "[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9]*"
 
 permissions:
   contents: write
@@ -51,7 +52,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
+          workspaces: apps/desktop
 
       - name: Install frontend dependencies
         run: npm ci
@@ -68,6 +69,7 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
+          projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
           releaseName: "OpenWorship ${{ github.ref_name }}"
           releaseBody: "See CHANGELOG for details."
