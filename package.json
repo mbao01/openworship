@@ -2,12 +2,12 @@
   "name": "openworship",
   "private": true,
   "version": "2026.04.1",
-  "workspaces": ["apps/web"],
+  "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "npm run dev --workspace=apps/web",
-    "build": "npm run build --workspace=apps/web",
-    "lint": "npm run lint --workspace=apps/web",
-    "type-check": "npm run type-check --workspace=apps/web",
-    "test": "npm run test --workspace=apps/web"
+    "dev": "pnpm --filter @openworship/web dev",
+    "build": "pnpm --filter @openworship/web build",
+    "lint": "pnpm --filter @openworship/web lint",
+    "type-check": "pnpm --filter @openworship/web type-check",
+    "test": "pnpm --filter @openworship/web test"
   }
 }

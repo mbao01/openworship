@@ -4,9 +4,9 @@
   "version": "2026.04.1",
   "identifier": "com.openworship.app",
   "build": {
-    "beforeDevCommand": "npm run dev --workspace=apps/web",
+    "beforeDevCommand": "pnpm --filter @openworship/web dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build --workspace=apps/web",
+    "beforeBuildCommand": "pnpm --filter @openworship/web build",
     "frontendDist": "../../apps/web/dist"
   },
   "app": {
