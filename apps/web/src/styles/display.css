@@ -1,0 +1,59 @@
+/* Display output — Sacred Monochrome, fullscreen projection */
+
+.display-root {
+  position: fixed;
+  inset: 0;
+  background: var(--color-void);
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+
+/* Left-anchored content block — ~10% left margin, max 55% vw */
+.display-content {
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  transform: translateY(-50%);
+  max-width: 55vw;
+}
+
+/* Scripture reference — gold, small-caps, sans-serif */
+.display-reference {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: small-caps;
+  color: var(--color-gold);
+  margin-bottom: var(--space-6);
+}
+
+/* Verse body — large serif, chalk, carved into darkness */
+.display-verse {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(3rem, 6vw, 6rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--color-chalk);
+  text-align: left;
+}
+
+/* Idle state — intentionally blank */
+.display-idle {
+  display: none;
+}
+
+/* Faint watermark — bottom-left */
+.display-watermark {
+  position: absolute;
+  bottom: var(--space-6);
+  left: 10%;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: var(--color-smoke);
+  text-transform: lowercase;
+  user-select: none;
+}

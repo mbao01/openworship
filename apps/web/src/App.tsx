@@ -1,16 +1,15 @@
-import { useState } from "react";
+import { Routes, Route } from "react-router-dom";
+import { OperatorPage } from "./pages/OperatorPage";
+import { DisplayPage } from "./pages/DisplayPage";
+import "./styles/tokens.css";
+import "./styles/global.css";
 
 function App() {
-  const [ready, setReady] = useState(false);
-
   return (
-    <main>
-      <h1>OpenWorship</h1>
-      <p>AI-powered worship display — coming soon.</p>
-      <button onClick={() => setReady((r) => !r)}>
-        {ready ? "Ready" : "Not ready"}
-      </button>
-    </main>
+    <Routes>
+      <Route path="/" element={<OperatorPage />} />
+      <Route path="/display" element={<DisplayPage />} />
+    </Routes>
   );
 }
 
