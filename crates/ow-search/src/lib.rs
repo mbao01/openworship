@@ -97,6 +97,9 @@ impl SearchEngine {
         translation: Option<&str>,
         limit: usize,
     ) -> Result<Vec<VerseResult>> {
+        if limit == 0 {
+            return Ok(vec![]);
+        }
         let searcher = self.reader.searcher();
         let q = query.trim();
 
@@ -192,8 +195,8 @@ fn build_schema() -> (Schema, Fields) {
     let translation = b.add_text_field("translation", STRING | STORED);
     let book = b.add_text_field("book", STRING | STORED);
     let book_number = b.add_u64_field("book_number", FAST);
-    let chapter = b.add_u64_field("chapter", FAST | INDEXED);
-    let verse = b.add_u64_field("verse", FAST | INDEXED);
+    let chapter = b.add_u64_field("chapter", FAST | INDEXED | STORED);
+    let verse = b.add_u64_field("verse", FAST | INDEXED | STORED);
     let text = b.add_text_field("text", TEXT | STORED);
     let reference = b.add_text_field("reference", STORED);
     let schema = b.build();
