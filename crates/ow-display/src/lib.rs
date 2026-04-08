@@ -17,6 +17,9 @@ pub struct ContentEvent {
     pub reference: String,
     pub text: String,
     pub translation: String,
+    /// For `kind = "song_advance"`: the lyric chunk index to display next.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line_index: Option<u32>,
 }
 
 impl ContentEvent {
@@ -30,6 +33,36 @@ impl ContentEvent {
             reference: reference.into(),
             text: text.into(),
             translation: translation.into(),
+            line_index: None,
+        }
+    }
+
+    /// Send a full song to the display (all lyrics, artist attribution).
+    ///
+    /// `reference` = song title, `text` = newline-separated lyrics,
+    /// `translation` = artist name.
+    pub fn song(
+        title: impl Into<String>,
+        lyrics: impl Into<String>,
+        artist: impl Into<String>,
+    ) -> Self {
+        Self {
+            kind: "song".into(),
+            reference: title.into(),
+            text: lyrics.into(),
+            translation: artist.into(),
+            line_index: Some(0),
+        }
+    }
+
+    /// Advance the currently-displayed song to lyric chunk `index`.
+    pub fn song_advance(title: impl Into<String>, index: u32) -> Self {
+        Self {
+            kind: "song_advance".into(),
+            reference: title.into(),
+            text: String::new(),
+            translation: String::new(),
+            line_index: Some(index),
         }
     }
 }

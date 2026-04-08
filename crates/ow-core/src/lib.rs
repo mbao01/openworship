@@ -37,16 +37,30 @@ pub enum QueueStatus {
     Dismissed,
 }
 
-/// A single detected-and-looked-up scripture verse in the content queue.
+/// Content kind discriminant for queue items.
+pub mod content_kind {
+    pub const SCRIPTURE: &str = "scripture";
+    pub const SONG: &str = "song";
+}
+
+fn default_kind() -> String {
+    content_kind::SCRIPTURE.to_owned()
+}
+
+/// A single detected-and-looked-up content item in the queue.
+///
+/// Items may be scripture verses (kind = "scripture") or song lyrics
+/// (kind = "song").  The `reference` field holds a verse reference or song
+/// title; `translation` holds a translation abbreviation or artist name.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueueItem {
     /// Stable identifier for this item (hex string).
     pub id: String,
-    /// Canonical reference, e.g. "John 3:16".
+    /// Canonical reference, e.g. "John 3:16" or "Amazing Grace".
     pub reference: String,
-    /// Full verse text.
+    /// Full verse text or song lyrics.
     pub text: String,
-    /// Translation abbreviation, e.g. "KJV".
+    /// Translation abbreviation (scripture) or artist name (song).
     pub translation: String,
     /// Current status.
     pub status: QueueStatus,
@@ -60,6 +74,12 @@ pub struct QueueItem {
     /// exact matches.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub confidence: Option<f64>,
+    /// Content kind: "scripture" (default) or "song".
+    #[serde(default = "default_kind")]
+    pub kind: String,
+    /// Song library ID — only set when `kind == "song"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub song_id: Option<i64>,
 }
 
 static ITEM_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -82,7 +102,105 @@ impl QueueItem {
             detected_at_ms,
             is_semantic: false,
             confidence: None,
+            kind: default_kind(),
+            song_id: None,
         }
+    }
+
+    /// Create a song lyric queue item.
+    pub fn new_song(title: String, lyrics: String, artist: String, song_id: i64) -> Self {
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_micros() as u64;
+        let count = ITEM_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let id = format!("{:016x}{:08x}", ts, count);
+        let detected_at_ms = ts / 1000;
+        Self {
+            id,
+            reference: title,
+            text: lyrics,
+            translation: artist,
+            status: QueueStatus::Pending,
+            detected_at_ms,
+            is_semantic: false,
+            confidence: None,
+            kind: content_kind::SONG.to_owned(),
+            song_id: Some(song_id),
+        }
+    }
+}
+
+// ─── Song detector ────────────────────────────────────────────────────────────
+
+/// A song that may have been referenced in transcript text.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SongRef {
+    pub id: i64,
+    pub title: String,
+}
+
+/// Detects song titles (and opening lines) in running transcript text.
+///
+/// Built from the song library at startup and refreshed whenever songs are
+/// added or removed.  Matches are case-insensitive, word-boundary anchored
+/// to avoid partial false positives.
+pub struct SongDetector {
+    patterns: Vec<(i64, String, regex::Regex)>,
+}
+
+impl SongDetector {
+    /// Build a detector from a list of `(id, title)` pairs.
+    pub fn new(songs: &[SongRef]) -> Self {
+        let patterns = Self::build(songs);
+        Self { patterns }
+    }
+
+    fn build(songs: &[SongRef]) -> Vec<(i64, String, regex::Regex)> {
+        songs
+            .iter()
+            .filter_map(|s| {
+                // Require at least 5 chars to avoid trivially matching common words.
+                if s.title.trim().len() < 5 {
+                    return None;
+                }
+                let escaped = regex::escape(s.title.trim());
+                // (?i) case-insensitive; \b word boundaries; allow extra
+                // whitespace between words to handle transcript noise.
+                let normalized = escaped.replace(r"\ ", r"\s+");
+                let pat = format!(r"(?i)\b{normalized}\b");
+                regex::Regex::new(&pat)
+                    .ok()
+                    .map(|re| (s.id, s.title.clone(), re))
+            })
+            .collect()
+    }
+
+    /// Rebuild patterns from a new song list (call when library changes).
+    pub fn update(&mut self, songs: &[SongRef]) {
+        self.patterns = Self::build(songs);
+    }
+
+    /// Return all songs whose title appears in `text`.
+    pub fn detect(&self, text: &str) -> Vec<SongRef> {
+        let mut found: Vec<SongRef> = Vec::new();
+        for (id, title, re) in &self.patterns {
+            if re.is_match(text) {
+                found.push(SongRef { id: *id, title: title.clone() });
+            }
+        }
+        found
+    }
+
+    /// True when no songs are loaded.
+    pub fn is_empty(&self) -> bool {
+        self.patterns.is_empty()
+    }
+}
+
+impl Default for SongDetector {
+    fn default() -> Self {
+        Self::new(&[])
     }
 }
 

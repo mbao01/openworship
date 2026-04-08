@@ -95,6 +95,10 @@ export interface QueueItem {
   is_semantic?: boolean;
   /** Cosine similarity score [0–1] for semantic matches. */
   confidence?: number;
+  /** Content kind: "scripture" (default) or "song" (Phase 10). */
+  kind?: string;
+  /** Song library ID — only set when kind === "song". */
+  song_id?: number | null;
 }
 
 /** Status of the semantic scripture index (Phase 9). */
@@ -102,4 +106,24 @@ export interface SemanticStatus {
   ready: boolean;
   verse_count: number;
   enabled: boolean;
+}
+
+// ─── Phase 10: Song library ────────────────────────────────────────────────────
+
+/** A song in the lyrics library. Matches Rust `Song` struct. */
+export interface Song {
+  id: number;
+  title: string;
+  artist: string | null;
+  /** Import source: "ccli", "openlp", or "manual". */
+  source: string | null;
+  ccli_number: string | null;
+  lyrics: string;
+  created_at_ms: number;
+}
+
+/** Status of the song semantic index. */
+export interface SongSemanticStatus {
+  ready: boolean;
+  song_count: number;
 }

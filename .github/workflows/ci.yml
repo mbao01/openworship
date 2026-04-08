@@ -69,6 +69,7 @@ jobs:
             crates/ow-audio
             crates/ow-display
             crates/ow-db
+            crates/ow-embed
             tests/integration
 
       - name: Cargo check

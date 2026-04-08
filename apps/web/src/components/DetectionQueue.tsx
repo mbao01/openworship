@@ -69,12 +69,18 @@ interface CardProps {
 
 function DetectionCard({ item, onApprove, onDismiss }: CardProps) {
   const statusClass = statusModifier(item.status);
+  const isSong = item.kind === "song";
 
   return (
-    <div className={`detection-card detection-card--${statusClass}`} role="article">
+    <div className={`detection-card detection-card--${statusClass}${isSong ? " detection-card--song" : ""}`} role="article">
       <div className="detection-card__meta">
+        {isSong && (
+          <span className="detection-card__kind-badge" title="Song">♪</span>
+        )}
         <span className="detection-card__reference">{item.reference}</span>
-        <span className="detection-card__translation">{item.translation}</span>
+        {!isSong && (
+          <span className="detection-card__translation">{item.translation}</span>
+        )}
         {item.is_semantic && (
           <span
             className="detection-card__semantic-badge"
@@ -91,7 +97,7 @@ function DetectionCard({ item, onApprove, onDismiss }: CardProps) {
           <span className="detection-card__live-dot" aria-label="Live" />
         )}
       </div>
-      <p className="detection-card__text">{item.text}</p>
+      {!isSong && <p className="detection-card__text">{item.text}</p>}
 
       {item.status === "pending" && (
         <div className="detection-card__actions">

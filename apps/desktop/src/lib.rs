@@ -4,12 +4,14 @@ mod identity;
 mod keychain;
 mod service;
 mod settings;
+mod songs;
 mod state;
 
 use ow_audio::SttEngine;
-use ow_core::{DetectionMode, QueueItem};
+use ow_core::{DetectionMode, QueueItem, SongRef};
 use ow_embed::{OllamaClient, SemanticIndex};
 use settings::AudioSettings;
+use songs::SongsDb;
 use state::AppState;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, RwLock};
@@ -17,25 +19,25 @@ use tokio::sync::broadcast;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Build DB + search index synchronously before the event loop starts.
+    // ── Scripture DB + search index ────────────────────────────────────────────
     let db = ow_db::open_and_seed().expect("Failed to open Bible DB");
     let verses = ow_db::get_all_verses(&db).expect("Failed to load verses");
     let search =
         Arc::new(ow_search::SearchEngine::build(&verses).expect("Failed to build search index"));
 
+    // ── Display server channel ─────────────────────────────────────────────────
     let (display_tx, _) = broadcast::channel::<ow_display::ContentEvent>(32);
     let tx_for_server = display_tx.clone();
     let tx_for_detect = display_tx.clone();
 
-    // SttEngine::new() returns (engine, initial_receiver).
-    // The initial receiver feeds the detection loop immediately.
+    // ── STT engine ────────────────────────────────────────────────────────────
     let (stt_engine, detect_rx) = SttEngine::new();
 
     let detection_mode = Arc::new(RwLock::new(DetectionMode::default()));
     let queue = Arc::new(Mutex::new(VecDeque::<QueueItem>::new()));
     let audio_settings = Arc::new(RwLock::new(AudioSettings::load()));
 
-    // Load church identity (None → show onboarding).
+    // ── Church identity ───────────────────────────────────────────────────────
     let identity_value = identity::ChurchIdentity::load()
         .unwrap_or_else(|e| {
             eprintln!("[identity] failed to load: {e}; showing onboarding");
@@ -43,11 +45,9 @@ pub fn run() {
         });
     let identity = Arc::new(RwLock::new(identity_value));
 
-    // Load service projects and content bank.
+    // ── Service projects + content bank ───────────────────────────────────────
     let projects = Arc::new(RwLock::new(service::load_projects()));
     let content_bank = Arc::new(RwLock::new(service::load_content_bank()));
-
-    // Determine the active project: the most-recently-created open project, if any.
     let active_project_id = {
         let plist = projects.read().unwrap();
         let active = plist
@@ -58,11 +58,10 @@ pub fn run() {
         Arc::new(RwLock::new(active))
     };
 
-    // Semantic index — starts empty; populated by the background embedding task.
+    // ── Semantic scripture index (Phase 9) ────────────────────────────────────
     let semantic_index: Arc<RwLock<Option<SemanticIndex>>> = Arc::new(RwLock::new(None));
     let ollama = Arc::new(OllamaClient::new());
 
-    // Build VerseResult list for embedding (same data as the search index).
     let verse_results: Vec<ow_search::VerseResult> = verses
         .iter()
         .map(|v| ow_search::VerseResult {
@@ -75,18 +74,44 @@ pub fn run() {
         })
         .collect();
 
-    // Clone Arcs for the detection loop before moving into AppState.
+    // ── Song library ──────────────────────────────────────────────────────────
+    let songs_db = match SongsDb::open() {
+        Ok(db) => Arc::new(Mutex::new(db)),
+        Err(e) => {
+            eprintln!("[songs] failed to open songs DB: {e}; using in-memory fallback");
+            // Fallback: open an in-memory DB so the app still starts.
+            Arc::new(Mutex::new(
+                SongsDb::open_in_memory().expect("failed to open in-memory songs DB"),
+            ))
+        }
+    };
+
+    let song_refs: Vec<SongRef> = songs_db
+        .lock()
+        .unwrap()
+        .all_refs()
+        .unwrap_or_default();
+    let song_refs = Arc::new(RwLock::new(song_refs));
+    let song_semantic_index: Arc<RwLock<Option<songs::SongSemanticIndex>>> =
+        Arc::new(RwLock::new(None));
+
+    // ── Clone Arcs for detection loop ─────────────────────────────────────────
     let detect_search = Arc::clone(&search);
     let detect_mode = Arc::clone(&detection_mode);
     let detect_queue = Arc::clone(&queue);
     let detect_settings = Arc::clone(&audio_settings);
     let detect_semantic = Arc::clone(&semantic_index);
     let detect_ollama = Arc::clone(&ollama);
+    let detect_song_semantic = Arc::clone(&song_semantic_index);
+    let detect_song_refs = Arc::clone(&song_refs);
 
-    // Clone Arcs for the background embedding task.
+    // ── Clone Arcs for background embedding tasks ─────────────────────────────
     let embed_index = Arc::clone(&semantic_index);
     let embed_ollama = Arc::clone(&ollama);
     let embed_settings = Arc::clone(&audio_settings);
+    let song_embed_db = Arc::clone(&songs_db);
+    let song_embed_index = Arc::clone(&song_semantic_index);
+    let song_embed_ollama = Arc::clone(&ollama);
 
     let app_state = AppState {
         search,
@@ -101,6 +126,9 @@ pub fn run() {
         content_bank,
         semantic_index,
         ollama,
+        songs_db,
+        song_semantic_index,
+        song_refs,
     };
 
     tauri::Builder::default()
@@ -108,9 +136,11 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .setup(move |app| {
             let app_handle = app.handle().clone();
+
             // Start the WebSocket display server.
             tauri::async_runtime::spawn(ow_display::start_server(tx_for_server));
-            // Start the scripture detection loop.
+
+            // Start the detection loop (scripture + song).
             tauri::async_runtime::spawn(detection::run_loop(
                 detect_rx,
                 detect_search,
@@ -119,26 +149,26 @@ pub fn run() {
                 detect_settings,
                 detect_semantic,
                 detect_ollama,
+                detect_song_semantic,
+                detect_song_refs,
                 tx_for_detect,
                 app_handle,
             ));
-            // Start the background embedding task (best-effort; skipped if Ollama absent).
+
+            // Background: embed all scripture verses.
             tauri::async_runtime::spawn(async move {
                 let enabled = embed_settings
                     .read()
                     .map(|s| s.semantic_enabled)
                     .unwrap_or(true);
-
                 if !enabled {
                     eprintln!("[embed] semantic search disabled by settings");
                     return;
                 }
-
                 if !embed_ollama.is_available().await {
                     eprintln!("[embed] Ollama not available — semantic search disabled");
                     return;
                 }
-
                 match ow_embed::build_index(&embed_ollama, &verse_results).await {
                     Ok(index) => {
                         let count = index.len();
@@ -147,11 +177,36 @@ pub fn run() {
                         }
                         eprintln!("[embed] semantic index ready ({count} verses)");
                     }
-                    Err(e) => {
-                        eprintln!("[embed] failed to build semantic index: {e}");
-                    }
+                    Err(e) => eprintln!("[embed] failed to build semantic index: {e}"),
                 }
             });
+
+            // Background: embed song lyrics for semantic song detection.
+            tauri::async_runtime::spawn(async move {
+                if !song_embed_ollama.is_available().await {
+                    return;
+                }
+                let all_songs = {
+                    match song_embed_db.lock() {
+                        Ok(db) => db.list_songs().unwrap_or_default(),
+                        Err(_) => return,
+                    }
+                };
+                if all_songs.is_empty() {
+                    return;
+                }
+                match songs::build_song_semantic_index(&song_embed_ollama, &all_songs).await {
+                    Ok(index) => {
+                        let count = index.len();
+                        if let Ok(mut guard) = song_embed_index.write() {
+                            *guard = Some(index);
+                        }
+                        eprintln!("[song-embed] song semantic index ready ({count} entries)");
+                    }
+                    Err(e) => eprintln!("[song-embed] failed: {e}"),
+                }
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -182,6 +237,17 @@ pub fn run() {
             commands::search_content_bank,
             commands::get_semantic_status,
             commands::search_semantic,
+            // ── Song library commands ──────────────────────────────────────
+            commands::list_songs,
+            commands::search_songs,
+            commands::get_song,
+            commands::add_song,
+            commands::update_song,
+            commands::delete_song,
+            commands::import_songs_ccli,
+            commands::import_songs_openlp,
+            commands::push_song_to_display,
+            commands::get_song_semantic_status,
             identity::get_identity,
             identity::create_church,
             identity::join_church,
