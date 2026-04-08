@@ -139,3 +139,44 @@ pub fn save_content_bank(bank: &[ContentBankEntry]) -> Result<()> {
     std::fs::write(&path, serde_json::to_vec_pretty(bank)?)?;
     Ok(())
 }
+
+// ─── Session memory ───────────────────────────────────────────────────────────
+
+/// Lightweight per-church session memory — persisted between app restarts.
+///
+/// Stores the operator's last-used Bible translation so the app can restore it
+/// on next launch without requiring a manual re-selection.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SessionMemory {
+    /// The last Bible translation the operator selected (e.g. "KJV", "WEB").
+    #[serde(default)]
+    pub preferred_translation: Option<String>,
+}
+
+fn session_memory_path() -> Result<PathBuf> {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    Ok(PathBuf::from(home)
+        .join(".openworship")
+        .join("session_memory.json"))
+}
+
+pub fn load_session_memory() -> SessionMemory {
+    try_load_session_memory().unwrap_or_default()
+}
+
+fn try_load_session_memory() -> Result<SessionMemory> {
+    let path = session_memory_path()?;
+    if !path.exists() {
+        return Ok(SessionMemory::default());
+    }
+    Ok(serde_json::from_slice(&std::fs::read(&path)?)?)
+}
+
+pub fn save_session_memory(mem: &SessionMemory) -> Result<()> {
+    let path = session_memory_path()?;
+    if let Some(p) = path.parent() {
+        std::fs::create_dir_all(p)?;
+    }
+    std::fs::write(&path, serde_json::to_vec_pretty(mem)?)?;
+    Ok(())
+}

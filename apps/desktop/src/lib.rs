@@ -96,8 +96,11 @@ pub fn run() {
     let song_semantic_index: Arc<RwLock<Option<songs::SongSemanticIndex>>> =
         Arc::new(RwLock::new(None));
 
-    // Active Bible translation (defaults to KJV; operator can switch at runtime).
-    let active_translation = Arc::new(RwLock::new("KJV".to_string()));
+    // Restore preferred translation from session memory (falls back to KJV).
+    let initial_translation = service::load_session_memory()
+        .preferred_translation
+        .unwrap_or_else(|| "KJV".to_string());
+    let active_translation = Arc::new(RwLock::new(initial_translation));
 
     // ── Clone Arcs for detection loop ─────────────────────────────────────────
     let detect_search = Arc::clone(&search);
@@ -257,6 +260,7 @@ pub fn run() {
             commands::get_song_semantic_status,
             commands::get_active_translation,
             commands::switch_live_translation,
+            commands::reject_live_item,
             identity::get_identity,
             identity::create_church,
             identity::join_church,

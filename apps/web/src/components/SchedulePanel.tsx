@@ -18,27 +18,50 @@ function ProjectItemRow({
   isReadOnly,
   onPush,
   onRemove,
+  onDragStart,
+  onDragOver,
+  onDrop,
 }: {
   item: ProjectItem;
   isLive: boolean;
   isReadOnly: boolean;
   onPush: (item: ProjectItem) => void;
   onRemove: (id: string) => void;
+  onDragStart?: (id: string) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (targetId: string) => void;
 }) {
   return (
     <li
       className={`schedule-item${isLive ? " schedule-item--live" : ""}`}
-      role="button"
-      tabIndex={0}
-      onClick={() => onPush(item)}
-      onKeyDown={(e) => e.key === "Enter" && onPush(item)}
+      draggable={!isReadOnly}
+      onDragStart={() => onDragStart?.(item.id)}
+      onDragOver={(e) => { e.preventDefault(); onDragOver?.(e); }}
+      onDrop={(e) => { e.preventDefault(); onDrop?.(item.id); }}
     >
-      <div className="schedule-item__meta">
-        <span className="schedule-item__reference">{item.reference}</span>
-        <span className="schedule-item__translation">{item.translation}</span>
-        {isLive && <span className="schedule-item__live-dot" aria-label="Live" />}
+      {!isReadOnly && (
+        <span
+          className="schedule-item__drag-handle"
+          aria-hidden="true"
+          title="Drag to reorder"
+        >
+          ⠿
+        </span>
+      )}
+      <div
+        className="schedule-item__body"
+        role="button"
+        tabIndex={0}
+        onClick={() => onPush(item)}
+        onKeyDown={(e) => e.key === "Enter" && onPush(item)}
+      >
+        <div className="schedule-item__meta">
+          <span className="schedule-item__reference">{item.reference}</span>
+          <span className="schedule-item__translation">{item.translation}</span>
+          {isLive && <span className="schedule-item__live-dot" aria-label="Live" />}
+        </div>
+        <p className="schedule-item__text">{item.text}</p>
       </div>
-      <p className="schedule-item__text">{item.text}</p>
       {!isReadOnly && (
         <button
           className="schedule-item__remove"
@@ -372,6 +395,7 @@ export function SchedulePanel() {
   const [liveReference, setLiveReference] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [showPastProjects, setShowPastProjects] = useState(false);
+  const dragItemId = useRef<string | null>(null);
 
   const loadProjects = useCallback(async () => {
     const [active, all] = await Promise.all([
@@ -419,6 +443,29 @@ export function SchedulePanel() {
       setActiveProject(updated);
     } catch {
       // ignore
+    }
+  };
+
+  const handleDrop = async (targetId: string) => {
+    const sourceId = dragItemId.current;
+    dragItemId.current = null;
+    if (!sourceId || sourceId === targetId || !activeProject) return;
+    const ids = activeProject.items
+      .slice()
+      .sort((a, b) => a.position - b.position)
+      .map((i) => i.id);
+    const fromIdx = ids.indexOf(sourceId);
+    const toIdx = ids.indexOf(targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    ids.splice(fromIdx, 1);
+    ids.splice(toIdx, 0, sourceId);
+    try {
+      const updated = await invoke<ServiceProject>("reorder_active_project_items", {
+        itemIds: ids,
+      });
+      setActiveProject(updated);
+    } catch {
+      // ignore — UI will snap back on next project-updated event
     }
   };
 
@@ -503,6 +550,8 @@ export function SchedulePanel() {
                     isReadOnly={false}
                     onPush={handlePushItem}
                     onRemove={handleRemoveItem}
+                    onDragStart={(id) => { dragItemId.current = id; }}
+                    onDrop={handleDrop}
                   />
                 ))}
             </ul>

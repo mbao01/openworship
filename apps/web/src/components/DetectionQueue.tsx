@@ -32,6 +32,10 @@ export function DetectionQueue() {
     invoke("dismiss_item", { id }).catch(console.error);
   }
 
+  function handleRejectLive() {
+    invoke("reject_live_item").catch(console.error);
+  }
+
   // Show pending + live items; hide dismissed.
   const visible = items.filter((i) => i.status !== "dismissed");
 
@@ -54,6 +58,7 @@ export function DetectionQueue() {
             item={item}
             onApprove={handleApprove}
             onDismiss={handleDismiss}
+            onRejectLive={handleRejectLive}
           />
         ))}
       </div>
@@ -65,9 +70,10 @@ interface CardProps {
   item: QueueItem;
   onApprove: (id: string) => void;
   onDismiss: (id: string) => void;
+  onRejectLive: () => void;
 }
 
-function DetectionCard({ item, onApprove, onDismiss }: CardProps) {
+function DetectionCard({ item, onApprove, onDismiss, onRejectLive }: CardProps) {
   const statusClass = statusModifier(item.status);
   const isSong = item.kind === "song";
   const confidencePct = item.confidence != null ? Math.round(item.confidence * 100) : null;
@@ -117,6 +123,19 @@ function DetectionCard({ item, onApprove, onDismiss }: CardProps) {
             aria-label={`Dismiss ${item.reference}`}
           >
             DISMISS
+          </button>
+        </div>
+      )}
+
+      {item.status === "live" && (
+        <div className="detection-card__actions">
+          <button
+            className="detection-card__btn detection-card__btn--reject"
+            onClick={onRejectLive}
+            aria-label="Not this one — skip to next"
+            title="Wrong verse? Dismiss and show the next pending item."
+          >
+            NOT THIS ONE
           </button>
         </div>
       )}
