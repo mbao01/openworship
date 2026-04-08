@@ -20,9 +20,16 @@
   background: var(--color-void);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--color-iron);
   flex-shrink: 0;
+}
+
+.operator-titlebar__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .operator-appname {
@@ -30,6 +37,20 @@
   color: var(--color-ash);
   letter-spacing: 0.08em;
   font-weight: 400;
+}
+
+/* Separator between app name and branch name */
+.operator-titlebar__sep {
+  font-size: 11px;
+  color: var(--color-smoke);
+}
+
+/* Branch name: Ash, 11px, monospace (per DESIGN.md §5) */
+.operator-branch {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ash);
+  letter-spacing: 0.04em;
 }
 
 /* ============================================================

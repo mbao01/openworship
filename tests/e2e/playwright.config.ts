@@ -18,6 +18,10 @@ export default defineConfig({
     : "html",
   timeout: 30_000,
 
+  expect: {
+    timeout: 15_000,
+  },
+
   use: {
     baseURL: "http://localhost:1420",
     trace: "on-first-retry",

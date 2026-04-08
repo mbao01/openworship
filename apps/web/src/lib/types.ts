@@ -45,6 +45,20 @@ export interface AudioSettings {
   deepgram_api_key: string;
 }
 
+/** Matches Rust `BranchRole` enum. */
+export type BranchRole = "hq" | "member";
+
+/** Matches Rust `ChurchIdentity` struct. */
+export interface ChurchIdentity {
+  church_id: string;
+  church_name: string;
+  branch_id: string;
+  branch_name: string;
+  role: BranchRole;
+  invite_code: string | null;
+}
+
+
 /** Matches Rust `QueueStatus` enum. */
 export type QueueStatus = "pending" | "live" | "dismissed";
 
