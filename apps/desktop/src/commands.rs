@@ -76,7 +76,7 @@ pub fn start_stt(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let config = AudioConfig::default();
-    let mut engine = state.stt.lock().unwrap();
+    let mut engine = state.stt.lock().map_err(|e| e.to_string())?;
 
     // Try to start with real whisper; fall back to mock.
     #[cfg(feature = "whisper")]
