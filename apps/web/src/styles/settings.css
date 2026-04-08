@@ -1,5 +1,7 @@
 /* Settings Modal — Sacred Monochrome (per DESIGN.md)
-   740px wide · 580px tall · Obsidian bg · 0px radius · two-column layout */
+   740px wide · 580px tall · Obsidian bg · 0px radius · two-column layout
+   Wrapped in @layer components for Tailwind v4 cascade integration */
+@layer components {
 
 /* ============================================================
    Overlay — darkened/blurred app background
@@ -531,3 +533,5 @@
   min-width: 2px;
 }
 
+
+} /* end @layer components */

@@ -10,7 +10,6 @@
  * The operator controls which slide is shown via the Operator Page.
  */
 import { useEffect, useRef, useState } from "react";
-import "../styles/speaker.css";
 
 const WS_URL = "ws://127.0.0.1:9000";
 const RECONNECT_DELAY_MS = 2000;
@@ -83,35 +82,43 @@ export function SpeakerPage() {
   }, []);
 
   return (
-    <div className="speaker-page">
-      <header className="speaker-header">
-        <span className="speaker-header__label">SPEAKER NOTES</span>
+    <div className="fixed inset-0 bg-void font-sans flex flex-col text-chalk">
+      <header className="flex items-center justify-between px-6 py-3 bg-obsidian border-b border-iron shrink-0">
+        <span className="text-[0.7rem] font-semibold tracking-[0.2em] text-ash uppercase">
+          SPEAKER NOTES
+        </span>
         <span
-          className={`speaker-header__status ${connected ? "speaker-header__status--connected" : ""}`}
+          className={`text-[0.65rem] font-semibold tracking-[0.18em] uppercase ${
+            connected ? "text-gold" : "text-smoke"
+          }`}
         >
           {connected ? "LIVE" : "CONNECTING…"}
         </span>
       </header>
 
       {slide ? (
-        <main className="speaker-slide">
-          <div className="speaker-slide__meta">
-            <span className="speaker-slide__title">{slide.title}</span>
-            <span className="speaker-slide__counter">
+        <main className="flex-1 flex flex-col px-8 pt-8 pb-6 gap-4 overflow-hidden">
+          <div className="flex items-baseline gap-4">
+            <span className="text-[1rem] font-semibold tracking-[0.1em] text-gold [font-variant:small-caps]">
+              {slide.title}
+            </span>
+            <span className="font-mono text-[0.8rem] text-ash">
               {slide.slideIndex + 1} / {slide.totalSlides}
             </span>
           </div>
-          <div className="speaker-slide__text">{slide.text}</div>
+          <div className="flex-1 text-[clamp(2rem,4vw,4.5rem)] font-normal leading-[1.4] text-chalk whitespace-pre-wrap overflow-auto">
+            {slide.text}
+          </div>
           {slide.slideIndex + 1 < slide.totalSlides && (
-            <div className="speaker-slide__next-hint">
+            <div className="text-[0.75rem] font-normal tracking-[0.1em] text-smoke text-right">
               Press ▶ on the operator panel to advance
             </div>
           )}
         </main>
       ) : (
-        <main className="speaker-empty">
+        <main className="flex-1 flex flex-col items-center justify-center gap-3 text-ash text-[1.1rem]">
           <p>Waiting for sermon notes…</p>
-          <p className="speaker-empty__sub">
+          <p className="text-[0.85rem] text-smoke">
             The operator will push notes when the message begins.
           </p>
         </main>

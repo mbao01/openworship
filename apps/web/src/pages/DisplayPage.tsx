@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import "../styles/display.css";
 
 interface ContentEvent {
   kind: string;
@@ -180,16 +179,16 @@ export function DisplayPage() {
   };
 
   return (
-    <div className="display-root">
+    <div className="fixed inset-0 bg-void overflow-hidden font-sans">
       {content ? (
-        <div className="display-content">
+        <div className="absolute top-1/2 left-[10%] -translate-y-1/2 max-w-[55vw]">
           {isSong ? (
             <>
-              <span className="display-reference display-song-title">
+              <span className="block font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-gold mb-4">
                 {content.reference}
               </span>
               <div
-                className="display-lyrics"
+                className="cursor-pointer outline-none"
                 onClick={() => advanceLyric(lyricChunks, chunkIndex)}
                 role="button"
                 tabIndex={0}
@@ -204,12 +203,17 @@ export function DisplayPage() {
                     /^(verse|chorus|bridge|pre-chorus|prechorus|intro|outro|tag)\b/i.test(
                       line.trim()
                     );
-                  return (
+                  return isHeader ? (
                     <p
                       key={i}
-                      className={
-                        isHeader ? "display-lyric-header" : "display-lyric-line"
-                      }
+                      className="m-0 mb-2 font-sans text-[0.85rem] font-medium tracking-[0.18em] uppercase text-smoke"
+                    >
+                      {line || "\u00A0"}
+                    </p>
+                  ) : (
+                    <p
+                      key={i}
+                      className="m-0 mb-3 font-serif text-[clamp(2.8rem,5.5vw,5.5rem)] font-semibold leading-[1.2] text-chalk text-left"
                     >
                       {line || "\u00A0"}
                     </p>
@@ -217,54 +221,69 @@ export function DisplayPage() {
                 })}
               </div>
               {content.translation && (
-                <span className="display-song-artist">{content.translation}</span>
+                <span className="absolute bottom-[calc(24px+1.5rem)] right-[10%] font-sans text-xs tracking-[0.16em] text-smoke lowercase">
+                  {content.translation}
+                </span>
               )}
               {lyricChunks.length > 1 && (
-                <span className="display-lyric-progress" aria-hidden="true">
+                <span
+                  className="absolute bottom-6 right-[10%] font-sans text-[0.7rem] tracking-[0.12em] text-smoke opacity-60"
+                  aria-hidden="true"
+                >
                   {chunkIndex + 1} / {lyricChunks.length}
                 </span>
               )}
             </>
           ) : isCountdown ? (
-            <div className="display-countdown">
+            <div className="flex flex-col items-start gap-4">
               {content.reference && (
-                <span className="display-countdown__label">{content.reference}</span>
+                <span className="font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-gold">
+                  {content.reference}
+                </span>
               )}
               <span
-                className={`display-countdown__time ${
-                  (countdownSecs ?? 0) <= 10 ? "display-countdown__time--urgent" : ""
+                className={`font-mono text-[clamp(6rem,14vw,14rem)] font-semibold leading-none tracking-[0.05em] transition-colors duration-500 ${
+                  (countdownSecs ?? 0) <= 10 ? "text-ember" : "text-chalk"
                 }`}
               >
                 {fmtCountdown(countdownSecs ?? 0)}
               </span>
             </div>
           ) : isAnnouncement ? (
-            <div className="display-announcement">
+            <div className="flex flex-col gap-4">
               {content.image_url && (
                 <img
-                  className="display-announcement__image"
+                  className="max-w-[40vw] max-h-[35vh] object-contain rounded-sm mb-2"
                   src={content.image_url}
                   alt=""
                 />
               )}
-              <span className="display-reference display-announcement__title">
+              <span className="font-sans text-[clamp(1.5rem,3vw,3rem)] font-semibold tracking-[0.08em] text-gold">
                 {content.reference}
               </span>
               {content.text && (
-                <p className="display-announcement__body">{content.text}</p>
+                <p className="m-0 font-sans text-[clamp(1.8rem,3.5vw,4rem)] font-normal leading-[1.3] text-chalk">
+                  {content.text}
+                </p>
               )}
             </div>
           ) : (
             <>
-              <span className="display-reference">{content.reference}</span>
-              <p className="display-verse">{content.text}</p>
+              <span className="block font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-gold mb-6">
+                {content.reference}
+              </span>
+              <p className="m-0 font-serif text-[clamp(3rem,6vw,6rem)] font-semibold leading-[1.15] text-chalk text-left">
+                {content.text}
+              </p>
             </>
           )}
         </div>
       ) : (
-        <div className="display-idle" aria-hidden={connected} />
+        <div className="hidden" aria-hidden={connected} />
       )}
-      <span className="display-watermark">openworship</span>
+      <span className="absolute bottom-6 left-[10%] font-sans text-xs tracking-[0.2em] text-smoke lowercase select-none">
+        openworship
+      </span>
     </div>
   );
 }

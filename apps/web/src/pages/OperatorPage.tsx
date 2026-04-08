@@ -13,6 +13,8 @@ import "../styles/operator.css";
 interface OperatorPageProps {
   identity: ChurchIdentity;
   onOpenArtifacts?: () => void;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
 }
 
 // ─── Translation Switcher ────────────────────────────────────────────────────
@@ -69,7 +71,7 @@ function TranslationSwitcher() {
   );
 }
 
-export function OperatorPage({ identity, onOpenArtifacts }: OperatorPageProps) {
+export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggleTheme }: OperatorPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
@@ -96,6 +98,34 @@ export function OperatorPage({ identity, onOpenArtifacts }: OperatorPageProps) {
                 <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
                 <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
               </svg>
+            </button>
+          )}
+          {onToggleTheme && (
+            <button
+              className="settings-gear-btn"
+              onClick={onToggleTheme}
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle theme"
+            >
+              {isDark ? (
+                /* Sun icon */
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.2" />
+                  <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="2.9" y1="2.9" x2="4.3" y2="4.3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="11.7" y1="11.7" x2="13.1" y2="13.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="11.7" y1="4.3" x2="13.1" y2="2.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="2.9" y1="13.1" x2="4.3" y2="11.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+              ) : (
+                /* Moon icon */
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                </svg>
+              )}
             </button>
           )}
           <button

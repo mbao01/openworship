@@ -1,4 +1,6 @@
 /* Operator UI shell — Sacred Monochrome desktop application */
+/* Wrapped in @layer components for Tailwind v4 cascade integration */
+@layer components {
 
 /* ============================================================
    Shell
@@ -2589,3 +2591,5 @@
   line-height: 1.5;
   margin-left: var(--space-3);
 }
+
+} /* end @layer components */
