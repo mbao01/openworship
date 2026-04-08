@@ -303,6 +303,8 @@ pub fn run() {
             commands::get_audio_settings,
             commands::set_audio_settings,
             commands::download_whisper_model,
+            commands::list_audio_input_devices,
+            commands::get_audio_level,
             commands::create_service_project,
             commands::list_service_projects,
             commands::get_active_project,

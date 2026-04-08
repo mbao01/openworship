@@ -4,7 +4,7 @@ use crate::slides::{AnnouncementItem, SermonNote};
 use crate::slides::{save_announcements, save_sermon_notes};
 use crate::songs::Song;
 use crate::state::AppState;
-use ow_audio::{AudioConfig, MockTranscriber, SttStatus};
+use ow_audio::{AudioConfig, AudioInputDevice, MockTranscriber, SttStatus, list_input_devices};
 use ow_core::{DetectionMode, QueueItem, QueueStatus, ScriptureDetector};
 use ow_display::ContentEvent;
 use ow_search::VerseResult;
@@ -154,12 +154,15 @@ pub fn greet(name: &str) -> String {
 /// events to the operator UI.
 #[tauri::command]
 pub fn start_stt(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    let config = AudioConfig::default();
     let settings = state
         .audio_settings
         .read()
         .map_err(|e| e.to_string())?
         .clone();
+    let config = AudioConfig {
+        device_name: settings.audio_input_device.clone(),
+        ..AudioConfig::default()
+    };
     let mut engine = state.stt.lock().map_err(|e| e.to_string())?;
 
     start_stt_with_settings(&mut engine, config, &settings, &app).map_err(|e| e.to_string())?;
@@ -394,6 +397,22 @@ pub fn set_audio_settings(
     *s = settings.clone();
     drop(s);
     settings.save().map_err(|e| e.to_string())
+}
+
+// ─── Audio input device commands ─────────────────────────────────────────────
+
+/// Return all available audio input devices on the default host.
+/// Each entry includes the device name and whether it is the system default.
+#[tauri::command]
+pub fn list_audio_input_devices() -> Result<Vec<AudioInputDevice>, String> {
+    list_input_devices().map_err(|e| e.to_string())
+}
+
+/// Return the most-recent RMS audio level `[0.0, 1.0]`.
+/// Returns `0.0` when the STT engine is stopped.
+#[tauri::command]
+pub fn get_audio_level(state: State<'_, AppState>) -> f32 {
+    state.stt.lock().unwrap().audio_level_rms()
 }
 
 // ─── Detection commands ───────────────────────────────────────────────────────

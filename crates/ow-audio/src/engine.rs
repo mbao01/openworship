@@ -2,7 +2,7 @@ use crate::capture::{AudioCapturer, AudioConfig};
 use crate::event::TranscriptEvent;
 use crate::transcribe::Transcriber;
 use anyhow::Result;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
@@ -27,6 +27,9 @@ pub struct SttEngine {
     tx: broadcast::Sender<TranscriptEvent>,
     status: Arc<Mutex<SttStatus>>,
     running: Arc<AtomicBool>,
+    /// RMS level of the most-recent audio chunk, stored as f32 bits.
+    /// Updated by the capture callback while the engine is running.
+    audio_level: Arc<AtomicU32>,
 }
 
 impl SttEngine {
@@ -37,9 +40,16 @@ impl SttEngine {
                 tx,
                 status: Arc::new(Mutex::new(SttStatus::Stopped)),
                 running: Arc::new(AtomicBool::new(false)),
+                audio_level: Arc::new(AtomicU32::new(0)),
             },
             rx,
         )
+    }
+
+    /// Return the most-recent RMS audio level `[0.0, 1.0]`.
+    /// Returns `0.0` when the engine is stopped.
+    pub fn audio_level_rms(&self) -> f32 {
+        f32::from_bits(self.audio_level.load(Ordering::Relaxed))
     }
 
     pub fn status(&self) -> SttStatus {
@@ -58,6 +68,9 @@ impl SttEngine {
         }
 
         let capturer = AudioCapturer::new(config.clone())?;
+        // Wire up the capturer's level atomic so get_audio_level() reflects live input.
+        self.audio_level = capturer.level_rms.clone();
+
         let tx = self.tx.clone();
         let status = self.status.clone();
         let running_worker = self.running.clone();
@@ -107,6 +120,7 @@ impl SttEngine {
     /// Stop the capture/transcription loop.
     pub fn stop(&mut self) {
         self.running.store(false, Ordering::Release);
+        self.audio_level.store(0u32, Ordering::Release);
     }
 
     pub fn sender(&self) -> broadcast::Sender<TranscriptEvent> {

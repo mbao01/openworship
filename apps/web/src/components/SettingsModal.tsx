@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "../lib/tauri";
-import type { AudioSettings, BranchSyncStatus, ChurchIdentity, DisplaySettings, EmailSettings, EmailSubscriber, MonitorInfo, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
+import type { AudioInputDevice, AudioSettings, BranchSyncStatus, ChurchIdentity, DisplaySettings, EmailSettings, EmailSubscriber, MonitorInfo, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
 
 interface SettingsModalProps {
   identity: ChurchIdentity;
@@ -31,6 +31,7 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
     semantic_threshold_copilot: 0.82,
     lyrics_threshold_auto: 0.70,
     lyrics_threshold_copilot: 0.78,
+    audio_input_device: null,
   });
   const [keyVisible, setKeyVisible] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,6 +64,10 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
 
   const handleApiKeyChange = (deepgram_api_key: string) => {
     setAudioSettings((prev) => ({ ...prev, deepgram_api_key }));
+  };
+
+  const handleDeviceChange = (audio_input_device: string | null) => {
+    setAudioSettings((prev) => ({ ...prev, audio_input_device }));
   };
 
   const handleSave = async () => {
@@ -120,6 +125,7 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
               onBackendChange={handleBackendChange}
               onApiKeyChange={handleApiKeyChange}
               onToggleKeyVisible={() => setKeyVisible((v) => !v)}
+              onDeviceChange={handleDeviceChange}
             />
           )}
           {activeCategory === "general" && <PlaceholderSection title="General" />}
@@ -177,6 +183,7 @@ interface AudioSectionProps {
   onBackendChange: (b: SttBackend) => void;
   onApiKeyChange: (k: string) => void;
   onToggleKeyVisible: () => void;
+  onDeviceChange: (name: string | null) => void;
 }
 
 function AudioSection({
@@ -185,12 +192,35 @@ function AudioSection({
   onBackendChange,
   onApiKeyChange,
   onToggleKeyVisible,
+  onDeviceChange,
 }: AudioSectionProps) {
   const [downloadState, setDownloadState] = useState<
     "idle" | "downloading" | "done" | "error"
   >("idle");
   const [downloadProgress, setDownloadProgress] = useState<ModelDownloadProgress | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [devices, setDevices] = useState<AudioInputDevice[]>([]);
+  const [audioLevel, setAudioLevel] = useState(0);
+
+  // Load device list on mount.
+  useEffect(() => {
+    invoke<AudioInputDevice[]>("list_audio_input_devices")
+      .then(setDevices)
+      .catch(() => {});
+  }, []);
+
+  // Poll audio level while tab is visible.
+  useEffect(() => {
+    const id = setInterval(async () => {
+      try {
+        const level = await invoke<number>("get_audio_level");
+        setAudioLevel(level);
+      } catch {
+        setAudioLevel(0);
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, []);
 
   // Subscribe to model download progress events from the Rust backend.
   useEffect(() => {
@@ -234,9 +264,42 @@ function AudioSection({
   const isWhisper = settings.backend === "whisper";
   const isOff = settings.backend === "off";
 
+  // Normalise 0–1 RMS to a visual percentage with slight boost for visibility.
+  const levelPct = Math.min(100, Math.round(audioLevel * 300));
+  const levelColor = levelPct > 80 ? "bg-ember" : levelPct > 50 ? "bg-gold" : "bg-green-400";
+
   return (
     <div className="flex-1 p-6">
       <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">Audio</h2>
+
+      {/* Input device selector */}
+      <div className="mb-6">
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">AUDIO INPUT DEVICE</p>
+        <select
+          data-qa="audio-input-device-select"
+          className="w-full bg-slate border border-iron text-chalk font-sans text-[13px] py-2 px-3 rounded-sm outline-none focus:border-gold cursor-pointer transition-colors hover:border-ash appearance-none"
+          value={settings.audio_input_device ?? ""}
+          onChange={(e) => onDeviceChange(e.target.value || null)}
+        >
+          <option value="">System Default</option>
+          {devices.map((d) => (
+            <option key={d.name} value={d.name}>
+              {d.name}{d.is_default ? " (default)" : ""}
+            </option>
+          ))}
+        </select>
+        {/* VU meter */}
+        <div className="mt-3">
+          <p className="text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-1">INPUT LEVEL</p>
+          <div className="h-[4px] bg-iron rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-75 ${levelColor}`}
+              style={{ width: `${levelPct}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-smoke mt-1">Live when STT is running</p>
+        </div>
+      </div>
 
       {/* STT Engine selector */}
       <div className="mb-6">
