@@ -1,5 +1,6 @@
 mod artifacts;
 mod claude_api;
+mod cloud_sync;
 mod commands;
 mod detection;
 mod email;
@@ -123,6 +124,27 @@ pub fn run() {
             ))
         }
     };
+
+    // ── Cloud sync DB + config (Phase 16) ─────────────────────────────────────
+    let cloud_sync_db = match cloud_sync::CloudSyncDb::open() {
+        Ok(db) => Arc::new(Mutex::new(db)),
+        Err(e) => {
+            eprintln!("[cloud_sync] failed to open db: {e}; using in-memory fallback");
+            Arc::new(Mutex::new(
+                cloud_sync::CloudSyncDb::open_in_memory()
+                    .expect("failed to open in-memory cloud_sync DB"),
+            ))
+        }
+    };
+    let cloud_config = Arc::new(RwLock::new({
+        let mut cfg = cloud_sync::load_config();
+        // Restore secret from keychain so sync works immediately on startup.
+        if let Some(ref mut c) = cfg {
+            c.secret_access_key =
+                keychain::get_secret("s3_secret_access_key").unwrap_or_default();
+        }
+        cfg
+    }));
     // ── Phase 14: Summaries + email subscriptions ─────────────────────────────
     let summaries = Arc::new(RwLock::new(summaries::load_summaries()));
     let subscribers = Arc::new(RwLock::new(summaries::load_subscribers()));
@@ -172,6 +194,8 @@ pub fn run() {
         sermon_notes,
         active_sermon_note,
         artifacts_db,
+        cloud_sync_db,
+        cloud_config,
         summaries,
         subscribers,
         email_settings,
@@ -315,6 +339,17 @@ pub fn run() {
             commands::push_sermon_note,
             commands::advance_sermon_note,
             commands::get_active_sermon_note,
+            // ── Phase 16: Cloud Sync ───────────────────────────────────────
+            commands::get_cloud_config,
+            commands::set_cloud_config,
+            commands::get_cloud_sync_info,
+            commands::toggle_artifact_cloud_sync,
+            commands::sync_artifact_now,
+            commands::list_cloud_artifacts,
+            commands::get_artifact_acl,
+            commands::set_artifact_acl,
+            commands::copy_artifact_link,
+            commands::get_storage_usage,
             // ── Phase 15: Artifacts ────────────────────────────────────────
             commands::list_artifacts,
             commands::list_recent_artifacts,

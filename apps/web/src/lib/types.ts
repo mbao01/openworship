@@ -193,6 +193,61 @@ export interface ArtifactsSettings {
   base_path: string;
 }
 
+// ─── Phase 16: Cloud Sync, Multi-Branch & Sharing ─────────────────────────────
+
+/** Matches Rust `SyncStatus` enum. */
+export type SyncStatus =
+  | "local_only"
+  | "queued"
+  | "syncing"
+  | "synced"
+  | "conflict"
+  | "error";
+
+/** Matches Rust `AccessLevel` enum. */
+export type AccessLevel = "restricted" | "branch_only" | "all_branches";
+
+/** Matches Rust `BranchPermission` enum. */
+export type BranchPermission = "view" | "comment" | "edit";
+
+/** Matches Rust `AclEntry` struct. */
+export interface AclEntry {
+  branch_id: string;
+  branch_name: string;
+  permission: BranchPermission;
+}
+
+/** Matches Rust `CloudSyncInfo` struct. */
+export interface CloudSyncInfo {
+  artifact_id: string;
+  sync_enabled: boolean;
+  status: SyncStatus;
+  cloud_key: string | null;
+  last_etag: string | null;
+  last_synced_ms: number | null;
+  sync_error: string | null;
+  /** Upload progress [0–1]; null when not actively syncing. */
+  progress: number | null;
+}
+
+/** S3-compatible cloud configuration. Secret is never returned from backend. */
+export interface S3Config {
+  endpoint_url: string;
+  bucket: string;
+  region: string;
+  access_key_id: string;
+  /** Write-only: send non-empty to update keychain; empty means "no change". */
+  secret_access_key: string;
+}
+
+/** Cloud storage usage summary. */
+export interface StorageUsage {
+  used_bytes: number;
+  quota_bytes: number | null;
+  synced_count: number;
+  last_updated_ms: number;
+}
+
 // ─── Phase 14: Service summaries + email subscriptions ────────────────────────
 
 /** Matches Rust `ServiceSummary` struct. */

@@ -1930,3 +1930,276 @@ pub fn open_artifact(id: String, state: State<'_, AppState>) -> Result<(), Strin
     std::process::Command::new("xdg-open").arg(&abs).spawn().map_err(|e| e.to_string())?;
     Ok(())
 }
+
+// ── Phase 16: Cloud Sync ───────────────────────────────────────────────────────
+
+use crate::cloud_sync::{AclEntry, AccessLevel, CloudSyncInfo, S3Config, SyncStatus};
+
+/// Return the current S3 cloud config (without the secret key).
+#[tauri::command]
+pub fn get_cloud_config(state: State<'_, AppState>) -> Result<Option<S3Config>, String> {
+    let cfg = state.cloud_config.read().map_err(|e| e.to_string())?;
+    Ok(cfg.as_ref().map(|c| {
+        let mut safe = c.clone();
+        safe.secret_access_key = String::new();
+        safe
+    }))
+}
+
+/// Save S3 cloud configuration. The secret key is stored in the OS keychain;
+/// all other fields are persisted to `~/.openworship/cloud_config.json`.
+#[tauri::command]
+pub fn set_cloud_config(config: S3Config, state: State<'_, AppState>) -> Result<(), String> {
+    // Store secret in keychain.
+    if !config.secret_access_key.is_empty() {
+        crate::keychain::set_secret("s3_secret_access_key", &config.secret_access_key)
+            .map_err(|e| format!("keychain write: {e}"))?;
+    }
+    crate::cloud_sync::save_config(&config).map_err(|e| e.to_string())?;
+    let mut guard = state.cloud_config.write().map_err(|e| e.to_string())?;
+    let mut stored = config.clone();
+    // Restore secret from keychain for in-memory config.
+    stored.secret_access_key =
+        crate::keychain::get_secret("s3_secret_access_key").unwrap_or_default();
+    *guard = Some(stored);
+    Ok(())
+}
+
+/// Get the cloud sync state for a single artifact.
+#[tauri::command]
+pub fn get_cloud_sync_info(
+    artifact_id: String,
+    state: State<'_, AppState>,
+) -> Result<Option<CloudSyncInfo>, String> {
+    state
+        .cloud_sync_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get_sync_info(&artifact_id)
+        .map_err(|e| e.to_string())
+}
+
+/// Enable or disable cloud sync for a single artifact.
+/// When enabled, the artifact is queued for upload.
+#[tauri::command]
+pub fn toggle_artifact_cloud_sync(
+    artifact_id: String,
+    enabled: bool,
+    state: State<'_, AppState>,
+) -> Result<CloudSyncInfo, String> {
+    let db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+    let existing = db.get_sync_info(&artifact_id).map_err(|e| e.to_string())?;
+    let mut info = existing.unwrap_or_else(|| CloudSyncInfo {
+        artifact_id: artifact_id.clone(),
+        sync_enabled: false,
+        status: SyncStatus::LocalOnly,
+        cloud_key: None,
+        last_etag: None,
+        last_synced_ms: None,
+        sync_error: None,
+        progress: None,
+    });
+    info.sync_enabled = enabled;
+    if enabled && matches!(info.status, SyncStatus::LocalOnly | SyncStatus::Error) {
+        info.status = SyncStatus::Queued;
+        // Derive cloud key from identity and artifact path.
+        if info.cloud_key.is_none() {
+            let af_db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+            if let Ok(Some(entry)) = af_db.get_by_id(&artifact_id) {
+                let identity = state.identity.read().map_err(|e| e.to_string())?;
+                if let Some(id) = identity.as_ref() {
+                    info.cloud_key = Some(crate::cloud_sync::cloud_key_for(
+                        &id.church_id, &id.branch_id, &entry.path,
+                    ));
+                }
+            }
+        }
+    } else if !enabled {
+        info.status = SyncStatus::LocalOnly;
+    }
+    db.upsert_sync_info(&info).map_err(|e| e.to_string())?;
+    Ok(info)
+}
+
+/// Trigger an immediate sync for a specific artifact.
+/// Returns the updated `CloudSyncInfo`. The upload happens asynchronously;
+/// callers should poll `get_cloud_sync_info` or listen for Tauri events.
+#[tauri::command]
+pub async fn sync_artifact_now(
+    artifact_id: String,
+    state: State<'_, AppState>,
+) -> Result<CloudSyncInfo, String> {
+    let config = {
+        let guard = state.cloud_config.read().map_err(|e| e.to_string())?;
+        guard.clone().ok_or_else(|| "cloud not configured".to_string())?
+    };
+    let (info, local_path, mime) = {
+        let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+        let af_db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        let mut info = sync_db
+            .get_sync_info(&artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("no sync entry for {artifact_id}"))?;
+        if !info.sync_enabled {
+            return Err("sync not enabled for this artifact".into());
+        }
+        let entry = af_db
+            .get_by_id(&artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("artifact not found: {artifact_id}"))?;
+        let abs = af_db.abs_path(&entry.path);
+        info.status = SyncStatus::Syncing;
+        sync_db.upsert_sync_info(&info).map_err(|e| e.to_string())?;
+        (info, abs, entry.mime_type)
+    };
+
+    let cloud_key = info.cloud_key.clone().ok_or("no cloud key")?;
+    let last_etag = info.last_etag.clone();
+    let client = reqwest::Client::new();
+    match crate::cloud_sync::upload_artifact(
+        &client,
+        &config,
+        last_etag.as_deref(),
+        &local_path,
+        &cloud_key,
+        mime.as_deref(),
+    )
+    .await
+    {
+        Ok(etag) => {
+            let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as i64;
+            let mut updated = sync_db
+                .get_sync_info(&artifact_id)
+                .map_err(|e| e.to_string())?
+                .unwrap_or_else(|| info.clone());
+            updated.status = SyncStatus::Synced;
+            updated.last_etag = Some(etag);
+            updated.last_synced_ms = Some(now);
+            updated.sync_error = None;
+            sync_db.upsert_sync_info(&updated).map_err(|e| e.to_string())?;
+            // Recalculate storage usage.
+            let synced = sync_db.list_enabled().map_err(|e| e.to_string())?;
+            let af_db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+            let used: i64 = synced
+                .iter()
+                .filter_map(|s| af_db.get_by_id(&s.artifact_id).ok().flatten())
+                .filter_map(|e| e.size_bytes)
+                .sum();
+            sync_db
+                .update_storage_usage(used, synced.len() as u32)
+                .map_err(|e| e.to_string())?;
+            Ok(updated)
+        }
+        Err(e) => {
+            let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+            let mut updated = sync_db
+                .get_sync_info(&artifact_id)
+                .map_err(|err| err.to_string())?
+                .unwrap_or_else(|| info.clone());
+            updated.status = SyncStatus::Error;
+            updated.sync_error = Some(e.to_string());
+            sync_db.upsert_sync_info(&updated).map_err(|err| err.to_string())?;
+            Err(e.to_string())
+        }
+    }
+}
+
+/// List cloud-synced artifacts in the given section ("branch" or "shared").
+#[tauri::command]
+pub fn list_cloud_artifacts(
+    section: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<CloudSyncInfo>, String> {
+    let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+    let all = sync_db.list_enabled().map_err(|e| e.to_string())?;
+    let identity = state.identity.read().map_err(|e| e.to_string())?;
+    let (church_id, branch_id) = match identity.as_ref() {
+        Some(id) => (id.church_id.clone(), id.branch_id.clone()),
+        None => return Ok(vec![]),
+    };
+    let prefix = if section == "shared" {
+        format!("{church_id}/shared/")
+    } else {
+        format!("{church_id}/{branch_id}/")
+    };
+    let filtered = all
+        .into_iter()
+        .filter(|s| {
+            s.cloud_key
+                .as_deref()
+                .map(|k| k.starts_with(&prefix))
+                .unwrap_or(false)
+        })
+        .collect();
+    Ok(filtered)
+}
+
+/// Get the ACL + access level for an artifact.
+#[tauri::command]
+pub fn get_artifact_acl(
+    artifact_id: String,
+    state: State<'_, AppState>,
+) -> Result<(Vec<AclEntry>, AccessLevel), String> {
+    let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+    let acl = sync_db.get_acl(&artifact_id).map_err(|e| e.to_string())?;
+    let level = sync_db
+        .get_access_level(&artifact_id)
+        .map_err(|e| e.to_string())?;
+    Ok((acl, level))
+}
+
+/// Set the ACL and access level for an artifact.
+#[tauri::command]
+pub fn set_artifact_acl(
+    artifact_id: String,
+    acl: Vec<AclEntry>,
+    access_level: AccessLevel,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+    sync_db.set_acl(&artifact_id, &acl).map_err(|e| e.to_string())?;
+    sync_db
+        .set_access_level(&artifact_id, &access_level)
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Generate a shareable link for a cloud-synced artifact.
+/// Returns `None` if the artifact is not synced or cloud is not configured.
+#[tauri::command]
+pub fn copy_artifact_link(
+    artifact_id: String,
+    state: State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    let config = {
+        let guard = state.cloud_config.read().map_err(|e| e.to_string())?;
+        guard.clone()
+    };
+    let config = match config {
+        Some(c) => c,
+        None => return Ok(None),
+    };
+    let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+    let info = sync_db
+        .get_sync_info(&artifact_id)
+        .map_err(|e| e.to_string())?;
+    match info.and_then(|i| i.cloud_key) {
+        Some(key) => Ok(Some(crate::cloud_sync::share_link_for(&config, &key))),
+        None => Ok(None),
+    }
+}
+
+/// Return current cloud storage usage for this branch.
+#[tauri::command]
+pub fn get_storage_usage(state: State<'_, AppState>) -> Result<crate::cloud_sync::StorageUsage, String> {
+    state
+        .cloud_sync_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get_storage_usage()
+        .map_err(|e| e.to_string())
+}
