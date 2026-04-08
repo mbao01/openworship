@@ -16,6 +16,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     <div className="onboarding-root">
       <div className="onboarding-card">
         <div className="onboarding-logo">
+          <img src="/logo.svg" alt="OpenWorship" className="onboarding-logo__img" />
           <span className="onboarding-logo__name">openworship</span>
         </div>
 

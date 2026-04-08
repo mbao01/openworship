@@ -38,6 +38,15 @@
 .onboarding-logo {
   text-align: center;
   margin-bottom: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.onboarding-logo__img {
+  width: 48px;
+  height: 48px;
 }
 
 .onboarding-logo__name {
