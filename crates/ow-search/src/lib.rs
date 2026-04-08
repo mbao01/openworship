@@ -247,9 +247,51 @@ fn parse_reference(query: &str) -> Option<(String, u32, Option<u32>)> {
 fn normalize_book(name: &str) -> Option<String> {
     let key = name.trim().to_lowercase();
     let canonical = match key.as_str() {
+        // Old Testament
         "gen" | "genesis" => "Genesis",
+        "exo" | "exod" | "exodus" => "Exodus",
+        "lev" | "leviticus" => "Leviticus",
+        "num" | "numbers" => "Numbers",
+        "deu" | "deut" | "deuteronomy" => "Deuteronomy",
+        "jos" | "josh" | "joshua" => "Joshua",
+        "jdg" | "judg" | "judges" => "Judges",
+        "rut" | "ruth" => "Ruth",
+        "1 sam" | "1sam" | "1 samuel" | "1samuel" => "1 Samuel",
+        "2 sam" | "2sam" | "2 samuel" | "2samuel" => "2 Samuel",
+        "1 ki" | "1ki" | "1 kgs" | "1kgs" | "1 kings" | "1kings" => "1 Kings",
+        "2 ki" | "2ki" | "2 kgs" | "2kgs" | "2 kings" | "2kings" => "2 Kings",
+        "1 chr" | "1chr" | "1 chron" | "1chron" | "1 chronicles" | "1chronicles" => {
+            "1 Chronicles"
+        }
+        "2 chr" | "2chr" | "2 chron" | "2chron" | "2 chronicles" | "2chronicles" => {
+            "2 Chronicles"
+        }
+        "ezr" | "ezra" => "Ezra",
+        "neh" | "nehemiah" => "Nehemiah",
+        "est" | "esth" | "esther" => "Esther",
+        "job" => "Job",
         "ps" | "psa" | "psalm" | "psalms" => "Psalms",
+        "pro" | "prov" | "proverbs" => "Proverbs",
+        "ecc" | "eccl" | "ecclesiastes" => "Ecclesiastes",
+        "sng" | "song" | "sos" | "song of solomon" | "song of songs" => "Song of Solomon",
         "isa" | "isaiah" => "Isaiah",
+        "jer" | "jeremiah" => "Jeremiah",
+        "lam" | "lamentations" => "Lamentations",
+        "ezk" | "ezek" | "ezekiel" => "Ezekiel",
+        "dan" | "daniel" => "Daniel",
+        "hos" | "hosea" => "Hosea",
+        "joe" | "joel" => "Joel",
+        "amo" | "amos" => "Amos",
+        "oba" | "obad" | "obadiah" => "Obadiah",
+        "jon" | "jonah" => "Jonah",
+        "mic" | "micah" => "Micah",
+        "nah" | "nahum" => "Nahum",
+        "hab" | "habakkuk" => "Habakkuk",
+        "zep" | "zeph" | "zephaniah" => "Zephaniah",
+        "hag" | "haggai" => "Haggai",
+        "zec" | "zech" | "zechariah" => "Zechariah",
+        "mal" | "malachi" => "Malachi",
+        // New Testament
         "matt" | "mat" | "matthew" => "Matthew",
         "mk" | "mar" | "mark" => "Mark",
         "lk" | "luk" | "luke" => "Luke",
@@ -262,7 +304,24 @@ fn normalize_book(name: &str) -> Option<String> {
         "eph" | "ephesians" => "Ephesians",
         "phil" | "php" | "philippians" => "Philippians",
         "col" | "colossians" => "Colossians",
+        "1 thes" | "1thes" | "1 thess" | "1thess" | "1 thessalonians" | "1thessalonians" => {
+            "1 Thessalonians"
+        }
+        "2 thes" | "2thes" | "2 thess" | "2thess" | "2 thessalonians" | "2thessalonians" => {
+            "2 Thessalonians"
+        }
+        "1 tim" | "1tim" | "1 timothy" | "1timothy" => "1 Timothy",
+        "2 tim" | "2tim" | "2 timothy" | "2timothy" => "2 Timothy",
+        "tit" | "titus" => "Titus",
+        "phm" | "phlm" | "philemon" => "Philemon",
         "heb" | "hebrews" => "Hebrews",
+        "jas" | "jam" | "james" => "James",
+        "1 pet" | "1pet" | "1 peter" | "1peter" => "1 Peter",
+        "2 pet" | "2pet" | "2 peter" | "2peter" => "2 Peter",
+        "1 jn" | "1jn" | "1 john" | "1john" => "1 John",
+        "2 jn" | "2jn" | "2 john" | "2john" => "2 John",
+        "3 jn" | "3jn" | "3 john" | "3john" => "3 John",
+        "jud" | "jude" => "Jude",
         "rev" | "revelation" => "Revelation",
         _ => return None,
     };
@@ -319,11 +378,66 @@ mod tests {
 
     #[test]
     fn test_normalize_book_aliases() {
+        // Pre-existing aliases
         assert_eq!(normalize_book("ps"), Some("Psalms".into()));
         assert_eq!(normalize_book("Psalm"), Some("Psalms".into()));
         assert_eq!(normalize_book("jn"), Some("John".into()));
         assert_eq!(normalize_book("1 Cor"), Some("1 Corinthians".into()));
         assert_eq!(normalize_book("unknown book xyz"), None);
+
+        // OT books previously missing (regression guard for CTO blocker)
+        assert_eq!(normalize_book("Ezekiel"), Some("Ezekiel".into()));
+        assert_eq!(normalize_book("ezk"), Some("Ezekiel".into()));
+        assert_eq!(normalize_book("ezek"), Some("Ezekiel".into()));
+        assert_eq!(normalize_book("Dan"), Some("Daniel".into()));
+        assert_eq!(normalize_book("Exod"), Some("Exodus".into()));
+        assert_eq!(normalize_book("Lev"), Some("Leviticus".into()));
+        assert_eq!(normalize_book("Num"), Some("Numbers".into()));
+        assert_eq!(normalize_book("Deut"), Some("Deuteronomy".into()));
+        assert_eq!(normalize_book("Josh"), Some("Joshua".into()));
+        assert_eq!(normalize_book("Judg"), Some("Judges".into()));
+        assert_eq!(normalize_book("Ruth"), Some("Ruth".into()));
+        assert_eq!(normalize_book("1 Sam"), Some("1 Samuel".into()));
+        assert_eq!(normalize_book("2 Sam"), Some("2 Samuel".into()));
+        assert_eq!(normalize_book("1 Kgs"), Some("1 Kings".into()));
+        assert_eq!(normalize_book("2 Kgs"), Some("2 Kings".into()));
+        assert_eq!(normalize_book("1 Chr"), Some("1 Chronicles".into()));
+        assert_eq!(normalize_book("2 Chr"), Some("2 Chronicles".into()));
+        assert_eq!(normalize_book("Neh"), Some("Nehemiah".into()));
+        assert_eq!(normalize_book("Esth"), Some("Esther".into()));
+        assert_eq!(normalize_book("Job"), Some("Job".into()));
+        assert_eq!(normalize_book("Prov"), Some("Proverbs".into()));
+        assert_eq!(normalize_book("Eccl"), Some("Ecclesiastes".into()));
+        assert_eq!(normalize_book("Isa"), Some("Isaiah".into()));
+        assert_eq!(normalize_book("Jer"), Some("Jeremiah".into()));
+        assert_eq!(normalize_book("Lam"), Some("Lamentations".into()));
+        assert_eq!(normalize_book("Hos"), Some("Hosea".into()));
+        assert_eq!(normalize_book("Joel"), Some("Joel".into()));
+        assert_eq!(normalize_book("Amos"), Some("Amos".into()));
+        assert_eq!(normalize_book("Obad"), Some("Obadiah".into()));
+        assert_eq!(normalize_book("Jonah"), Some("Jonah".into()));
+        assert_eq!(normalize_book("Mic"), Some("Micah".into()));
+        assert_eq!(normalize_book("Nah"), Some("Nahum".into()));
+        assert_eq!(normalize_book("Hab"), Some("Habakkuk".into()));
+        assert_eq!(normalize_book("Zeph"), Some("Zephaniah".into()));
+        assert_eq!(normalize_book("Hag"), Some("Haggai".into()));
+        assert_eq!(normalize_book("Zech"), Some("Zechariah".into()));
+        assert_eq!(normalize_book("Mal"), Some("Malachi".into()));
+
+        // NT books previously missing
+        assert_eq!(normalize_book("1 Thess"), Some("1 Thessalonians".into()));
+        assert_eq!(normalize_book("2 Thess"), Some("2 Thessalonians".into()));
+        assert_eq!(normalize_book("1 Tim"), Some("1 Timothy".into()));
+        assert_eq!(normalize_book("2 Tim"), Some("2 Timothy".into()));
+        assert_eq!(normalize_book("Titus"), Some("Titus".into()));
+        assert_eq!(normalize_book("Phm"), Some("Philemon".into()));
+        assert_eq!(normalize_book("Jas"), Some("James".into()));
+        assert_eq!(normalize_book("1 Pet"), Some("1 Peter".into()));
+        assert_eq!(normalize_book("2 Pet"), Some("2 Peter".into()));
+        assert_eq!(normalize_book("1 John"), Some("1 John".into()));
+        assert_eq!(normalize_book("2 John"), Some("2 John".into()));
+        assert_eq!(normalize_book("3 John"), Some("3 John".into()));
+        assert_eq!(normalize_book("Jude"), Some("Jude".into()));
     }
 
     #[test]
