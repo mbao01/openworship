@@ -68,6 +68,7 @@ impl AnnouncementItem {
         }
     }
 
+    #[allow(dead_code)]
     pub fn new_custom_slide(
         title: String,
         body: String,
