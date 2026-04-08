@@ -199,7 +199,7 @@ fn build_book_alternation() -> String {
     ];
 
     // Sort longest-first to ensure greedy matching of full names.
-    books.sort_by(|a, b| b.len().cmp(&a.len()));
+    books.sort_by_key(|b| std::cmp::Reverse(b.len()));
 
     books
         .iter()
