@@ -51,6 +51,7 @@ pub fn delete_deepgram_api_key() -> Result<(), keyring::Error> {
     set_deepgram_api_key("")
 }
 
+const SMTP_PASSWORD_ACCOUNT: &str = "smtp_password";
 const ANTHROPIC_ACCOUNT: &str = "anthropic_api_key";
 
 /// Retrieve any named secret from the OS keychain (returns empty string if not set).
@@ -80,6 +81,16 @@ pub fn set_secret(account: &str, value: &str) -> Result<(), keyring::Error> {
     } else {
         entry.set_password(value)
     }
+}
+
+/// Retrieve the SMTP password from the OS keychain.
+pub fn get_smtp_password() -> Option<String> {
+    get_secret(SMTP_PASSWORD_ACCOUNT)
+}
+
+/// Store the SMTP password in the OS keychain. Empty string deletes the entry.
+pub fn set_smtp_password(password: &str) -> Result<(), keyring::Error> {
+    set_secret(SMTP_PASSWORD_ACCOUNT, password)
 }
 
 /// Retrieve the Anthropic API key from the OS keychain.
