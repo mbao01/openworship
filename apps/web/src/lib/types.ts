@@ -33,18 +33,24 @@ export interface TranslationInfo {
   abbreviation: string;
 }
 
-/** Matches Rust `DetectionMode` enum. */
-export type DetectionMode = "auto" | "copilot" | "airplane" | "offline";
+/** Matches Rust `OperatingMode` enum. */
+export type OperatingMode = "auto" | "copilot" | "airplane" | "offline";
 
-/** Matches Rust `QueueStatus` enum. */
-export type QueueStatus = "pending" | "live" | "dismissed";
+/** Matches Rust `VerseStatus` enum. */
+export type VerseStatus = "pending" | "approved" | "dismissed";
 
-/** Matches Rust `QueueItem` struct. */
-export interface QueueItem {
-  id: string;
-  reference: string;
+/** Matches Rust `ScriptureRef`. */
+export interface ScriptureRef {
+  book: string;
+  chapter: number;
+  verse: number | null;
+}
+
+/** Matches Rust `QueuedVerse`. */
+export interface QueuedVerse {
+  id: number;
+  reference: ScriptureRef;
   text: string;
   translation: string;
-  status: QueueStatus;
-  detected_at_ms: number;
+  status: VerseStatus;
 }

@@ -2,6 +2,25 @@
 
 All notable changes to OpenWorship are documented here.
 
+## [0.3.0.0] - 2026-04-08
+
+### Added
+
+- **Scripture Detection Pipeline** (`ow-detect` crate): Regex-based scripture reference parser supporting colon form ("John 3:16"), chapter-only ("John 3"), spoken form ("John chapter three verse sixteen"), and spoken chapter ("first Corinthians thirteen"). 5-pass deduplication with chapter-only suppression when verse-level ref exists for same book+chapter.
+- **Detection Pipeline**: `DetectionPipeline` subscribes to STT broadcast, applies 30s per-reference cooldown, routes detected verses to display (Auto) or operator queue (Copilot) based on current operating mode.
+- **ContentQueue**: `VecDeque`-backed queue (max 20 items) with `Pending`, `Approved`, `Dismissed` statuses and snapshot/approve/dismiss/clear operations.
+- **Operating Modes**: Auto (detected verses push directly to display), Copilot (operator approves each verse), Airplane (detection paused), Offline (STT inactive).
+- **Tauri Commands**: `get_queue`, `approve_verse`, `dismiss_verse`, `clear_queue`, `get_mode`, `set_mode` — full operator control over the detection pipeline.
+- **ModeBar UI**: Segmented control with AUTO/COPILOT/AIRPLANE/OFFLINE buttons; Gold underline on active mode; persists mode via Tauri backend.
+- **DetectionQueue UI**: Polls queue every 1s in active modes; pending verses show SHOW/DISMISS action buttons in Copilot mode; approved show "SHOWN" badge; dismissed show "DISMISSED" badge; empty-state and mode-specific status messages.
+
+### Changed
+
+- Replaced `ow-core` ScriptureDetector + `detection.rs` Tauri command with the new `ow-detect` crate architecture.
+- Replaced `ModeToolbar.tsx` with `ModeBar.tsx` (Sacred Monochrome segmented control design).
+- Operator right column now renders `ModeBar` + `DetectionQueue` wired to live mode state.
+- `AppState.search` is now `Arc<SearchEngine>` (shared between search commands and the detection pipeline).
+
 ## [0.2.0.0] - 2026-04-08
 
 ### Added

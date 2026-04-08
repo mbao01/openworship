@@ -371,229 +371,184 @@
 }
 
 /* ============================================================
-   Mode Toolbar strip
-   Per DESIGN.md: Obsidian background, 36px height, segmented control
-   with gold underline on active mode.
+   Mode Bar — segmented control above the queue column
    ============================================================ */
 
-.mode-toolbar {
-  height: 36px;
-  background: var(--color-obsidian);
-  border-bottom: 1px solid var(--color-iron);
+.mode-bar {
   display: flex;
-  align-items: center;
-  padding: 0 var(--space-4);
+  gap: 2px;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--color-iron);
   flex-shrink: 0;
 }
 
-.mode-toolbar__segment {
-  display: flex;
-  align-items: stretch;
-  height: 100%;
-  gap: 0;
-}
-
-/* Ghost button style: no background, no border, Ash text. */
-.mode-toolbar__btn {
-  font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 500;
+.mode-bar__btn {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
   letter-spacing: 0.1em;
-  color: var(--color-ash);
+  color: var(--color-smoke);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  padding: 0 var(--space-4);
+  padding: var(--space-1) var(--space-2) 4px;
   cursor: pointer;
-  transition: color 150ms ease-out, border-color 150ms ease-out;
-  text-transform: uppercase;
+  transition: color 0.12s ease, border-color 0.12s ease;
+  text-align: center;
 }
 
-.mode-toolbar__btn:hover {
-  color: var(--color-chalk);
+.mode-bar__btn:hover {
+  color: var(--color-ash);
 }
 
-/* Active mode: Chalk text + Liturgical Gold underline (per DESIGN.md). */
-.mode-toolbar__btn--active {
-  color: var(--color-chalk);
+.mode-bar__btn--active {
+  color: var(--color-gold);
   border-bottom-color: var(--color-gold);
 }
 
 /* ============================================================
-   Detection Queue — right column
+   Detection Queue
    ============================================================ */
 
 .detection-queue {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .detection-queue__header {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-4) 0;
   flex-shrink: 0;
 }
 
-.detection-queue__label {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  color: var(--color-ash);
-  text-transform: uppercase;
-}
-
-.detection-queue__count {
+.detection-queue__clear {
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--color-gold);
-  background: rgba(201, 168, 76, 0.1);
-  border: 1px solid rgba(201, 168, 76, 0.3);
-  border-radius: var(--radius-sm);
-  padding: 1px 5px;
-  letter-spacing: 0.04em;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--color-smoke);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.12s ease;
 }
 
-.detection-queue__body {
-  flex: 1;
-  overflow-y: auto;
+.detection-queue__clear:hover {
+  color: var(--color-ash);
+}
+
+.detection-queue__list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0 var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  overflow-y: auto;
+  flex: 1;
   min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: var(--color-iron) transparent;
 }
 
-.detection-queue__body::-webkit-scrollbar {
-  width: 4px;
-}
-
-.detection-queue__body::-webkit-scrollbar-thumb {
-  background: var(--color-iron);
-  border-radius: 2px;
-}
-
-.detection-queue__empty {
-  font-size: 12px;
-  color: var(--color-smoke);
-  margin: 0;
-}
-
-/* ============================================================
-   Detection Card
-   Per DESIGN.md: Slate background.
-   Pending: thin Muted Gold left border (2px).
-   Live: gold dot.
-   ============================================================ */
-
-.detection-card {
+.detection-queue__item {
   background: var(--color-slate);
-  border: 1px solid rgba(42, 42, 42, 0.4);
-  border-left: 2px solid transparent;
   border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-3);
-  transition: border-color 150ms ease-out;
+  padding: var(--space-3);
+  border-left: 3px solid var(--color-gold-muted);
+  animation: queue-item-in 150ms ease-out;
 }
 
-/* Pending: Muted Gold left border (per DESIGN.md). */
-.detection-card--pending {
-  border-left-color: var(--color-gold-muted);
+@keyframes queue-item-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Live: Liturgical Gold left border + glow — active/confirmed context. */
-.detection-card--live {
+.detection-queue__item--approved {
   border-left-color: var(--color-gold);
+  opacity: 0.5;
 }
 
-.detection-card--dismissed {
-  opacity: 0.4;
+.detection-queue__item--dismissed {
+  border-left-color: var(--color-smoke);
+  opacity: 0.35;
 }
 
-.detection-card__meta {
+.detection-queue__ref {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-1);
-}
-
-.detection-card__reference {
   font-size: 12px;
   font-weight: 500;
   color: var(--color-chalk);
   letter-spacing: 0.04em;
-  flex: 1;
+  margin-bottom: var(--space-1);
 }
 
-.detection-card__translation {
+.detection-queue__translation {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--color-ash);
+  letter-spacing: 0.06em;
+}
+
+.detection-queue__badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
   letter-spacing: 0.08em;
+  margin-left: auto;
 }
 
-/* Gold pulse dot for Live items — per DESIGN.md live indicator spec. */
-.detection-card__live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-gold);
-  box-shadow: 0 0 4px var(--color-gold);
-  flex-shrink: 0;
-}
+.detection-queue__badge--approved { color: var(--color-gold); }
+.detection-queue__badge--dismissed { color: var(--color-smoke); }
 
-.detection-card__text {
+.detection-queue__text {
+  margin: 0 0 var(--space-2);
   font-size: 12px;
   line-height: 1.5;
   color: var(--color-ash);
-  margin: 0 0 var(--space-2) 0;
 }
 
-.detection-card__actions {
+.detection-queue__actions {
   display: flex;
   gap: var(--space-2);
-  margin-top: var(--space-2);
 }
 
-/* Approve — Primary button: Liturgical Gold bg, dark text (per DESIGN.md). */
-.detection-card__btn--approve {
-  font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: var(--color-void);
-  background: var(--color-gold);
-  border: none;
+.detection-queue__btn {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  padding: 3px var(--space-2);
   border-radius: var(--radius-sm);
-  padding: 4px 10px;
   cursor: pointer;
-  transition: filter 150ms ease-out;
-  text-transform: uppercase;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
-.detection-card__btn--approve:hover {
-  filter: brightness(1.15);
+.detection-queue__btn--approve {
+  background: transparent;
+  border: 1px solid var(--color-gold-muted);
+  color: var(--color-gold);
 }
 
-/* Dismiss — Secondary button: Iron border, Chalk text (per DESIGN.md). */
-.detection-card__btn--dismiss {
-  font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: var(--color-chalk);
+.detection-queue__btn--approve:hover {
+  background: rgba(201, 168, 76, 0.1);
+  border-color: var(--color-gold);
+}
+
+.detection-queue__btn--dismiss {
   background: transparent;
   border: 1px solid var(--color-iron);
-  border-radius: var(--radius-sm);
-  padding: 4px 10px;
-  cursor: pointer;
-  transition: border-color 150ms ease-out;
-  text-transform: uppercase;
+  color: var(--color-smoke);
 }
 
-.detection-card__btn--dismiss:hover {
+.detection-queue__btn--dismiss:hover {
   border-color: var(--color-ash);
+  color: var(--color-ash);
 }

@@ -28,4 +28,4 @@ ow-display = { path = "../../crates/ow-display" }
 ow-db = { path = "../../crates/ow-db" }
 ow-search = { path = "../../crates/ow-search" }
 ow-audio = { path = "../../crates/ow-audio" }
-ow-core = { path = "../../crates/ow-core" }
+ow-detect = { path = "../../crates/ow-detect" }

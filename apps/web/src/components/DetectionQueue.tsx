@@ -1,112 +1,131 @@
-import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
-import { QueueItem, QueueStatus } from "../lib/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "../lib/tauri";
+import type { OperatingMode, QueuedVerse, ScriptureRef } from "../lib/types";
 
-export function DetectionQueue() {
-  const [items, setItems] = useState<QueueItem[]>([]);
+function refDisplay(ref: ScriptureRef): string {
+  return ref.verse != null
+    ? `${ref.book} ${ref.chapter}:${ref.verse}`
+    : `${ref.book} ${ref.chapter}`;
+}
 
-  // Load initial queue and subscribe to updates.
-  useEffect(() => {
-    invoke<QueueItem[]>("get_queue")
-      .then(setItems)
-      .catch(console.error);
+interface Props {
+  mode: OperatingMode;
+}
 
-    let unlisten: UnlistenFn | null = null;
-    listen<QueueItem[]>("detection://queue-updated", (event) => {
-      setItems(event.payload);
-    }).then((fn) => {
-      unlisten = fn;
-    });
+export function DetectionQueue({ mode }: Props) {
+  const [items, setItems] = useState<QueuedVerse[]>([]);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    return () => {
-      unlisten?.();
-    };
+  const fetchQueue = useCallback(async () => {
+    try {
+      const q = await invoke<QueuedVerse[]>("get_queue");
+      setItems(q);
+    } catch {
+      // backend not available in browser preview
+    }
   }, []);
 
-  function handleApprove(id: string) {
-    invoke("approve_item", { id }).catch(console.error);
+  useEffect(() => {
+    fetchQueue();
+    // Poll every second while in copilot/auto mode.
+    if (mode === "auto" || mode === "copilot") {
+      pollRef.current = setInterval(fetchQueue, 1000);
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [mode, fetchQueue]);
+
+  async function handleApprove(id: number) {
+    try {
+      await invoke("approve_verse", { id });
+      await fetchQueue();
+    } catch {
+      // ignore
+    }
   }
 
-  function handleDismiss(id: string) {
-    invoke("dismiss_item", { id }).catch(console.error);
+  async function handleDismiss(id: number) {
+    try {
+      await invoke("dismiss_verse", { id });
+      await fetchQueue();
+    } catch {
+      // ignore
+    }
   }
 
-  // Show pending + live items; hide dismissed.
-  const visible = items.filter((i) => i.status !== "dismissed");
+  async function handleClear() {
+    try {
+      await invoke("clear_queue");
+      setItems([]);
+    } catch {
+      // ignore
+    }
+  }
+
+  const pending = items.filter((v) => v.status === "pending");
+  const actioned = items.filter((v) => v.status !== "pending");
 
   return (
     <div className="detection-queue">
       <div className="detection-queue__header">
-        <span className="detection-queue__label">QUEUE</span>
-        {visible.length > 0 && (
-          <span className="detection-queue__count">{visible.length}</span>
-        )}
-      </div>
-
-      <div className="detection-queue__body">
-        {visible.length === 0 && (
-          <p className="detection-queue__empty">No detections yet.</p>
-        )}
-        {visible.map((item) => (
-          <DetectionCard
-            key={item.id}
-            item={item}
-            onApprove={handleApprove}
-            onDismiss={handleDismiss}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-interface CardProps {
-  item: QueueItem;
-  onApprove: (id: string) => void;
-  onDismiss: (id: string) => void;
-}
-
-function DetectionCard({ item, onApprove, onDismiss }: CardProps) {
-  const statusClass = statusModifier(item.status);
-
-  return (
-    <div className={`detection-card detection-card--${statusClass}`} role="article">
-      <div className="detection-card__meta">
-        <span className="detection-card__reference">{item.reference}</span>
-        <span className="detection-card__translation">{item.translation}</span>
-        {item.status === "live" && (
-          <span className="detection-card__live-dot" aria-label="Live" />
-        )}
-      </div>
-      <p className="detection-card__text">{item.text}</p>
-
-      {item.status === "pending" && (
-        <div className="detection-card__actions">
-          <button
-            className="detection-card__btn detection-card__btn--approve"
-            onClick={() => onApprove(item.id)}
-            aria-label={`Approve ${item.reference}`}
-          >
-            APPROVE
+        <h2 className="operator-col__heading">QUEUE</h2>
+        {items.length > 0 && (
+          <button className="detection-queue__clear" onClick={handleClear}>
+            CLEAR
           </button>
-          <button
-            className="detection-card__btn detection-card__btn--dismiss"
-            onClick={() => onDismiss(item.id)}
-            aria-label={`Dismiss ${item.reference}`}
-          >
-            DISMISS
-          </button>
-        </div>
+        )}
+      </div>
+
+      {mode === "airplane" || mode === "offline" ? (
+        <p className="operator-col__empty">
+          {mode === "offline" ? "STT inactive." : "Manual mode — detection paused."}
+        </p>
+      ) : pending.length === 0 && actioned.length === 0 ? (
+        <p className="operator-col__empty">No detections yet.</p>
+      ) : (
+        <ul className="detection-queue__list">
+          {pending.map((verse) => (
+            <li key={verse.id} className="detection-queue__item detection-queue__item--pending">
+              <div className="detection-queue__ref">
+                {refDisplay(verse.reference)}
+                <span className="detection-queue__translation">{verse.translation}</span>
+              </div>
+              <p className="detection-queue__text">{verse.text}</p>
+              {mode === "copilot" && (
+                <div className="detection-queue__actions">
+                  <button
+                    className="detection-queue__btn detection-queue__btn--approve"
+                    onClick={() => handleApprove(verse.id)}
+                  >
+                    SHOW
+                  </button>
+                  <button
+                    className="detection-queue__btn detection-queue__btn--dismiss"
+                    onClick={() => handleDismiss(verse.id)}
+                  >
+                    DISMISS
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+          {actioned.map((verse) => (
+            <li
+              key={verse.id}
+              className={`detection-queue__item detection-queue__item--${verse.status}`}
+            >
+              <div className="detection-queue__ref">
+                {refDisplay(verse.reference)}
+                <span className="detection-queue__translation">{verse.translation}</span>
+                <span className={`detection-queue__badge detection-queue__badge--${verse.status}`}>
+                  {verse.status === "approved" ? "SHOWN" : "DISMISSED"}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
-}
-
-function statusModifier(status: QueueStatus): string {
-  switch (status) {
-    case "pending":  return "pending";
-    case "live":     return "live";
-    case "dismissed": return "dismissed";
-  }
 }

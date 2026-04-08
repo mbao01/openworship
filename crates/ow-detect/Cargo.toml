@@ -1,0 +1,15 @@
+[package]
+name = "ow-detect"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+regex = "1"
+once_cell = "1"
+ow-search = { path = "../ow-search" }
+ow-audio = { path = "../ow-audio" }
+ow-display = { path = "../ow-display" }
+ow-db = { path = "../ow-db" }
+anyhow = { workspace = true }
+tokio = { workspace = true }
