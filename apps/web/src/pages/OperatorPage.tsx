@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DetectionQueue } from "../components/DetectionQueue";
-import { ScriptureSearch } from "../components/ScriptureSearch";
+import { SchedulePanel } from "../components/SchedulePanel";
 import { SettingsModal } from "../components/SettingsModal";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import type { ChurchIdentity } from "../lib/types";
@@ -47,10 +47,9 @@ export function OperatorPage({ identity }: OperatorPageProps) {
 
       {/* Main layout — three columns */}
       <div className="operator-body">
-        {/* Left: Scripture search / content bank */}
+        {/* Left: Schedule + Content Bank */}
         <aside className="operator-col operator-col--left">
-          <h2 className="operator-col__heading">CONTENT BANK</h2>
-          <ScriptureSearch />
+          <SchedulePanel />
         </aside>
 
         {/* Center: Live transcript */}

@@ -6,16 +6,34 @@ export interface TranscriptEvent {
   mic_active: boolean;
 }
 
-export interface ContentItem {
+/** A single scripture item within a service project. */
+export interface ProjectItem {
   id: string;
-  kind: "scripture" | "lyrics" | "announcement";
-  body: string;
+  reference: string;
+  text: string;
+  translation: string;
+  position: number;
+  added_at_ms: number;
 }
 
+/** A named container for the ordered content of a single worship service. */
 export interface ServiceProject {
   id: string;
-  title: string;
-  items: ContentItem[];
+  name: string;
+  created_at_ms: number;
+  /** null while the service is active; set when the operator ends the service. */
+  closed_at_ms: number | null;
+  items: ProjectItem[];
+}
+
+/** An entry in the global content bank (auto-populated on push_to_display). */
+export interface ContentBankEntry {
+  id: string;
+  reference: string;
+  text: string;
+  translation: string;
+  last_used_ms: number;
+  use_count: number;
 }
 
 export interface VerseResult {

@@ -2,6 +2,7 @@ mod commands;
 mod detection;
 mod identity;
 mod keychain;
+mod service;
 mod settings;
 mod state;
 
@@ -41,6 +42,21 @@ pub fn run() {
         });
     let identity = Arc::new(RwLock::new(identity_value));
 
+    // Load service projects and content bank.
+    let projects = Arc::new(RwLock::new(service::load_projects()));
+    let content_bank = Arc::new(RwLock::new(service::load_content_bank()));
+
+    // Determine the active project: the most-recently-created open project, if any.
+    let active_project_id = {
+        let plist = projects.read().unwrap();
+        let active = plist
+            .iter()
+            .filter(|p| p.is_open())
+            .max_by_key(|p| p.created_at_ms)
+            .map(|p| p.id.clone());
+        Arc::new(RwLock::new(active))
+    };
+
     // Clone Arcs for the detection loop before moving into AppState.
     let detect_search = Arc::clone(&search);
     let detect_mode = Arc::clone(&detection_mode);
@@ -54,6 +70,9 @@ pub fn run() {
         queue,
         audio_settings,
         identity,
+        projects,
+        active_project_id,
+        content_bank,
     };
 
     tauri::Builder::default()
@@ -91,6 +110,15 @@ pub fn run() {
             commands::clear_queue,
             commands::get_audio_settings,
             commands::set_audio_settings,
+            commands::create_service_project,
+            commands::list_service_projects,
+            commands::get_active_project,
+            commands::open_service_project,
+            commands::close_active_project,
+            commands::add_item_to_active_project,
+            commands::remove_item_from_active_project,
+            commands::reorder_active_project_items,
+            commands::search_content_bank,
             identity::get_identity,
             identity::create_church,
             identity::join_church,

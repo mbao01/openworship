@@ -1,3 +1,4 @@
+use crate::service::{ContentBankEntry, ProjectItem, ServiceProject};
 use crate::settings::AudioSettings;
 #[cfg(feature = "deepgram")]
 use crate::settings::SttBackend;
@@ -26,16 +27,80 @@ pub fn search_scriptures(
 }
 
 /// Push a verse to the fullscreen display via WebSocket.
+///
+/// Side-effects:
+/// - Adds/updates the entry in the global content bank.
+/// - If a service project is currently open, appends the item (no-op if already
+///   present by reference).
+/// - Emits `service://project-updated` when the project changes.
 #[tauri::command]
 pub fn push_to_display(
     reference: String,
     text: String,
     translation: String,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<(), String> {
-    let event = ContentEvent::scripture(reference, text, translation);
+    let event = ContentEvent::scripture(reference.clone(), text.clone(), translation.clone());
     // Ignore send errors when no display client is connected.
     let _ = state.display_tx.send(event);
+
+    // ── Update content bank ───────────────────────────────────────────────────
+    {
+        let mut bank = state.content_bank.write().map_err(|e| e.to_string())?;
+        let now = crate::service::now_ms();
+        if let Some(entry) = bank.iter_mut().find(|e| e.reference == reference) {
+            entry.last_used_ms = now;
+            entry.use_count += 1;
+        } else {
+            bank.push(ContentBankEntry {
+                id: crate::service::new_id(),
+                reference: reference.clone(),
+                text: text.clone(),
+                translation: translation.clone(),
+                last_used_ms: now,
+                use_count: 1,
+            });
+        }
+        crate::service::save_content_bank(&bank).map_err(|e| e.to_string())?;
+    }
+
+    // ── Append to active project (if open) ────────────────────────────────────
+    let active_id = state
+        .active_project_id
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
+
+    if let Some(id) = active_id {
+        let updated = {
+            let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+            if let Some(p) = projects.iter_mut().find(|p| p.id == id && p.is_open()) {
+                if !p.items.iter().any(|i| i.reference == reference) {
+                    let position = p.items.len();
+                    p.items.push(ProjectItem {
+                        id: crate::service::new_id(),
+                        reference,
+                        text,
+                        translation,
+                        position,
+                        added_at_ms: crate::service::now_ms(),
+                    });
+                    let p = p.clone();
+                    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+                    Some(p)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        };
+        if let Some(project) = updated {
+            let _ = app.emit("service://project-updated", &project);
+        }
+    }
+
     Ok(())
 }
 
@@ -444,4 +509,289 @@ pub(crate) fn detect_and_queue(
     };
 
     let _ = app.emit("detection://queue-updated", snapshot);
+}
+
+// ─── Service project commands ─────────────────────────────────────────────────
+
+/// Create a new named service project and make it the active project.
+#[tauri::command]
+pub fn create_service_project(
+    name: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let project = ServiceProject {
+        id: crate::service::new_id(),
+        name,
+        created_at_ms: crate::service::now_ms(),
+        closed_at_ms: None,
+        items: vec![],
+    };
+
+    {
+        let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+        projects.push(project.clone());
+        crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    }
+
+    {
+        let mut active = state.active_project_id.write().map_err(|e| e.to_string())?;
+        *active = Some(project.id.clone());
+    }
+
+    let _ = app.emit("service://project-updated", &project);
+    Ok(project)
+}
+
+/// Return all service projects, newest first.
+#[tauri::command]
+pub fn list_service_projects(state: State<'_, AppState>) -> Result<Vec<ServiceProject>, String> {
+    let projects = state.projects.read().map_err(|e| e.to_string())?;
+    let mut list: Vec<ServiceProject> = projects.iter().cloned().collect();
+    list.sort_by(|a, b| b.created_at_ms.cmp(&a.created_at_ms));
+    Ok(list)
+}
+
+/// Return the currently active service project, if any.
+#[tauri::command]
+pub fn get_active_project(state: State<'_, AppState>) -> Result<Option<ServiceProject>, String> {
+    let active_id = state
+        .active_project_id
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
+    let Some(id) = active_id else {
+        return Ok(None);
+    };
+    let projects = state.projects.read().map_err(|e| e.to_string())?;
+    Ok(projects.iter().find(|p| p.id == id).cloned())
+}
+
+/// Load an existing project as the active project.
+///
+/// The project's content is ready for the live service.  Closed projects are
+/// loaded as read-only (the UI must enforce this based on `closed_at_ms`).
+#[tauri::command]
+pub fn open_service_project(
+    id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let project = {
+        let projects = state.projects.read().map_err(|e| e.to_string())?;
+        projects
+            .iter()
+            .find(|p| p.id == id)
+            .cloned()
+            .ok_or_else(|| format!("project {id} not found"))?
+    };
+
+    {
+        let mut active = state.active_project_id.write().map_err(|e| e.to_string())?;
+        *active = Some(id);
+    }
+
+    let _ = app.emit("service://project-updated", &project);
+    Ok(project)
+}
+
+/// End the active service — marks it read-only and clears the active slot.
+#[tauri::command]
+pub fn close_active_project(
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let active_id = state
+        .active_project_id
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
+
+    let Some(id) = active_id else {
+        return Ok(());
+    };
+
+    let project = {
+        let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+        let p = projects
+            .iter_mut()
+            .find(|p| p.id == id)
+            .ok_or_else(|| format!("project {id} not found"))?;
+        if p.is_open() {
+            p.closed_at_ms = Some(crate::service::now_ms());
+        }
+        let p = p.clone();
+        crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+        p
+    };
+
+    {
+        let mut active = state.active_project_id.write().map_err(|e| e.to_string())?;
+        *active = None;
+    }
+
+    let _ = app.emit("service://project-updated", &project);
+    Ok(())
+}
+
+/// Add a scripture item to the active (open) project.
+///
+/// Silently skips duplicates (same reference already in the project).
+#[tauri::command]
+pub fn add_item_to_active_project(
+    reference: String,
+    text: String,
+    translation: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let active_id = state
+        .active_project_id
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone()
+        .ok_or("no active project")?;
+
+    let project = {
+        let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+        let p = projects
+            .iter_mut()
+            .find(|p| p.id == active_id)
+            .ok_or_else(|| format!("active project {active_id} not found"))?;
+
+        if !p.is_open() {
+            return Err("cannot modify a closed project".into());
+        }
+
+        if !p.items.iter().any(|i| i.reference == reference) {
+            let position = p.items.len();
+            p.items.push(ProjectItem {
+                id: crate::service::new_id(),
+                reference,
+                text,
+                translation,
+                position,
+                added_at_ms: crate::service::now_ms(),
+            });
+        }
+
+        let p = p.clone();
+        crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+        p
+    };
+
+    let _ = app.emit("service://project-updated", &project);
+    Ok(project)
+}
+
+/// Remove an item from the active (open) project.
+#[tauri::command]
+pub fn remove_item_from_active_project(
+    item_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let active_id = state
+        .active_project_id
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone()
+        .ok_or("no active project")?;
+
+    let project = {
+        let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+        let p = projects
+            .iter_mut()
+            .find(|p| p.id == active_id)
+            .ok_or_else(|| format!("active project {active_id} not found"))?;
+
+        if !p.is_open() {
+            return Err("cannot modify a closed project".into());
+        }
+
+        p.items.retain(|i| i.id != item_id);
+        for (i, item) in p.items.iter_mut().enumerate() {
+            item.position = i;
+        }
+
+        let p = p.clone();
+        crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+        p
+    };
+
+    let _ = app.emit("service://project-updated", &project);
+    Ok(project)
+}
+
+/// Reorder items in the active (open) project.
+///
+/// `item_ids` must contain the IDs of every item in the desired new order.
+/// Items whose ID is absent from `item_ids` are silently dropped.
+#[tauri::command]
+pub fn reorder_active_project_items(
+    item_ids: Vec<String>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let active_id = state
+        .active_project_id
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone()
+        .ok_or("no active project")?;
+
+    let project = {
+        let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+        let p = projects
+            .iter_mut()
+            .find(|p| p.id == active_id)
+            .ok_or_else(|| format!("active project {active_id} not found"))?;
+
+        if !p.is_open() {
+            return Err("cannot modify a closed project".into());
+        }
+
+        let mut reordered: Vec<ProjectItem> = Vec::with_capacity(p.items.len());
+        for (pos, id) in item_ids.iter().enumerate() {
+            if let Some(item) = p.items.iter().find(|i| &i.id == id) {
+                let mut item = item.clone();
+                item.position = pos;
+                reordered.push(item);
+            }
+        }
+        p.items = reordered;
+
+        let p = p.clone();
+        crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+        p
+    };
+
+    let _ = app.emit("service://project-updated", &project);
+    Ok(project)
+}
+
+/// Search the content bank by reference or verse text.
+///
+/// Empty query returns the 20 most-recently-used entries.
+#[tauri::command]
+pub fn search_content_bank(
+    query: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<ContentBankEntry>, String> {
+    let bank = state.content_bank.read().map_err(|e| e.to_string())?;
+    let q = query.to_lowercase();
+    let results: Vec<ContentBankEntry> = if q.is_empty() {
+        let mut entries: Vec<ContentBankEntry> = bank.iter().cloned().collect();
+        entries.sort_by(|a, b| b.last_used_ms.cmp(&a.last_used_ms));
+        entries.truncate(20);
+        entries
+    } else {
+        bank.iter()
+            .filter(|e| {
+                e.reference.to_lowercase().contains(&q) || e.text.to_lowercase().contains(&q)
+            })
+            .cloned()
+            .collect()
+    };
+    Ok(results)
 }
