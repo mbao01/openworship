@@ -430,7 +430,7 @@ fn enqueue_song_ref(
     q.iter().cloned().collect()
 }
 
-/// Generic inner enqueue that carries semantic metadata and content kind.
+/// Inner implementation that carries semantic metadata.
 #[allow(clippy::too_many_arguments)]
 fn enqueue_item_inner(
     reference: String,
