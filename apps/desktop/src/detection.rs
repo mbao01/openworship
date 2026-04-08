@@ -143,13 +143,21 @@ pub async fn run_loop(
                 let (sem_enabled, thresh_auto, thresh_copilot) = sem_cfg;
 
                 if sem_enabled && !text.trim().is_empty() {
-                    let should_run = text != semantic_last_text
-                        || semantic_last_run
-                            .map(|t| {
-                                now.duration_since(t)
-                                    >= Duration::from_secs(SEMANTIC_DEBOUNCE_SECS)
-                            })
-                            .unwrap_or(true);
+                    // Debounce is the primary gate: only run if enough time has
+                    // elapsed since the last pass.  Text-change is a skip
+                    // optimisation: if the window is identical to the last run
+                    // there is nothing new to learn.
+                    //
+                    // Previously this was `text_changed || debounce_elapsed`,
+                    // which fired on every transcript token (text always changes)
+                    // regardless of the debounce, hammering Ollama continuously
+                    // during speech.
+                    let debounce_elapsed = semantic_last_run
+                        .map(|t| {
+                            now.duration_since(t) >= Duration::from_secs(SEMANTIC_DEBOUNCE_SECS)
+                        })
+                        .unwrap_or(true);
+                    let should_run = debounce_elapsed && text != semantic_last_text;
 
                     if should_run {
                         // Check if the index is ready without holding the lock.
@@ -162,7 +170,11 @@ pub async fn run_loop(
                             // Embed the window text via Ollama (async HTTP).
                             match ollama.embed(&text).await {
                                 Ok(query_emb) => {
-                                    semantic_last_run = Some(now);
+                                    // Re-sample the clock after the async embed
+                                    // so that cooldown timestamps and the debounce
+                                    // anchor are not stale by the embed latency.
+                                    let embed_now = Instant::now();
+                                    semantic_last_run = Some(embed_now);
                                     semantic_last_text = text.clone();
 
                                     let threshold = match current_mode {
@@ -203,7 +215,7 @@ pub async fn run_loop(
                                                 }
                                             }
 
-                                            cooldown.insert(m.verse.reference.clone(), now);
+                                            cooldown.insert(m.verse.reference.clone(), embed_now);
                                             let snapshot = enqueue_item_inner(
                                                 m.verse.reference.clone(),
                                                 m.verse.text.clone(),
@@ -220,6 +232,10 @@ pub async fn run_loop(
                                 }
                                 Err(e) => {
                                     eprintln!("[detect] semantic embed failed: {e}");
+                                    // Record the run time even on failure so the debounce
+                                    // prevents hammering a broken/slow Ollama with a retry
+                                    // on every incoming transcript token.
+                                    semantic_last_run = Some(now);
                                 }
                             }
                         }

@@ -299,9 +299,10 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
               max="0.99"
               step="0.01"
               value={settings.semantic_threshold_auto}
-              onChange={(e) =>
-                onSettingsChange({ semantic_threshold_auto: parseFloat(e.target.value) })
-              }
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v)) onSettingsChange({ semantic_threshold_auto: v });
+              }}
             />
             <p className="settings-group__hint">
               Lower = more matches (may include false positives). Higher = stricter.
@@ -319,9 +320,10 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
               max="0.99"
               step="0.01"
               value={settings.semantic_threshold_copilot}
-              onChange={(e) =>
-                onSettingsChange({ semantic_threshold_copilot: parseFloat(e.target.value) })
-              }
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v)) onSettingsChange({ semantic_threshold_copilot: v });
+              }}
             />
             <p className="settings-group__hint">
               Copilot mode requires your approval before display — a stricter threshold

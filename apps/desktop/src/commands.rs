@@ -873,7 +873,11 @@ pub async fn search_semantic(
         .await
         .map_err(|e| format!("embed failed: {e}"))?;
 
-    let effective_threshold = threshold.unwrap_or(0.75);
+    // Clamp threshold to a sane range — reject NaN, infinity, and out-of-range
+    // values.  Note: f32::clamp propagates NaN unchanged, and f32::NAN.max(0.0)
+    // also returns NaN in Rust — so we must check is_nan() explicitly.
+    let raw = threshold.unwrap_or(0.75);
+    let effective_threshold = if raw.is_nan() { 0.75 } else { raw.clamp(0.0, 1.0) };
 
     let results = state
         .semantic_index

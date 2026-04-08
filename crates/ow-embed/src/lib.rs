@@ -134,14 +134,19 @@ impl Default for OllamaClient {
 
 /// Cosine similarity in `[−1, 1]`.  Returns 0.0 for zero-length vectors.
 pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
-    debug_assert_eq!(a.len(), b.len(), "embedding dimension mismatch");
-    if a.is_empty() || b.is_empty() {
+    // Dimension mismatch produces meaningless similarity — return 0.0 rather
+    // than silently truncating via zip (which debug_assert alone would allow in
+    // release builds).
+    if a.len() != b.len() || a.is_empty() {
         return 0.0;
     }
     let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
     let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
     let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if norm_a == 0.0 || norm_b == 0.0 {
+    // Use an epsilon guard rather than exact zero — a subnormal norm would pass
+    // the == 0.0 check and cause division by a tiny value, producing ±Inf that
+    // then clamps to ±1.0, matching everything at max similarity.
+    if norm_a < f32::EPSILON || norm_b < f32::EPSILON {
         return 0.0;
     }
     (dot / (norm_a * norm_b)).clamp(-1.0, 1.0)
