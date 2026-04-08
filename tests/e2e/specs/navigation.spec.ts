@@ -34,7 +34,7 @@ test.describe("App Navigation", () => {
     await page.waitForSelector(".operator-root, .onboarding-root", {
       timeout: 15_000,
     });
-    await expect(page.locator(".operator-col__heading")).toContainText(
+    await expect(page.locator(".content-bank__toggle-label")).toContainText(
       "CONTENT BANK"
     );
   });
