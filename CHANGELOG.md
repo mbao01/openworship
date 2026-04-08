@@ -2,6 +2,22 @@
 
 All notable changes to OpenWorship are documented here.
 
+## [0.3.0.0] - 2026-04-08
+
+### Added
+
+- **Multi-Translation Live Switcher**: Operator titlebar dropdown lets the operator switch Bible translation in real time; the live queue item is re-fetched in the new translation and pushed to the display immediately (`switch_live_translation` Tauri command)
+- **Confidence Scoring**: `VerseResult` now carries a normalized BM25 confidence score (0.0–1.0) for every search result; exact reference lookups return `1.0`; detection queue renders a visual confidence bar per item
+- **Lyrics Detection Thresholds**: `AudioSettings` gains `lyrics_threshold_auto` (default 0.70) and `lyrics_threshold_copilot` (default 0.78) fields with slider controls in SettingsModal
+- **`get_active_translation` Tauri command**: Frontend can query the currently active translation without a full state reload
+
+### Fixed
+
+- BM25 score normalization floor changed from `1.0` to `f32::EPSILON` so the top result always scores `1.0` even on weak matches (short corpus, single-result sets)
+- `parseFloat` NaN guard added to all four threshold sliders in SettingsModal (`semantic_threshold_auto`, `semantic_threshold_copilot`, `lyrics_threshold_auto`, `lyrics_threshold_copilot`) to prevent `NaN` from propagating into Rust settings
+- `TranslationSwitcher.load()` wrapped in `try/catch` so backend-not-ready startup errors are silently swallowed rather than surfaced as unhandled rejections
+- Removed dead `enqueue_item` wrapper from `detection.rs` (Clippy: never used; all callers already used `enqueue_item_inner`)
+
 ## [0.2.0.0] - 2026-04-08
 
 ### Added

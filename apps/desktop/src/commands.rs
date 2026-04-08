@@ -1106,6 +1106,87 @@ pub fn push_song_to_display(
     Ok(())
 }
 
+// ─── Translation switcher ─────────────────────────────────────────────────────
+
+/// Return the currently active Bible translation abbreviation (default: "KJV").
+#[tauri::command]
+pub fn get_active_translation(state: State<'_, AppState>) -> String {
+    state
+        .active_translation
+        .read()
+        .map(|t| t.clone())
+        .unwrap_or_else(|_| "KJV".into())
+}
+
+/// Switch the active Bible translation.
+///
+/// If a verse is currently live on the display, re-fetches it in the new
+/// translation and pushes the update to the display WebSocket immediately.
+/// Also emits `detection://queue-updated` so the queue cards refresh.
+#[tauri::command]
+pub fn switch_live_translation(
+    translation: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    // Update active translation first.
+    {
+        let mut active = state.active_translation.write().map_err(|e| e.to_string())?;
+        *active = translation.clone();
+    }
+
+    // Find the current Live queue item (first one in Live status).
+    let live_item = {
+        let q = state.queue.lock().unwrap_or_else(|e| e.into_inner());
+        q.iter()
+            .find(|i| i.status == ow_core::QueueStatus::Live)
+            .cloned()
+    };
+
+    if let Some(item) = live_item {
+        // Re-fetch the verse in the new translation.
+        let result = state
+            .search
+            .search(&item.reference, Some(&translation), 1)
+            .ok()
+            .and_then(|mut r| r.pop())
+            .or_else(|| {
+                // Fall back to any translation if the requested one is unavailable.
+                state
+                    .search
+                    .search(&item.reference, None, 1)
+                    .ok()
+                    .and_then(|mut r| r.pop())
+            });
+
+        if let Some(verse) = result {
+            // Push updated translation to display.
+            let event = ow_display::ContentEvent::scripture(
+                &verse.reference,
+                &verse.text,
+                &verse.translation,
+            );
+            let _ = state.display_tx.send(event);
+
+            // Update the queue item text + translation in place.
+            {
+                let mut q = state.queue.lock().unwrap_or_else(|e| e.into_inner());
+                if let Some(live) = q.iter_mut().find(|i| i.status == ow_core::QueueStatus::Live) {
+                    live.text = verse.text;
+                    live.translation = verse.translation;
+                }
+            }
+
+            // Emit queue update so the frontend refreshes.
+            let snapshot: Vec<QueueItem> =
+                state.queue.lock().unwrap_or_else(|e| e.into_inner()).iter().cloned().collect();
+            let _ = app.emit(crate::detection::QUEUE_UPDATED_EVENT, snapshot);
+        }
+    }
+
+    Ok(())
+}
+
 /// Status of the song semantic index.
 #[derive(serde::Serialize)]
 pub struct SongSemanticStatus {

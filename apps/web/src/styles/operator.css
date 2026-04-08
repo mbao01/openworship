@@ -1915,3 +1915,88 @@
   line-height: 1;
   flex-shrink: 0;
 }
+
+/* ============================================================
+   Translation switcher (OPE-32)
+   ============================================================ */
+
+.operator-titlebar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.translation-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.translation-switcher__label {
+  font-size: 10px;
+  color: var(--color-smoke);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.translation-switcher__select {
+  appearance: none;
+  background: var(--color-iron);
+  color: var(--color-chalk);
+  border: 1px solid var(--color-steel);
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 2px 20px 2px 6px;
+  height: 22px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+}
+
+.translation-switcher__select:focus {
+  outline: 1px solid var(--color-gold);
+  outline-offset: 1px;
+}
+
+/* ============================================================
+   Detection card confidence bar (OPE-32)
+   ============================================================ */
+
+.detection-card__confidence {
+  position: relative;
+  height: 3px;
+  background: var(--color-iron);
+  border-radius: 2px;
+  margin: var(--space-1) 0 var(--space-1);
+  overflow: visible;
+}
+
+.detection-card__confidence-fill {
+  height: 100%;
+  background: var(--color-gold);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.detection-card__confidence-label {
+  position: absolute;
+  right: 0;
+  top: -14px;
+  font-size: 9px;
+  color: var(--color-smoke);
+  font-family: var(--font-mono);
+}
+
+/* ============================================================
+   Content bank score badge (OPE-32 Airplane mode)
+   ============================================================ */
+
+.content-bank__score {
+  font-size: 9px;
+  color: var(--color-smoke);
+  font-family: var(--font-mono);
+  margin-left: auto;
+  opacity: 0.7;
+}

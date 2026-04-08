@@ -43,6 +43,8 @@ export interface VerseResult {
   verse: number;
   text: string;
   reference: string;
+  /** Normalized relevance score [0–1]. 1.0 for exact lookups; BM25-scaled for keyword search. */
+  score: number;
 }
 
 export interface TranslationInfo {
@@ -64,6 +66,8 @@ export interface AudioSettings {
   semantic_enabled: boolean;
   semantic_threshold_auto: number;
   semantic_threshold_copilot: number;
+  lyrics_threshold_auto: number;
+  lyrics_threshold_copilot: number;
 }
 
 /** Matches Rust `BranchRole` enum. */

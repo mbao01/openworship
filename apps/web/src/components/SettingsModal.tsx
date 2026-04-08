@@ -27,6 +27,8 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
     semantic_enabled: true,
     semantic_threshold_auto: 0.75,
     semantic_threshold_copilot: 0.82,
+    lyrics_threshold_auto: 0.70,
+    lyrics_threshold_copilot: 0.78,
   });
   const [keyVisible, setKeyVisible] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -299,9 +301,10 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
               max="0.99"
               step="0.01"
               value={settings.semantic_threshold_auto}
-              onChange={(e) =>
-                onSettingsChange({ semantic_threshold_auto: parseFloat(e.target.value) })
-              }
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v)) onSettingsChange({ semantic_threshold_auto: v });
+              }}
             />
             <p className="settings-group__hint">
               Lower = more matches (may include false positives). Higher = stricter.
@@ -319,14 +322,60 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
               max="0.99"
               step="0.01"
               value={settings.semantic_threshold_copilot}
-              onChange={(e) =>
-                onSettingsChange({ semantic_threshold_copilot: parseFloat(e.target.value) })
-              }
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v)) onSettingsChange({ semantic_threshold_copilot: v });
+              }}
             />
             <p className="settings-group__hint">
               Copilot mode requires your approval before display — a stricter threshold
               reduces noise in the suggestion queue.
             </p>
+          </div>
+
+          {/* Lyrics-specific thresholds */}
+          <div className="settings-group">
+            <p className="settings-group__label">LYRICS CONTENT TYPE</p>
+            <p className="settings-group__hint">
+              Separate thresholds for song lyric detection — typically set lower than
+              scripture since lyric phrases are more colloquial.
+            </p>
+          </div>
+
+          <div className="settings-group">
+            <p className="settings-group__label">
+              LYRICS AUTO MODE THRESHOLD — {formatThreshold(settings.lyrics_threshold_auto)}
+            </p>
+            <input
+              className="settings-slider"
+              type="range"
+              min="0.5"
+              max="0.99"
+              step="0.01"
+              value={settings.lyrics_threshold_auto}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v)) onSettingsChange({ lyrics_threshold_auto: v });
+              }}
+            />
+          </div>
+
+          <div className="settings-group">
+            <p className="settings-group__label">
+              LYRICS COPILOT MODE THRESHOLD — {formatThreshold(settings.lyrics_threshold_copilot)}
+            </p>
+            <input
+              className="settings-slider"
+              type="range"
+              min="0.5"
+              max="0.99"
+              step="0.01"
+              value={settings.lyrics_threshold_copilot}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v)) onSettingsChange({ lyrics_threshold_copilot: v });
+              }}
+            />
           </div>
         </>
       )}

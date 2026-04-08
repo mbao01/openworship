@@ -71,6 +71,7 @@ pub fn run() {
             verse: v.verse,
             text: v.text.clone(),
             reference: v.reference.clone(),
+            score: 1.0,
         })
         .collect();
 
@@ -95,6 +96,9 @@ pub fn run() {
     let song_semantic_index: Arc<RwLock<Option<songs::SongSemanticIndex>>> =
         Arc::new(RwLock::new(None));
 
+    // Active Bible translation (defaults to KJV; operator can switch at runtime).
+    let active_translation = Arc::new(RwLock::new("KJV".to_string()));
+
     // ── Clone Arcs for detection loop ─────────────────────────────────────────
     let detect_search = Arc::clone(&search);
     let detect_mode = Arc::clone(&detection_mode);
@@ -104,6 +108,7 @@ pub fn run() {
     let detect_ollama = Arc::clone(&ollama);
     let detect_song_semantic = Arc::clone(&song_semantic_index);
     let detect_song_refs = Arc::clone(&song_refs);
+    let detect_translation = Arc::clone(&active_translation);
 
     // ── Clone Arcs for background embedding tasks ─────────────────────────────
     let embed_index = Arc::clone(&semantic_index);
@@ -129,6 +134,7 @@ pub fn run() {
         songs_db,
         song_semantic_index,
         song_refs,
+        active_translation,
     };
 
     tauri::Builder::default()
@@ -153,6 +159,7 @@ pub fn run() {
                 detect_song_refs,
                 tx_for_detect,
                 app_handle,
+                detect_translation,
             ));
 
             // Background: embed all scripture verses.
@@ -248,6 +255,8 @@ pub fn run() {
             commands::import_songs_openlp,
             commands::push_song_to_display,
             commands::get_song_semantic_status,
+            commands::get_active_translation,
+            commands::switch_live_translation,
             identity::get_identity,
             identity::create_church,
             identity::join_church,

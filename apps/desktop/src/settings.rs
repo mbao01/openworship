@@ -42,6 +42,10 @@ pub struct AudioSettings {
     /// Cosine-similarity threshold for semantic matches in Copilot mode.
     /// Default: 0.82 (stricter, because the operator reviews before display).
     pub semantic_threshold_copilot: f32,
+    /// Semantic match threshold for song lyrics in Auto / Offline mode. Default: 0.70.
+    pub lyrics_threshold_auto: f32,
+    /// Semantic match threshold for song lyrics in Copilot mode. Default: 0.78.
+    pub lyrics_threshold_copilot: f32,
 }
 
 impl Default for AudioSettings {
@@ -52,6 +56,8 @@ impl Default for AudioSettings {
             semantic_enabled: true,
             semantic_threshold_auto: 0.75,
             semantic_threshold_copilot: 0.82,
+            lyrics_threshold_auto: 0.70,
+            lyrics_threshold_copilot: 0.78,
         }
     }
 }
@@ -67,6 +73,8 @@ struct AudioSettingsFile {
     semantic_enabled: Option<bool>,
     semantic_threshold_auto: Option<f32>,
     semantic_threshold_copilot: Option<f32>,
+    lyrics_threshold_auto: Option<f32>,
+    lyrics_threshold_copilot: Option<f32>,
 }
 
 impl AudioSettings {
@@ -123,6 +131,12 @@ impl AudioSettings {
             semantic_threshold_copilot: file
                 .semantic_threshold_copilot
                 .unwrap_or(defaults.semantic_threshold_copilot),
+            lyrics_threshold_auto: file
+                .lyrics_threshold_auto
+                .unwrap_or(defaults.lyrics_threshold_auto),
+            lyrics_threshold_copilot: file
+                .lyrics_threshold_copilot
+                .unwrap_or(defaults.lyrics_threshold_copilot),
         })
     }
 
@@ -181,5 +195,45 @@ mod tests {
         let file: AudioSettingsFile = serde_json::from_str(json).unwrap();
         assert_eq!(file.backend, SttBackend::Online);
         assert_eq!(file.deepgram_api_key, "old-plaintext-key");
+    }
+
+    #[test]
+    fn lyrics_thresholds_have_correct_defaults() {
+        let s = AudioSettings::default();
+        assert!(
+            (s.lyrics_threshold_auto - 0.70).abs() < f32::EPSILON,
+            "lyrics_threshold_auto default should be 0.70, got {}",
+            s.lyrics_threshold_auto
+        );
+        assert!(
+            (s.lyrics_threshold_copilot - 0.78).abs() < f32::EPSILON,
+            "lyrics_threshold_copilot default should be 0.78, got {}",
+            s.lyrics_threshold_copilot
+        );
+    }
+
+    #[test]
+    fn lyrics_thresholds_lower_than_scripture_thresholds() {
+        let s = AudioSettings::default();
+        assert!(
+            s.lyrics_threshold_auto < s.semantic_threshold_auto,
+            "lyrics auto ({}) should be lower than scripture auto ({})",
+            s.lyrics_threshold_auto,
+            s.semantic_threshold_auto
+        );
+        assert!(
+            s.lyrics_threshold_copilot < s.semantic_threshold_copilot,
+            "lyrics copilot ({}) should be lower than scripture copilot ({})",
+            s.lyrics_threshold_copilot,
+            s.semantic_threshold_copilot
+        );
+    }
+
+    #[test]
+    fn missing_lyrics_fields_use_defaults() {
+        let json = r#"{"backend":"offline"}"#;
+        let s: AudioSettings = serde_json::from_str(json).unwrap();
+        assert!((s.lyrics_threshold_auto - 0.70).abs() < f32::EPSILON);
+        assert!((s.lyrics_threshold_copilot - 0.78).abs() < f32::EPSILON);
     }
 }

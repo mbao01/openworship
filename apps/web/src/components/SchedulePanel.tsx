@@ -301,6 +301,14 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                         <div className="content-bank__result-meta">
                           <span className="content-bank__reference">{v.reference}</span>
                           <span className="content-bank__translation">{v.translation}</span>
+                          {v.score != null && v.score < 1.0 && (
+                            <span
+                              className="content-bank__score"
+                              title={`${Math.round(v.score * 100)}% relevance`}
+                            >
+                              {Math.round(v.score * 100)}%
+                            </span>
+                          )}
                           {isLive && (
                             <span className="content-bank__live-dot" aria-label="Live" />
                           )}
