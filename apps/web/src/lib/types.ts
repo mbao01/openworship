@@ -61,6 +61,9 @@ export type SttBackend = "offline" | "online";
 export interface AudioSettings {
   backend: SttBackend;
   deepgram_api_key: string;
+  semantic_enabled: boolean;
+  semantic_threshold_auto: number;
+  semantic_threshold_copilot: number;
 }
 
 /** Matches Rust `BranchRole` enum. */
@@ -88,4 +91,15 @@ export interface QueueItem {
   translation: string;
   status: QueueStatus;
   detected_at_ms: number;
+  /** True when this item was matched via semantic similarity (Phase 9). */
+  is_semantic?: boolean;
+  /** Cosine similarity score [0–1] for semantic matches. */
+  confidence?: number;
+}
+
+/** Status of the semantic scripture index (Phase 9). */
+export interface SemanticStatus {
+  ready: boolean;
+  verse_count: number;
+  enabled: boolean;
 }

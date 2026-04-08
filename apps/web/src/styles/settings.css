@@ -373,3 +373,48 @@
   letter-spacing: 0.25em;
   color: var(--color-gold);
 }
+
+/* ─── Detection / Semantic section ────────────────────────────────────────── */
+
+.settings-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  color: var(--color-ash);
+  font-size: 13px;
+}
+
+.settings-checkbox-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--color-gold);
+  cursor: pointer;
+}
+
+.settings-slider {
+  width: 100%;
+  accent-color: var(--color-gold);
+  cursor: pointer;
+  margin-top: var(--space-1);
+}
+
+.settings-semantic-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--color-ash);
+}
+
+.settings-semantic-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-iron);
+  flex-shrink: 0;
+}
+
+.settings-semantic-dot--ready {
+  background: var(--color-gold);
+}
