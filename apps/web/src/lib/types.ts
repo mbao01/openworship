@@ -57,7 +57,7 @@ export interface TranslationInfo {
 export type DetectionMode = "auto" | "copilot" | "airplane" | "offline";
 
 /** Matches Rust `SttBackend` enum. */
-export type SttBackend = "offline" | "online";
+export type SttBackend = "whisper" | "deepgram" | "off";
 
 /** Matches Rust `AudioSettings` struct. */
 export interface AudioSettings {

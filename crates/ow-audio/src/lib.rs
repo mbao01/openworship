@@ -20,7 +20,7 @@ pub use engine::{SttEngine, SttStatus};
 pub use event::TranscriptEvent;
 pub use transcribe::{MockTranscriber, Transcriber};
 #[cfg(feature = "whisper")]
-pub use transcribe::WhisperTranscriber;
+pub use transcribe::{WhisperTranscriber, default_model_path, resolve_model_path};
 #[cfg(feature = "deepgram")]
 pub use deepgram::DeepgramTranscriber;
 

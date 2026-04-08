@@ -40,8 +40,7 @@ impl Transcriber for MockTranscriber {
 
 #[cfg(feature = "whisper")]
 pub struct WhisperTranscriber {
-    ctx: whisper_rs::WhisperContext,
-    state: whisper_rs::WhisperState<'static>,
+    state: whisper_rs::WhisperState,
 }
 
 #[cfg(feature = "whisper")]
@@ -55,12 +54,10 @@ impl WhisperTranscriber {
             WhisperContextParameters::default(),
         )
         .map_err(|e| anyhow::anyhow!("Failed to load whisper model: {e}"))?;
-        // SAFETY: state borrows ctx; we box both together so lifetimes align.
-        let ctx = Box::leak(Box::new(ctx));
         let state = ctx
             .create_state()
             .map_err(|e| anyhow::anyhow!("Failed to create whisper state: {e}"))?;
-        Ok(Self { ctx: unsafe { std::ptr::read(ctx as *const _) }, state })
+        Ok(Self { state })
     }
 
     /// Try to load from the standard model resolution path.
@@ -89,7 +86,7 @@ impl Transcriber for WhisperTranscriber {
         let mut out = String::new();
         for i in 0..n {
             if let Ok(seg) = self.state.full_get_segment_text(i) {
-                out.push_str(seg.trim());
+                out.push_str(seg.trim_matches(char::is_whitespace));
                 out.push(' ');
             }
         }
@@ -97,9 +94,21 @@ impl Transcriber for WhisperTranscriber {
     }
 }
 
+/// Returns the canonical path where the primary Whisper model should live.
+/// This is the file that `download_whisper_model` writes to.
+#[cfg(feature = "whisper")]
+pub fn default_model_path() -> std::path::PathBuf {
+    let home = std::env::var("HOME").unwrap_or_default();
+    std::path::PathBuf::from(home)
+        .join(".openworship")
+        .join("models")
+        .join("ggml-base.en.bin")
+}
+
 /// Resolve the model path using:
 /// 1. `OPENWORSHIP_WHISPER_MODEL` env var
-/// 2. `~/.openworship/models/ggml-tiny.en.bin`
+/// 2. `~/.openworship/models/ggml-base.en.bin` (preferred)
+/// 3. `~/.openworship/models/ggml-tiny.en.bin`  (legacy fallback)
 #[cfg(feature = "whisper")]
 pub fn resolve_model_path() -> Result<std::path::PathBuf> {
     if let Ok(p) = std::env::var("OPENWORSHIP_WHISPER_MODEL") {
@@ -109,14 +118,12 @@ pub fn resolve_model_path() -> Result<std::path::PathBuf> {
         }
     }
     let home = std::env::var("HOME").unwrap_or_default();
-    let default = std::path::PathBuf::from(home)
-        .join(".openworship")
-        .join("models")
-        .join("ggml-tiny.en.bin");
-    if default.exists() {
-        return Ok(default);
+    let models_dir = std::path::PathBuf::from(&home).join(".openworship").join("models");
+    for name in ["ggml-base.en.bin", "ggml-tiny.en.bin"] {
+        let path = models_dir.join(name);
+        if path.exists() {
+            return Ok(path);
+        }
     }
-    bail!(
-        "Whisper model not found. Set OPENWORSHIP_WHISPER_MODEL or run scripts/download-whisper-model.sh"
-    )
+    anyhow::bail!("Whisper model not found. Use Settings → Audio → Download Model to get ggml-base.en.bin")
 }
