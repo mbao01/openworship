@@ -2,7 +2,7 @@ use crate::artifacts::ArtifactsDb;
 use crate::cloud_sync::{CloudSyncDb, S3Config};
 use crate::identity::ChurchIdentity;
 use crate::service::{ContentBankEntry, ServiceProject};
-use crate::settings::AudioSettings;
+use crate::settings::{AudioSettings, DisplaySettings};
 use crate::slides::{AnnouncementItem, SermonNote};
 use crate::songs::{SongSemanticIndex, SongsDb};
 use crate::summaries::{EmailSettings, EmailSubscriber, ServiceSummary};
@@ -26,6 +26,8 @@ pub struct AppState {
     pub queue: Arc<Mutex<VecDeque<QueueItem>>>,
     /// Operator audio/STT settings, persisted to disk.
     pub audio_settings: Arc<RwLock<AudioSettings>>,
+    /// Display output settings (monitor selection, multi-output), persisted to disk.
+    pub display_settings: Arc<RwLock<DisplaySettings>>,
     /// Church + branch identity. `None` until onboarding completes.
     pub identity: Arc<RwLock<Option<ChurchIdentity>>>,
     /// All service projects, persisted to `~/.openworship/projects.json`.

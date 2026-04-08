@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "../lib/tauri";
-import type { AudioSettings, ChurchIdentity, EmailSettings, EmailSubscriber, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
+import type { AudioSettings, ChurchIdentity, DisplaySettings, EmailSettings, EmailSubscriber, MonitorInfo, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
 
 interface SettingsModalProps {
   identity: ChurchIdentity;
@@ -123,7 +123,7 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
             />
           )}
           {activeCategory === "general" && <PlaceholderSection title="General" />}
-          {activeCategory === "display" && <PlaceholderSection title="Display" />}
+          {activeCategory === "display" && <DisplaySection />}
           {activeCategory === "detection" && (
             <DetectionSection
               settings={audioSettings}
@@ -510,6 +510,181 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ─── Display section (OPE-63) ─────────────────────────────────────────────────
+
+function DisplaySection() {
+  const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
+  const [settings, setSettings] = useState<DisplaySettings>({ selected_monitor_index: null, multi_output: false });
+  const [windowOpen, setWindowOpen] = useState(false);
+  const [obsUrl, setObsUrl] = useState("");
+  const [obsCopied, setObsCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load state on mount.
+  useEffect(() => {
+    invoke<MonitorInfo[]>("list_monitors").then(setMonitors).catch(() => {});
+    invoke<DisplaySettings>("get_display_settings").then(setSettings).catch(() => {});
+    invoke<boolean>("get_display_window_open").then(setWindowOpen).catch(() => {});
+    invoke<string>("get_obs_display_url").then(setObsUrl).catch(() => {});
+  }, []);
+
+  // Listen for monitor-disconnected events.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen("display://monitor-disconnected", () => {
+      setError("Selected monitor disconnected — falling back to primary display.");
+      invoke<MonitorInfo[]>("list_monitors").then(setMonitors).catch(() => {});
+    }).then((fn) => { unlisten = fn; });
+    return () => unlisten?.();
+  }, []);
+
+  const handleOpen = async (monitorIndex: number) => {
+    setError(null);
+    try {
+      await invoke("open_display_window", { monitorIndex });
+      setWindowOpen(true);
+      setSettings((prev) => ({ ...prev, selected_monitor_index: monitorIndex }));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  const handleClose = async () => {
+    setError(null);
+    try {
+      await invoke("close_display_window");
+      setWindowOpen(false);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  const handleMultiOutputToggle = async (enabled: boolean) => {
+    const next = { ...settings, multi_output: enabled };
+    setSettings(next);
+    try {
+      await invoke("set_display_settings", { settings: next });
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  const handleCopyObsUrl = () => {
+    if (!obsUrl) return;
+    navigator.clipboard.writeText(obsUrl).then(() => {
+      setObsCopied(true);
+      setTimeout(() => setObsCopied(false), 1500);
+    });
+  };
+
+  const resolutionLabel = (m: MonitorInfo) =>
+    `${m.width} × ${m.height}${m.scale_factor !== 1 ? ` @${m.scale_factor}x` : ""}`;
+
+  return (
+    <div className="flex-1 p-6">
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">Display</h2>
+
+      {error && (
+        <p className="text-xs text-ember mb-4 leading-[1.5]">{error}</p>
+      )}
+
+      {/* Monitor list */}
+      <div className="mb-6">
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">OUTPUT MONITOR</p>
+        {monitors.length === 0 ? (
+          <p className="text-xs text-smoke leading-[1.5]">No monitors detected.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {monitors.map((m, idx) => {
+              const isSelected = settings.selected_monitor_index === idx;
+              const isActive = windowOpen && isSelected;
+              return (
+                <div
+                  key={idx}
+                  data-qa={`monitor-row-${idx}`}
+                  className={[
+                    "flex items-center justify-between rounded-sm px-4 py-3 border",
+                    isActive
+                      ? "bg-gold/[0.07] border-gold"
+                      : "bg-slate border-iron",
+                  ].join(" ")}
+                >
+                  <div className="flex flex-col gap-[2px]">
+                    <div className="flex items-center gap-2">
+                      <span className="font-sans text-[13px] font-medium text-chalk">{m.name}</span>
+                      {m.is_primary && (
+                        <span className="font-mono text-[9px] font-medium tracking-[0.1em] text-ash bg-iron/60 border border-iron rounded-sm px-[5px] py-[1px]">PRIMARY</span>
+                      )}
+                      {isActive && (
+                        <span className="font-mono text-[9px] font-medium tracking-[0.1em] text-gold bg-gold/10 border border-gold/30 rounded-sm px-[5px] py-[1px]">ACTIVE</span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-ash">{resolutionLabel(m)}</span>
+                  </div>
+                  <button
+                    data-qa={`monitor-open-btn-${idx}`}
+                    className={[
+                      "font-sans text-[11px] font-medium tracking-[0.08em] border-none rounded-sm py-[6px] px-4 cursor-pointer transition-[filter]",
+                      isActive
+                        ? "text-void bg-gold hover:brightness-[1.15]"
+                        : "text-chalk bg-iron/60 hover:bg-iron",
+                    ].join(" ")}
+                    onClick={() => isActive ? handleClose() : handleOpen(idx)}
+                  >
+                    {isActive ? "Close" : "Open Fullscreen"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-xs text-smoke mt-3 leading-[1.5]">
+          Opens a dedicated fullscreen window on the selected monitor. Projector operators can close it with Escape.
+        </p>
+      </div>
+
+      {/* Multi-output toggle */}
+      {monitors.length > 1 && (
+        <div className="mb-6">
+          <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">MULTI-OUTPUT</p>
+          <label className="flex items-center gap-2 cursor-pointer text-ash text-[13px]">
+            <input
+              type="checkbox"
+              className="w-[14px] h-[14px] accent-gold cursor-pointer"
+              checked={settings.multi_output}
+              onChange={(e) => handleMultiOutputToggle(e.target.checked)}
+            />
+            <span>Mirror content on all connected displays</span>
+          </label>
+          <p className="text-xs text-smoke mt-2 leading-[1.5]">
+            When enabled, "Open Fullscreen" opens windows on every monitor simultaneously.
+          </p>
+        </div>
+      )}
+
+      {/* OBS browser source URL */}
+      <div className="mb-6">
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">OBS BROWSER SOURCE</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="flex-1 font-mono text-[11px] text-chalk bg-void border border-iron rounded-sm px-3 py-2 overflow-hidden text-ellipsis whitespace-nowrap">
+            {obsUrl || "ws://127.0.0.1:9000"}
+          </span>
+          <button
+            data-qa="obs-url-copy-btn"
+            className="font-sans text-[11px] font-medium tracking-[0.08em] text-ash bg-transparent border border-iron rounded-sm py-[6px] px-3 cursor-pointer transition-colors hover:text-chalk hover:border-ash whitespace-nowrap"
+            onClick={handleCopyObsUrl}
+          >
+            {obsCopied ? "Copied" : "Copy"}
+          </button>
+        </div>
+        <p className="text-xs text-smoke mt-2 leading-[1.5]">
+          Add this URL as a Browser Source in OBS. Works regardless of the display window state.
+        </p>
+      </div>
     </div>
   );
 }
