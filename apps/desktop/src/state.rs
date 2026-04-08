@@ -1,3 +1,4 @@
+use crate::artifacts::ArtifactsDb;
 use crate::identity::ChurchIdentity;
 use crate::service::{ContentBankEntry, ServiceProject};
 use crate::settings::AudioSettings;
@@ -53,6 +54,8 @@ pub struct AppState {
     /// Active sermon note state: `(note_id, current_slide_index)`.
     /// `None` when no sermon note is currently in use.
     pub active_sermon_note: Arc<RwLock<Option<(String, u32)>>>,
+    /// Artifact metadata database (Phase 15).
+    pub artifacts_db: Arc<Mutex<ArtifactsDb>>,
     /// Generated service summaries, persisted to `~/.openworship/summaries.json`.
     pub summaries: Arc<RwLock<Vec<ServiceSummary>>>,
     /// Email subscribers per church, persisted to `~/.openworship/subscribers.json`.

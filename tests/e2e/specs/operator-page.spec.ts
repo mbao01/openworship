@@ -16,7 +16,7 @@ test.describe("Operator Page", () => {
   test("settings gear button is present and accessible", async ({
     operatorPage: page,
   }) => {
-    const settingsBtn = page.locator(".settings-gear-btn");
+    const settingsBtn = page.locator('button[aria-label="Open settings"]');
     await expect(settingsBtn).toBeVisible();
     await expect(settingsBtn).toHaveAttribute("aria-label", "Open settings");
   });
@@ -24,7 +24,7 @@ test.describe("Operator Page", () => {
   test("clicking settings gear opens settings modal", async ({
     operatorPage: page,
   }) => {
-    const settingsBtn = page.locator(".settings-gear-btn");
+    const settingsBtn = page.locator('button[aria-label="Open settings"]');
     await settingsBtn.click();
     await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
   });

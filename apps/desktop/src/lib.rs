@@ -1,3 +1,4 @@
+mod artifacts;
 mod claude_api;
 mod commands;
 mod detection;
@@ -111,6 +112,17 @@ pub fn run() {
     let sermon_notes = Arc::new(RwLock::new(slides::load_sermon_notes()));
     let active_sermon_note: Arc<RwLock<Option<(String, u32)>>> = Arc::new(RwLock::new(None));
 
+    // ── Artifacts DB (Phase 15) ────────────────────────────────────────────────
+    let artifacts_db = match artifacts::ArtifactsDb::open() {
+        Ok(db) => Arc::new(Mutex::new(db)),
+        Err(e) => {
+            eprintln!("[artifacts] failed to open db: {e}; using in-memory fallback");
+            Arc::new(Mutex::new(
+                artifacts::ArtifactsDb::open_in_memory()
+                    .expect("failed to open in-memory artifacts DB"),
+            ))
+        }
+    };
     // ── Phase 14: Summaries + email subscriptions ─────────────────────────────
     let summaries = Arc::new(RwLock::new(summaries::load_summaries()));
     let subscribers = Arc::new(RwLock::new(summaries::load_subscribers()));
@@ -159,6 +171,7 @@ pub fn run() {
         announcements,
         sermon_notes,
         active_sermon_note,
+        artifacts_db,
         summaries,
         subscribers,
         email_settings,
@@ -302,6 +315,20 @@ pub fn run() {
             commands::push_sermon_note,
             commands::advance_sermon_note,
             commands::get_active_sermon_note,
+            // ── Phase 15: Artifacts ────────────────────────────────────────
+            commands::list_artifacts,
+            commands::list_recent_artifacts,
+            commands::list_starred_artifacts,
+            commands::search_artifacts,
+            commands::create_artifact_dir,
+            commands::import_artifact_file,
+            commands::rename_artifact,
+            commands::delete_artifact,
+            commands::move_artifact,
+            commands::star_artifact,
+            commands::get_artifacts_settings,
+            commands::set_artifacts_base_path,
+            commands::open_artifact,
             // ── Phase 14: Summaries + email ────────────────────────────────
             commands::generate_service_summary,
             commands::list_service_summaries,

@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { invoke } from "./lib/tauri";
 import type { ChurchIdentity } from "./lib/types";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OperatorPage } from "./pages/OperatorPage";
 import { DisplayPage } from "./pages/DisplayPage";
+import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { SpeakerPage } from "./pages/SpeakerPage";
 import "./styles/tokens.css";
 import "./styles/global.css";
 
-function App() {
+function AppInner() {
+  const navigate = useNavigate();
   // `null` = not yet loaded, `undefined` = loaded but no identity (→ onboarding)
   const [identity, setIdentity] = useState<ChurchIdentity | null | undefined>(
     null
@@ -32,17 +34,28 @@ function App() {
       <Route path="/display" element={<DisplayPage />} />
       <Route path="/speaker" element={<SpeakerPage />} />
       <Route
+        path="/artifacts"
+        element={<ArtifactsPage onBack={() => navigate("/")} />}
+      />
+      <Route
         path="/"
         element={
           identity === undefined ? (
             <OnboardingPage onComplete={(id) => setIdentity(id)} />
           ) : (
-            <OperatorPage identity={identity} />
+            <OperatorPage
+              identity={identity}
+              onOpenArtifacts={() => navigate("/artifacts")}
+            />
           )
         }
       />
     </Routes>
   );
+}
+
+function App() {
+  return <AppInner />;
 }
 
 export default App;
