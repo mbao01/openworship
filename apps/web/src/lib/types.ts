@@ -36,6 +36,15 @@ export interface TranslationInfo {
 /** Matches Rust `DetectionMode` enum. */
 export type DetectionMode = "auto" | "copilot" | "airplane" | "offline";
 
+/** Matches Rust `SttBackend` enum. */
+export type SttBackend = "offline" | "online";
+
+/** Matches Rust `AudioSettings` struct. */
+export interface AudioSettings {
+  backend: SttBackend;
+  deepgram_api_key: string;
+}
+
 /** Matches Rust `QueueStatus` enum. */
 export type QueueStatus = "pending" | "live" | "dismissed";
 

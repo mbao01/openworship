@@ -10,6 +10,8 @@ default = []
 whisper = ["dep:whisper-rs"]
 # Enable CoreML acceleration on Apple Silicon (macOS only).
 coreml = ["whisper", "whisper-rs/coreml"]
+# Enable Deepgram online streaming STT via WebSocket.
+deepgram = ["dep:tokio-tungstenite", "dep:futures-util"]
 
 [dependencies]
 serde = { workspace = true }
@@ -21,3 +23,7 @@ ringbuf = "0.4"
 
 # Optional: only compiled when the `whisper` feature is enabled.
 whisper-rs = { version = "0.14", optional = true }
+
+# Optional: only compiled when the `deepgram` feature is enabled.
+tokio-tungstenite = { workspace = true, optional = true, features = ["native-tls"] }
+futures-util = { workspace = true, optional = true }

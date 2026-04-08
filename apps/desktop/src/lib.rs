@@ -1,9 +1,11 @@
 mod commands;
 mod detection;
+mod settings;
 mod state;
 
 use ow_audio::SttEngine;
 use ow_core::{DetectionMode, QueueItem};
+use settings::AudioSettings;
 use state::AppState;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, RwLock};
@@ -27,6 +29,7 @@ pub fn run() {
 
     let detection_mode = Arc::new(RwLock::new(DetectionMode::default()));
     let queue = Arc::new(Mutex::new(VecDeque::<QueueItem>::new()));
+    let audio_settings = Arc::new(RwLock::new(AudioSettings::load()));
 
     // Clone Arcs for the detection loop before moving into AppState.
     let detect_search = Arc::clone(&search);
@@ -39,6 +42,7 @@ pub fn run() {
         stt: Mutex::new(stt_engine),
         detection_mode,
         queue,
+        audio_settings,
     };
 
     tauri::Builder::default()
@@ -74,6 +78,8 @@ pub fn run() {
             commands::approve_item,
             commands::dismiss_item,
             commands::clear_queue,
+            commands::get_audio_settings,
+            commands::set_audio_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

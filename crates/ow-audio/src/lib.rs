@@ -1,24 +1,28 @@
-//! STT pipeline — offline Whisper.cpp transcription via whisper-rs.
+//! STT pipeline — offline Whisper.cpp transcription via whisper-rs, and online
+//! Deepgram streaming via WebSocket.
 //!
 //! # Feature flags
-//! - `whisper`  — enables the real `WhisperTranscriber` backed by whisper.cpp.
+//! - `whisper`   — enables the real `WhisperTranscriber` backed by whisper.cpp.
 //!   Requires a ggml model file at runtime (see `resolve_model_path`).
-//! - `coreml`   — enables Apple CoreML acceleration on macOS (implies `whisper`).
+//! - `coreml`    — enables Apple CoreML acceleration on macOS (implies `whisper`).
+//! - `deepgram`  — enables `DeepgramTranscriber` for online streaming STT.
 //!
-//! Without the `whisper` feature the public API is still fully available;
-//! only `WhisperTranscriber::new` will return an error.
+//! Without any feature the public API is still fully available via `MockTranscriber`.
 
 mod capture;
+mod deepgram;
 mod engine;
 pub mod event;
-mod transcribe;
+pub(crate) mod transcribe;
 
 pub use capture::AudioConfig;
 pub use engine::{SttEngine, SttStatus};
 pub use event::TranscriptEvent;
-pub use transcribe::MockTranscriber;
+pub use transcribe::{MockTranscriber, Transcriber};
 #[cfg(feature = "whisper")]
 pub use transcribe::WhisperTranscriber;
+#[cfg(feature = "deepgram")]
+pub use deepgram::DeepgramTranscriber;
 
 #[cfg(test)]
 mod tests {
