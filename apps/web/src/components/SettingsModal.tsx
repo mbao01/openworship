@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "../lib/tauri";
-import type { AudioSettings, SttBackend } from "../lib/types";
+import type { AudioSettings, ChurchIdentity, SttBackend } from "../lib/types";
 import "../styles/settings.css";
 
 interface SettingsModalProps {
+  identity: ChurchIdentity;
   onClose: () => void;
 }
 
-type Category = "general" | "audio" | "display" | "detection" | "about";
+type Category = "church" | "general" | "audio" | "display" | "detection" | "about";
 
 const CATEGORIES: { id: Category; label: string }[] = [
+  { id: "church", label: "Church" },
   { id: "general", label: "General" },
   { id: "audio", label: "Audio" },
   { id: "display", label: "Display" },
@@ -17,8 +19,8 @@ const CATEGORIES: { id: Category; label: string }[] = [
   { id: "about", label: "About" },
 ];
 
-export function SettingsModal({ onClose }: SettingsModalProps) {
-  const [activeCategory, setActiveCategory] = useState<Category>("audio");
+export function SettingsModal({ identity, onClose }: SettingsModalProps) {
+  const [activeCategory, setActiveCategory] = useState<Category>("church");
   const [audioSettings, setAudioSettings] = useState<AudioSettings>({
     backend: "offline",
     deepgram_api_key: "",
@@ -94,6 +96,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
         {/* Right content area */}
         <div className="settings-content">
+          {activeCategory === "church" && <ChurchSection identity={identity} />}
           {activeCategory === "audio" && (
             <AudioSection
               settings={audioSettings}
@@ -112,15 +115,17 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           <div className="settings-footer">
             {saveError && <span className="settings-footer__error">{saveError}</span>}
             <button className="settings-btn--secondary" onClick={onClose}>
-              Cancel
+              {activeCategory === "church" ? "Close" : "Cancel"}
             </button>
-            <button
-              className="settings-btn--primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
+            {activeCategory !== "church" && (
+              <button
+                className="settings-btn--primary"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -226,6 +231,68 @@ function AboutSection() {
       <p className="settings-group__hint">
         openworship — AI-powered worship presentation.
       </p>
+    </div>
+  );
+}
+
+// ─── Church section ────────────────────────────────────────────────────────────
+
+function ChurchSection({ identity }: { identity: ChurchIdentity }) {
+  const [copied, setCopied] = useState(false);
+  const isHq = identity.role === "hq";
+
+  const handleCopy = () => {
+    if (!identity.invite_code) return;
+    navigator.clipboard.writeText(identity.invite_code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <div className="settings-section">
+      <h2 className="settings-section__title">Church</h2>
+
+      <div className="settings-group">
+        <p className="settings-group__label">CHURCH NAME</p>
+        <p className="settings-church-value">
+          {identity.church_name || <span className="settings-group__hint">Not set</span>}
+        </p>
+      </div>
+
+      <div className="settings-group">
+        <p className="settings-group__label">BRANCH NAME</p>
+        <p className="settings-church-value">{identity.branch_name}</p>
+      </div>
+
+      <div className="settings-group">
+        <p className="settings-group__label">ROLE</p>
+        <span className={`settings-role-badge settings-role-badge--${identity.role}`}>
+          {isHq ? "HQ" : "MEMBER"}
+        </span>
+      </div>
+
+      {isHq && identity.invite_code && (
+        <div className="settings-group">
+          <p className="settings-group__label">INVITE CODE</p>
+          <div className="settings-invite-row">
+            <span className="settings-invite-code">{identity.invite_code}</span>
+            <button className="settings-btn--ghost" onClick={handleCopy}>
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <p className="settings-group__hint">
+            Share this code with other branches to join your church.
+          </p>
+        </div>
+      )}
+
+      {isHq && (
+        <div className="settings-group">
+          <p className="settings-group__label">MEMBER BRANCHES</p>
+          <p className="settings-group__hint">Branch sync coming soon.</p>
+        </div>
+      )}
     </div>
   );
 }

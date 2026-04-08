@@ -1,16 +1,18 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import App from "./App";
 
 describe("App", () => {
-  it("renders the operator page at /", () => {
+  it("renders the onboarding page at / when no identity is set", async () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <App />
       </MemoryRouter>
     );
-    expect(screen.getByText("openworship")).toBeDefined();
+    // invoke mock returns undefined → identity becomes undefined → onboarding
+    // "openworship" appears in the onboarding logo after the async check resolves
+    await waitFor(() => expect(screen.getByText("openworship")).toBeDefined());
   });
 
   it("renders the display page at /display", () => {

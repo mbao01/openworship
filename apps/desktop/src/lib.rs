@@ -1,5 +1,6 @@
 mod commands;
 mod detection;
+mod identity;
 mod settings;
 mod state;
 
@@ -31,6 +32,14 @@ pub fn run() {
     let queue = Arc::new(Mutex::new(VecDeque::<QueueItem>::new()));
     let audio_settings = Arc::new(RwLock::new(AudioSettings::load()));
 
+    // Load church identity (None → show onboarding).
+    let identity_value = identity::ChurchIdentity::load()
+        .unwrap_or_else(|e| {
+            eprintln!("[identity] failed to load: {e}; showing onboarding");
+            None
+        });
+    let identity = Arc::new(RwLock::new(identity_value));
+
     // Clone Arcs for the detection loop before moving into AppState.
     let detect_search = Arc::clone(&search);
     let detect_mode = Arc::clone(&detection_mode);
@@ -43,6 +52,7 @@ pub fn run() {
         detection_mode,
         queue,
         audio_settings,
+        identity,
     };
 
     tauri::Builder::default()
@@ -80,6 +90,10 @@ pub fn run() {
             commands::clear_queue,
             commands::get_audio_settings,
             commands::set_audio_settings,
+            identity::get_identity,
+            identity::create_church,
+            identity::join_church,
+            identity::generate_invite_code,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

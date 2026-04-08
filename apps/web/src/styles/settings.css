@@ -308,3 +308,68 @@
 .settings-btn--secondary:hover {
   border-color: var(--color-ash);
 }
+
+/* Ghost button — no background, no border (nav-like) */
+.settings-btn--ghost {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--color-ash);
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: color 150ms ease-out;
+  text-transform: uppercase;
+}
+
+.settings-btn--ghost:hover {
+  color: var(--color-chalk);
+}
+
+/* ─── Church section ──────────────────────────────────────── */
+
+.settings-church-value {
+  font-size: 13px;
+  color: var(--color-chalk);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.settings-role-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.settings-role-badge--hq {
+  background: rgba(201, 168, 76, 0.15);
+  color: var(--color-gold);
+  border: 1px solid rgba(201, 168, 76, 0.3);
+}
+
+.settings-role-badge--member {
+  background: rgba(42, 42, 42, 0.6);
+  color: var(--color-ash);
+  border: 1px solid var(--color-iron);
+}
+
+.settings-invite-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.settings-invite-code {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  color: var(--color-gold);
+}

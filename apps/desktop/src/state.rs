@@ -1,3 +1,4 @@
+use crate::identity::ChurchIdentity;
 use crate::settings::AudioSettings;
 use ow_audio::{SttEngine, SttStatus};
 use ow_core::{DetectionMode, QueueItem};
@@ -18,6 +19,8 @@ pub struct AppState {
     pub queue: Arc<Mutex<VecDeque<QueueItem>>>,
     /// Operator audio/STT settings, persisted to disk.
     pub audio_settings: Arc<RwLock<AudioSettings>>,
+    /// Church + branch identity. `None` until onboarding completes.
+    pub identity: Arc<RwLock<Option<ChurchIdentity>>>,
 }
 
 impl AppState {

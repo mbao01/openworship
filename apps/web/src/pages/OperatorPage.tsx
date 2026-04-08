@@ -1,19 +1,27 @@
 import { useState } from "react";
 import { DetectionQueue } from "../components/DetectionQueue";
-import { ModeToolbar } from "../components/ModeToolbar";
 import { ScriptureSearch } from "../components/ScriptureSearch";
 import { SettingsModal } from "../components/SettingsModal";
 import { TranscriptPanel } from "../components/TranscriptPanel";
+import type { ChurchIdentity } from "../lib/types";
 import "../styles/operator.css";
 
-export function OperatorPage() {
+interface OperatorPageProps {
+  identity: ChurchIdentity;
+}
+
+export function OperatorPage({ identity }: OperatorPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div className="operator-root">
       {/* Custom title bar */}
       <header className="operator-titlebar">
-        <span className="operator-appname">openworship</span>
+        <div className="operator-titlebar__left">
+          <span className="operator-appname">openworship</span>
+          <span className="operator-titlebar__sep" aria-hidden="true">/</span>
+          <span className="operator-branch">{identity.branch_name}</span>
+        </div>
         <button
           className="settings-gear-btn"
           onClick={() => setSettingsOpen(true)}
@@ -33,10 +41,9 @@ export function OperatorPage() {
         </button>
       </header>
 
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
-
-      {/* Toolbar strip — mode switcher */}
-      <ModeToolbar />
+      {settingsOpen && (
+        <SettingsModal identity={identity} onClose={() => setSettingsOpen(false)} />
+      )}
 
       {/* Main layout — three columns */}
       <div className="operator-body">
