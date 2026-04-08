@@ -33,9 +33,6 @@ importers:
       '@eslint/js':
         specifier: ^9
         version: 9.39.4
-      '@tauri-apps/cli':
-        specifier: ^2
-        version: 2.10.1
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
