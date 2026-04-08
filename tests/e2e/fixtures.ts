@@ -30,6 +30,9 @@ export async function stubTauriIdentity(page: Page): Promise<void> {
         if (cmd === "list_service_projects") return Promise.resolve([]);
         if (cmd === "search_content_bank") return Promise.resolve([]);
         if (cmd === "search_scriptures") return Promise.resolve([]);
+        if (cmd === "search_semantic") return Promise.resolve([]);
+        if (cmd === "get_semantic_status")
+          return Promise.resolve({ ready: false, verse_count: 0, enabled: false });
         return Promise.resolve(null);
       },
       listen: () => Promise.resolve(() => {}),

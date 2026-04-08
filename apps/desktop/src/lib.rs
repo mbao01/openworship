@@ -8,6 +8,7 @@ mod state;
 
 use ow_audio::SttEngine;
 use ow_core::{DetectionMode, QueueItem};
+use ow_embed::{OllamaClient, SemanticIndex};
 use settings::AudioSettings;
 use state::AppState;
 use std::collections::VecDeque;
@@ -57,10 +58,35 @@ pub fn run() {
         Arc::new(RwLock::new(active))
     };
 
+    // Semantic index — starts empty; populated by the background embedding task.
+    let semantic_index: Arc<RwLock<Option<SemanticIndex>>> = Arc::new(RwLock::new(None));
+    let ollama = Arc::new(OllamaClient::new());
+
+    // Build VerseResult list for embedding (same data as the search index).
+    let verse_results: Vec<ow_search::VerseResult> = verses
+        .iter()
+        .map(|v| ow_search::VerseResult {
+            translation: v.translation.clone(),
+            book: v.book.clone(),
+            chapter: v.chapter,
+            verse: v.verse,
+            text: v.text.clone(),
+            reference: v.reference.clone(),
+        })
+        .collect();
+
     // Clone Arcs for the detection loop before moving into AppState.
     let detect_search = Arc::clone(&search);
     let detect_mode = Arc::clone(&detection_mode);
     let detect_queue = Arc::clone(&queue);
+    let detect_settings = Arc::clone(&audio_settings);
+    let detect_semantic = Arc::clone(&semantic_index);
+    let detect_ollama = Arc::clone(&ollama);
+
+    // Clone Arcs for the background embedding task.
+    let embed_index = Arc::clone(&semantic_index);
+    let embed_ollama = Arc::clone(&ollama);
+    let embed_settings = Arc::clone(&audio_settings);
 
     let app_state = AppState {
         search,
@@ -73,6 +99,8 @@ pub fn run() {
         projects,
         active_project_id,
         content_bank,
+        semantic_index,
+        ollama,
     };
 
     tauri::Builder::default()
@@ -88,9 +116,42 @@ pub fn run() {
                 detect_search,
                 detect_queue,
                 detect_mode,
+                detect_settings,
+                detect_semantic,
+                detect_ollama,
                 tx_for_detect,
                 app_handle,
             ));
+            // Start the background embedding task (best-effort; skipped if Ollama absent).
+            tauri::async_runtime::spawn(async move {
+                let enabled = embed_settings
+                    .read()
+                    .map(|s| s.semantic_enabled)
+                    .unwrap_or(true);
+
+                if !enabled {
+                    eprintln!("[embed] semantic search disabled by settings");
+                    return;
+                }
+
+                if !embed_ollama.is_available().await {
+                    eprintln!("[embed] Ollama not available — semantic search disabled");
+                    return;
+                }
+
+                match ow_embed::build_index(&embed_ollama, &verse_results).await {
+                    Ok(index) => {
+                        let count = index.len();
+                        if let Ok(mut guard) = embed_index.write() {
+                            *guard = Some(index);
+                        }
+                        eprintln!("[embed] semantic index ready ({count} verses)");
+                    }
+                    Err(e) => {
+                        eprintln!("[embed] failed to build semantic index: {e}");
+                    }
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -119,6 +180,8 @@ pub fn run() {
             commands::remove_item_from_active_project,
             commands::reorder_active_project_items,
             commands::search_content_bank,
+            commands::get_semantic_status,
+            commands::search_semantic,
             identity::get_identity,
             identity::create_church,
             identity::join_church,

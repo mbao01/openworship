@@ -52,6 +52,14 @@ pub struct QueueItem {
     pub status: QueueStatus,
     /// Unix timestamp (ms) when this item was detected.
     pub detected_at_ms: u64,
+    /// True when this item was found via semantic similarity rather than exact
+    /// reference matching.
+    #[serde(default)]
+    pub is_semantic: bool,
+    /// Cosine similarity score (0.0–1.0) for semantic matches; `None` for
+    /// exact matches.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confidence: Option<f64>,
 }
 
 static ITEM_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -65,7 +73,16 @@ impl QueueItem {
         let count = ITEM_COUNTER.fetch_add(1, Ordering::Relaxed);
         let id = format!("{:016x}{:08x}", ts, count);
         let detected_at_ms = ts / 1000;
-        Self { id, reference, text, translation, status: QueueStatus::Pending, detected_at_ms }
+        Self {
+            id,
+            reference,
+            text,
+            translation,
+            status: QueueStatus::Pending,
+            detected_at_ms,
+            is_semantic: false,
+            confidence: None,
+        }
     }
 }
 

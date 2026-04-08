@@ -591,6 +591,15 @@
   letter-spacing: 0.08em;
 }
 
+/* Tilde badge marking semantic (paraphrase) matches. */
+.detection-card__semantic-badge {
+  font-size: 11px;
+  color: var(--color-gold);
+  opacity: 0.75;
+  cursor: default;
+  letter-spacing: 0;
+}
+
 /* Gold pulse dot for Live items — per DESIGN.md live indicator spec. */
 .detection-card__live-dot {
   width: 8px;

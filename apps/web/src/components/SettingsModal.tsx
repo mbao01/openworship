@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "../lib/tauri";
-import type { AudioSettings, ChurchIdentity, SttBackend } from "../lib/types";
+import type { AudioSettings, ChurchIdentity, SemanticStatus, SttBackend } from "../lib/types";
 import "../styles/settings.css";
 
 interface SettingsModalProps {
@@ -24,6 +24,9 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
   const [audioSettings, setAudioSettings] = useState<AudioSettings>({
     backend: "offline",
     deepgram_api_key: "",
+    semantic_enabled: true,
+    semantic_threshold_auto: 0.75,
+    semantic_threshold_copilot: 0.82,
   });
   const [keyVisible, setKeyVisible] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -108,7 +111,14 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
           )}
           {activeCategory === "general" && <PlaceholderSection title="General" />}
           {activeCategory === "display" && <PlaceholderSection title="Display" />}
-          {activeCategory === "detection" && <PlaceholderSection title="Detection" />}
+          {activeCategory === "detection" && (
+            <DetectionSection
+              settings={audioSettings}
+              onSettingsChange={(patch) =>
+                setAudioSettings((prev) => ({ ...prev, ...patch }))
+              }
+            />
+          )}
           {activeCategory === "about" && <AboutSection />}
 
           {/* Footer */}
@@ -211,6 +221,115 @@ function AudioSection({
             : "Requires the Whisper ggml-tiny.en model at ~/.openworship/models/ggml-tiny.en.bin."}
         </p>
       </div>
+    </div>
+  );
+}
+
+// ─── Detection section (Phase 9 Semantic) ────────────────────────────────────
+
+interface DetectionSectionProps {
+  settings: AudioSettings;
+  onSettingsChange: (patch: Partial<AudioSettings>) => void;
+}
+
+function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps) {
+  const [semanticStatus, setSemanticStatus] = useState<SemanticStatus | null>(null);
+
+  useEffect(() => {
+    invoke<SemanticStatus>("get_semantic_status")
+      .then(setSemanticStatus)
+      .catch(() => {});
+  }, []);
+
+  const formatThreshold = (v: number) => `${Math.round(v * 100)}%`;
+
+  return (
+    <div className="settings-section">
+      <h2 className="settings-section__title">Detection</h2>
+
+      {/* Semantic matching toggle */}
+      <div className="settings-group">
+        <p className="settings-group__label">SEMANTIC SCRIPTURE MATCHING</p>
+        <div className="settings-toggle-row">
+          <label className="settings-checkbox-row">
+            <input
+              type="checkbox"
+              checked={settings.semantic_enabled}
+              onChange={(e) => onSettingsChange({ semantic_enabled: e.target.checked })}
+            />
+            <span>Enable paraphrase &amp; story-based detection</span>
+          </label>
+        </div>
+        <p className="settings-group__hint">
+          Uses Ollama + nomic-embed-text (running locally) to detect scripture references
+          even when the exact book/chapter/verse is not spoken. Requires Ollama to be
+          installed and running.
+        </p>
+      </div>
+
+      {/* Semantic index status */}
+      {settings.semantic_enabled && semanticStatus && (
+        <div className="settings-group">
+          <p className="settings-group__label">INDEX STATUS</p>
+          <div className="settings-semantic-status">
+            <span
+              className={`settings-semantic-dot${semanticStatus.ready ? " settings-semantic-dot--ready" : ""}`}
+              aria-hidden="true"
+            />
+            <span>
+              {semanticStatus.ready
+                ? `Ready — ${semanticStatus.verse_count.toLocaleString()} verses indexed`
+                : "Building index… (Ollama must be running with nomic-embed-text)"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Confidence threshold sliders — only shown when semantic is enabled */}
+      {settings.semantic_enabled && (
+        <>
+          <div className="settings-group">
+            <p className="settings-group__label">
+              AUTO MODE THRESHOLD — {formatThreshold(settings.semantic_threshold_auto)}
+            </p>
+            <input
+              className="settings-slider"
+              type="range"
+              min="0.5"
+              max="0.99"
+              step="0.01"
+              value={settings.semantic_threshold_auto}
+              onChange={(e) =>
+                onSettingsChange({ semantic_threshold_auto: parseFloat(e.target.value) })
+              }
+            />
+            <p className="settings-group__hint">
+              Lower = more matches (may include false positives). Higher = stricter.
+            </p>
+          </div>
+
+          <div className="settings-group">
+            <p className="settings-group__label">
+              COPILOT MODE THRESHOLD — {formatThreshold(settings.semantic_threshold_copilot)}
+            </p>
+            <input
+              className="settings-slider"
+              type="range"
+              min="0.5"
+              max="0.99"
+              step="0.01"
+              value={settings.semantic_threshold_copilot}
+              onChange={(e) =>
+                onSettingsChange({ semantic_threshold_copilot: parseFloat(e.target.value) })
+              }
+            />
+            <p className="settings-group__hint">
+              Copilot mode requires your approval before display — a stricter threshold
+              reduces noise in the suggestion queue.
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
 }

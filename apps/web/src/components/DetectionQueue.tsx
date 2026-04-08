@@ -75,6 +75,18 @@ function DetectionCard({ item, onApprove, onDismiss }: CardProps) {
       <div className="detection-card__meta">
         <span className="detection-card__reference">{item.reference}</span>
         <span className="detection-card__translation">{item.translation}</span>
+        {item.is_semantic && (
+          <span
+            className="detection-card__semantic-badge"
+            title={
+              item.confidence != null
+                ? `Semantic match — ${Math.round(item.confidence * 100)}% confidence`
+                : "Semantic match"
+            }
+          >
+            ~
+          </span>
+        )}
         {item.status === "live" && (
           <span className="detection-card__live-dot" aria-label="Live" />
         )}

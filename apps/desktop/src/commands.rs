@@ -795,3 +795,98 @@ pub fn search_content_bank(
     };
     Ok(results)
 }
+
+// ─── Semantic search status ───────────────────────────────────────────────────
+
+/// Status of the background semantic index.
+#[derive(serde::Serialize)]
+pub struct SemanticStatus {
+    /// `true` when the embedding index is fully built and ready.
+    pub ready: bool,
+    /// Number of verses currently indexed (0 when not ready).
+    pub verse_count: usize,
+    /// Whether semantic search is enabled in current settings.
+    pub enabled: bool,
+}
+
+/// Return the current state of the semantic scripture index.
+///
+/// The frontend can poll this (or wait for the `semantic://index-ready` event)
+/// to know when paraphrase/story matching becomes available.
+#[tauri::command]
+pub fn get_semantic_status(state: State<'_, AppState>) -> Result<SemanticStatus, String> {
+    let enabled = state
+        .audio_settings
+        .read()
+        .map(|s| s.semantic_enabled)
+        .unwrap_or(true);
+
+    let (ready, verse_count) = state
+        .semantic_index
+        .read()
+        .map(|guard| match guard.as_ref() {
+            Some(idx) => (true, idx.len()),
+            None => (false, 0),
+        })
+        .unwrap_or((false, 0));
+
+    Ok(SemanticStatus {
+        ready,
+        verse_count,
+        enabled,
+    })
+}
+
+/// Perform an on-demand semantic scripture search against the embedded index.
+///
+/// Embeds `query` via Ollama and returns the top semantically similar verses.
+/// Returns an empty list when the index is not ready or Ollama is unavailable.
+#[tauri::command]
+pub async fn search_semantic(
+    query: String,
+    threshold: Option<f32>,
+    state: State<'_, AppState>,
+) -> Result<Vec<VerseResult>, String> {
+    let enabled = state
+        .audio_settings
+        .read()
+        .map(|s| s.semantic_enabled)
+        .unwrap_or(true);
+
+    if !enabled {
+        return Ok(vec![]);
+    }
+
+    let index_ready = state
+        .semantic_index
+        .read()
+        .map(|g| g.is_some())
+        .unwrap_or(false);
+
+    if !index_ready {
+        return Ok(vec![]);
+    }
+
+    let embedding = state
+        .ollama
+        .embed(&query)
+        .await
+        .map_err(|e| format!("embed failed: {e}"))?;
+
+    let effective_threshold = threshold.unwrap_or(0.75);
+
+    let results = state
+        .semantic_index
+        .read()
+        .map_err(|e| e.to_string())?
+        .as_ref()
+        .map(|idx| {
+            idx.search(&embedding, effective_threshold, 10)
+                .into_iter()
+                .map(|m| m.verse)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    Ok(results)
+}

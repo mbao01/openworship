@@ -25,7 +25,7 @@ pub enum SttBackend {
 /// `deepgram_api_key` is held in memory and exchanged over the Tauri command
 /// bridge, but is **skipped during JSON serialisation** — the key lives in the
 /// OS keychain (see [`crate::keychain`]).
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AudioSettings {
     /// Selected STT backend.
@@ -33,6 +33,27 @@ pub struct AudioSettings {
     /// Deepgram API key — runtime only, never written to disk.
     #[serde(skip_serializing)]
     pub deepgram_api_key: String,
+    /// Enable semantic (paraphrase / story) scripture matching via Ollama.
+    /// When `false` or when Ollama is unavailable, only exact detection runs.
+    pub semantic_enabled: bool,
+    /// Cosine-similarity threshold for semantic matches in Auto / Offline mode.
+    /// Range `[0, 1]`; higher = stricter.  Default: 0.75.
+    pub semantic_threshold_auto: f32,
+    /// Cosine-similarity threshold for semantic matches in Copilot mode.
+    /// Default: 0.82 (stricter, because the operator reviews before display).
+    pub semantic_threshold_copilot: f32,
+}
+
+impl Default for AudioSettings {
+    fn default() -> Self {
+        Self {
+            backend: SttBackend::default(),
+            deepgram_api_key: String::new(),
+            semantic_enabled: true,
+            semantic_threshold_auto: 0.75,
+            semantic_threshold_copilot: 0.82,
+        }
+    }
 }
 
 /// Deserialisation target that can still read the old plaintext key field.
@@ -43,6 +64,9 @@ struct AudioSettingsFile {
     backend: SttBackend,
     /// Present in pre-keychain builds; absent (default empty) afterwards.
     deepgram_api_key: String,
+    semantic_enabled: Option<bool>,
+    semantic_threshold_auto: Option<f32>,
+    semantic_threshold_copilot: Option<f32>,
 }
 
 impl AudioSettings {
@@ -78,6 +102,7 @@ impl AudioSettings {
             let clean = Self {
                 backend: file.backend.clone(),
                 deepgram_api_key: String::new(),
+                ..Self::default()
             };
             if let Err(e) = clean.save() {
                 eprintln!("[settings] failed to re-save after migration: {e}");
@@ -86,10 +111,18 @@ impl AudioSettings {
 
         // Load the key from keychain for in-memory use.
         let deepgram_api_key = crate::keychain::get_deepgram_api_key().unwrap_or_default();
+        let defaults = Self::default();
 
         Ok(Self {
             backend: file.backend,
             deepgram_api_key,
+            semantic_enabled: file.semantic_enabled.unwrap_or(defaults.semantic_enabled),
+            semantic_threshold_auto: file
+                .semantic_threshold_auto
+                .unwrap_or(defaults.semantic_threshold_auto),
+            semantic_threshold_copilot: file
+                .semantic_threshold_copilot
+                .unwrap_or(defaults.semantic_threshold_copilot),
         })
     }
 
@@ -126,6 +159,7 @@ mod tests {
         let s = AudioSettings {
             backend: SttBackend::Online,
             deepgram_api_key: "secret-key".into(),
+            ..AudioSettings::default()
         };
         let json = serde_json::to_string(&s).unwrap();
         assert!(!json.contains("secret-key"), "key must not appear in JSON");
