@@ -1,5 +1,9 @@
 /* Operator UI shell — Sacred Monochrome desktop application */
 
+/* ============================================================
+   Shell
+   ============================================================ */
+
 .operator-root {
   display: flex;
   flex-direction: column;
@@ -28,33 +32,63 @@
   font-weight: 400;
 }
 
+/* ============================================================
+   3-column body
+   Per DESIGN.md: left 25% (Obsidian) | center 50% (Void) | right 25% (Obsidian)
+   ============================================================ */
+
 .operator-body {
   flex: 1;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.operator-col {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.operator-col--left {
+  width: 25%;
   background: var(--color-obsidian);
+  border-right: 1px solid var(--color-iron);
+  padding: var(--space-4);
   overflow-y: auto;
-  padding: var(--space-8) var(--space-6);
 }
 
-/* ─── Main panel ─────────────────────────────────── */
-
-.operator-panel {
-  width: 100%;
-  max-width: 680px;
+.operator-col--center {
+  width: 50%;
+  background: var(--color-void);
+  min-height: 0;
 }
 
-.operator-panel__heading {
-  font-size: 12px;
+.operator-col--right {
+  width: 25%;
+  background: var(--color-obsidian);
+  border-left: 1px solid var(--color-iron);
+  padding: var(--space-4);
+}
+
+.operator-col__heading {
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.12em;
   color: var(--color-ash);
   margin: 0 0 var(--space-4) 0;
+  text-transform: uppercase;
 }
 
-/* ─── Scripture Search ───────────────────────────── */
+.operator-col__empty {
+  font-size: 13px;
+  color: var(--color-smoke);
+}
+
+/* ============================================================
+   Scripture Search
+   ============================================================ */
 
 .scripture-search {
   display: flex;
@@ -212,4 +246,126 @@
   color: var(--color-smoke);
   padding: var(--space-4) 0;
   margin: 0;
+}
+
+/* ============================================================
+   Transcript Panel
+   ============================================================ */
+
+.transcript-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.transcript-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-iron);
+  flex-shrink: 0;
+}
+
+.transcript-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.transcript-title {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--color-ash);
+  text-transform: uppercase;
+}
+
+/* Live pulse dot — Liturgical Gold, 8px per DESIGN.md */
+.transcript-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-gold) 25%, transparent);
+  animation: transcript-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes transcript-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Secondary button style: Iron border, Chalk text */
+.transcript-toggle {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--color-chalk);
+  background: transparent;
+  border: 1px solid var(--color-iron);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: border-color 150ms ease-out, color 150ms ease-out;
+  text-transform: uppercase;
+}
+
+.transcript-toggle:hover {
+  border-color: var(--color-ash);
+}
+
+.transcript-toggle--active {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+}
+
+.transcript-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  min-height: 0;
+  /* Subtle scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-iron) transparent;
+}
+
+.transcript-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.transcript-body::-webkit-scrollbar-thumb {
+  background: var(--color-iron);
+  border-radius: 2px;
+}
+
+/* Individual transcript segments: body-lg per DESIGN.md (16px / 400) */
+.transcript-line {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--color-chalk);
+  margin: 0 0 var(--space-2) 0;
+  animation: transcript-line-in 150ms ease-out;
+}
+
+@keyframes transcript-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.transcript-empty {
+  font-size: 14px;
+  color: var(--color-smoke);
+  margin: 0;
+}
+
+.transcript-error {
+  font-size: 13px;
+  color: var(--color-ember);
+  margin: 0 0 var(--space-2) 0;
 }
