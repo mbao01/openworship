@@ -8,6 +8,7 @@ import { SummaryPanel } from "../components/SummaryPanel";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
 import type { ChurchIdentity, TranslationInfo } from "../lib/types";
+// operator.css still needed for child component styles (TranscriptPanel, ScriptureSearch, etc.)
 import "../styles/operator.css";
 
 interface OperatorPageProps {
@@ -52,13 +53,17 @@ function TranslationSwitcher() {
   if (translations.length === 0) return null;
 
   return (
-    <div className="translation-switcher">
-      <label className="translation-switcher__label" htmlFor="translation-select">
+    <div className="flex items-center gap-2">
+      <label
+        className="text-[10px] text-smoke tracking-[0.06em] uppercase"
+        htmlFor="translation-select"
+      >
         Translation
       </label>
       <select
+        data-qa="translation-select"
         id="translation-select"
-        className="translation-switcher__select"
+        className="appearance-none bg-iron text-chalk border border-steel rounded-[3px] text-[11px] font-mono pt-[2px] pb-[2px] pl-[6px] pr-5 cursor-pointer min-w-[52px] transition-colors focus:outline focus:outline-1 focus:outline-gold focus:outline-offset-[1px]"
         value={active}
         onChange={handleChange}
         title="Switch Bible translation"
@@ -75,19 +80,20 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-    <div data-qa="operator-root" className="operator-root">
+    <div data-qa="operator-root" className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden">
       {/* Custom title bar */}
-      <header data-qa="operator-titlebar" className="operator-titlebar">
-        <div className="operator-titlebar__left">
-          <span data-qa="operator-appname" className="operator-appname">openworship</span>
-          <span className="operator-titlebar__sep" aria-hidden="true">/</span>
-          <span data-qa="operator-branch" className="operator-branch">{identity.branch_name}</span>
+      <header data-qa="operator-titlebar" className="h-9 bg-void flex items-center justify-between px-4 border-b border-iron shrink-0">
+        <div className="flex items-center gap-2">
+          <span data-qa="operator-appname" className="text-xs text-ash tracking-[0.08em] font-normal">openworship</span>
+          <span className="text-[11px] text-smoke" aria-hidden="true">/</span>
+          <span data-qa="operator-branch" className="font-mono text-[11px] text-ash tracking-[0.04em]">{identity.branch_name}</span>
         </div>
-        <div className="operator-titlebar__right">
+        <div className="flex items-center gap-3">
           <TranslationSwitcher />
           {onOpenArtifacts && (
             <button
-              className="settings-gear-btn"
+              data-qa="open-artifacts-btn"
+              className="bg-transparent border-none text-ash cursor-pointer p-1 flex items-center justify-center transition-colors hover:text-chalk hover:bg-white/[0.06]"
               onClick={onOpenArtifacts}
               title="Artifacts"
               aria-label="Open artifacts"
@@ -102,7 +108,8 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
           )}
           {onToggleTheme && (
             <button
-              className="settings-gear-btn"
+              data-qa="toggle-theme-btn"
+              className="bg-transparent border-none text-ash cursor-pointer p-1 flex items-center justify-center transition-colors hover:text-chalk hover:bg-white/[0.06]"
               onClick={onToggleTheme}
               title={isDark ? "Switch to light mode" : "Switch to dark mode"}
               aria-label="Toggle theme"
@@ -129,7 +136,8 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
             </button>
           )}
           <button
-            className="settings-gear-btn"
+            data-qa="open-settings-btn"
+            className="bg-transparent border-none text-ash cursor-pointer p-1 flex items-center justify-center transition-colors hover:text-chalk hover:bg-white/[0.06]"
             onClick={() => setSettingsOpen(true)}
             title="Settings"
             aria-label="Open settings"
@@ -153,25 +161,25 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
       )}
 
       {/* Main layout — three columns */}
-      <div className="operator-body">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Left: Schedule + Song Library + Summaries */}
-        <aside data-qa="operator-col-left" className="operator-col operator-col--left">
+        <aside data-qa="operator-col-left" className="flex flex-col overflow-hidden min-h-0 w-1/4 bg-obsidian border-r border-iron p-4 overflow-y-auto">
           <SchedulePanel />
-          <div className="operator-divider" aria-hidden="true" />
+          <div className="h-px bg-iron my-4 shrink-0" aria-hidden="true" />
           <SongLibrary />
-          <div className="operator-divider" aria-hidden="true" />
+          <div className="h-px bg-iron my-4 shrink-0" aria-hidden="true" />
           <ContentPanel />
-          <div className="operator-divider" aria-hidden="true" />
+          <div className="h-px bg-iron my-4 shrink-0" aria-hidden="true" />
           <SummaryPanel />
         </aside>
 
         {/* Center: Live transcript */}
-        <main data-qa="operator-col-center" className="operator-col operator-col--center">
+        <main data-qa="operator-col-center" className="flex flex-col overflow-hidden min-h-0 w-1/2 bg-void">
           <TranscriptPanel />
         </main>
 
         {/* Right: Detection queue */}
-        <aside data-qa="operator-col-right" className="operator-col operator-col--right">
+        <aside data-qa="operator-col-right" className="flex flex-col overflow-hidden min-h-0 w-1/4 bg-obsidian border-l border-iron p-4">
           <DetectionQueue />
         </aside>
       </div>

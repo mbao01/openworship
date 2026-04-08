@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ShareDialog } from "../components/ShareDialog";
 import { invoke } from "../lib/tauri";
 import type { ArtifactCategory, ArtifactEntry, ArtifactsSettings, CloudSyncInfo, ServiceProject, StorageUsage, SyncStatus } from "../lib/types";
-import "../styles/artifacts.css";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,8 +59,19 @@ function syncStatusLabel(status: SyncStatus): string {
 }
 
 function SyncBadge({ status }: { status: SyncStatus }) {
+  const colorCls =
+    status === "synced" ? "text-gold" :
+    status === "syncing" ? "text-chalk animate-spin" :
+    status === "queued" ? "text-ash" :
+    status === "conflict" ? "text-[#e89a00]" :
+    status === "error" ? "text-ember" :
+    "hidden";
+
   return (
-    <span className={`af-sync-badge af-sync-badge--${status}`} title={syncStatusLabel(status)}>
+    <span
+      className={`inline-flex items-center justify-center text-[10px] w-4 h-4 rounded-full shrink-0 ${colorCls}`}
+      title={syncStatusLabel(status)}
+    >
       {status === "synced" ? "☁" : status === "syncing" ? "↑" : status === "queued" ? "⏳" : status === "conflict" ? "⚠" : status === "error" ? "✕" : ""}
     </span>
   );
@@ -70,24 +80,31 @@ function SyncBadge({ status }: { status: SyncStatus }) {
 function Sidebar({
   projects, nav, onNav, usage,
 }: { projects: ServiceProject[]; nav: Nav; onNav: (n: Nav) => void; usage: StorageUsage | null }) {
-  const cls = (n: Nav) =>
-    `af-nav__item${JSON.stringify(n) === JSON.stringify(nav) ? " af-nav__item--active" : ""}`;
+  const navItemCls = (n: Nav) => [
+    "block w-full text-left bg-transparent border-none font-sans text-xs px-3 py-[6px]",
+    "cursor-pointer whitespace-nowrap overflow-hidden text-ellipsis transition-colors",
+    "hover:text-chalk hover:bg-white/[0.03]",
+    JSON.stringify(n) === JSON.stringify(nav)
+      ? "text-chalk bg-gold/[0.08]"
+      : "text-ash",
+  ].join(" ");
 
   return (
-    <nav className="af-sidebar">
-      <div className="af-nav__section">
-        <p className="af-nav__heading">LOCAL</p>
-        <button className={cls({ kind: "all" })} onClick={() => onNav({ kind: "all" })}>All Artifacts</button>
-        <button className={cls({ kind: "recent" })} onClick={() => onNav({ kind: "recent" })}>Recent</button>
-        <button className={cls({ kind: "starred" })} onClick={() => onNav({ kind: "starred" })}>Starred</button>
+    <nav data-qa="artifacts-sidebar" className="w-[200px] shrink-0 bg-obsidian border-r border-iron overflow-y-auto py-3">
+      <div className="mb-4">
+        <p className="text-[9px] font-semibold tracking-[0.12em] uppercase text-smoke px-3 pb-1 m-0">LOCAL</p>
+        <button data-qa="artifacts-nav-all" className={navItemCls({ kind: "all" })} onClick={() => onNav({ kind: "all" })}>All Artifacts</button>
+        <button data-qa="artifacts-nav-recent" className={navItemCls({ kind: "recent" })} onClick={() => onNav({ kind: "recent" })}>Recent</button>
+        <button data-qa="artifacts-nav-starred" className={navItemCls({ kind: "starred" })} onClick={() => onNav({ kind: "starred" })}>Starred</button>
       </div>
       {projects.length > 0 && (
-        <div className="af-nav__section">
-          <p className="af-nav__heading">SERVICES</p>
+        <div className="mb-4">
+          <p className="text-[9px] font-semibold tracking-[0.12em] uppercase text-smoke px-3 pb-1 m-0">SERVICES</p>
           {projects.map((p) => (
             <button
               key={p.id}
-              className={cls({ kind: "service", id: p.id, name: p.name })}
+              data-qa={`artifacts-nav-service-${p.id}`}
+              className={navItemCls({ kind: "service", id: p.id, name: p.name })}
               onClick={() => onNav({ kind: "service", id: p.id, name: p.name })}
             >
               {p.name}
@@ -95,20 +112,20 @@ function Sidebar({
           ))}
         </div>
       )}
-      <div className="af-nav__section">
-        <p className="af-nav__heading">CLOUD</p>
-        <button className={cls({ kind: "cloud_branch" })} onClick={() => onNav({ kind: "cloud_branch" })}>
+      <div className="mb-4">
+        <p className="text-[9px] font-semibold tracking-[0.12em] uppercase text-smoke px-3 pb-1 m-0">CLOUD</p>
+        <button data-qa="artifacts-nav-cloud-branch" className={navItemCls({ kind: "cloud_branch" })} onClick={() => onNav({ kind: "cloud_branch" })}>
           ☁ My Branch
         </button>
-        <button className={cls({ kind: "cloud_shared" })} onClick={() => onNav({ kind: "cloud_shared" })}>
+        <button data-qa="artifacts-nav-cloud-shared" className={navItemCls({ kind: "cloud_shared" })} onClick={() => onNav({ kind: "cloud_shared" })}>
           ⊕ Church Shared
         </button>
       </div>
       {usage && (
-        <div className="af-storage-indicator">
-          <div className="af-storage-bar">
+        <div className="px-[14px] py-[10px] mt-auto border-t border-iron">
+          <div className="h-[2px] bg-iron rounded-[1px] overflow-hidden mb-[6px]">
             <div
-              className="af-storage-fill"
+              className="h-full bg-gold transition-[width] duration-300 min-w-[2px]"
               style={{
                 width: usage.quota_bytes
                   ? `${Math.min(100, (usage.used_bytes / usage.quota_bytes) * 100)}%`
@@ -116,7 +133,7 @@ function Sidebar({
               }}
             />
           </div>
-          <span className="af-storage-label">
+          <span className="block text-[10px] text-ash font-mono">
             {formatStorageBytes(usage.used_bytes)}
             {usage.quota_bytes ? ` / ${formatStorageBytes(usage.quota_bytes)}` : " used"}
           </span>
@@ -157,24 +174,31 @@ function ContextMenu({
     return () => document.removeEventListener("mousedown", h);
   }, [onClose]);
 
+  const btnCls = "block w-full text-left bg-transparent border-none font-sans text-xs text-chalk px-[14px] py-[6px] cursor-pointer transition-colors hover:bg-white/[0.06]";
+
   return (
-    <div ref={ref} className="af-ctx" style={{ top: menu.y, left: menu.x }}>
+    <div
+      ref={ref}
+      data-qa="artifacts-ctx-menu"
+      className="fixed z-[1000] bg-slate border border-iron rounded py-1 min-w-[140px] shadow-[0_8px_24px_rgba(0,0,0,0.6)]"
+      style={{ top: menu.y, left: menu.x }}
+    >
       {!menu.entry.is_dir && (
-        <button onClick={() => { onOpen(menu.entry); onClose(); }}>Open</button>
+        <button className={btnCls} onClick={() => { onOpen(menu.entry); onClose(); }}>Open</button>
       )}
-      <button onClick={() => { onStar(menu.entry); onClose(); }}>
+      <button className={btnCls} onClick={() => { onStar(menu.entry); onClose(); }}>
         {menu.entry.starred ? "Unstar" : "Star"}
       </button>
-      <button onClick={() => { onRename(menu.entry); onClose(); }}>Rename</button>
-      <div className="af-ctx__divider" />
-      <button onClick={() => { onShare(menu.entry); onClose(); }}>
+      <button className={btnCls} onClick={() => { onRename(menu.entry); onClose(); }}>Rename</button>
+      <div className="h-px bg-iron my-[3px]" />
+      <button className={btnCls} onClick={() => { onShare(menu.entry); onClose(); }}>
         {syncInfo?.sync_enabled ? "Share / Permissions…" : "Sync & Share…"}
       </button>
       {syncInfo?.sync_enabled && syncInfo.status !== "syncing" && (
-        <button onClick={() => { onSyncNow(menu.entry); onClose(); }}>Sync now</button>
+        <button className={btnCls} onClick={() => { onSyncNow(menu.entry); onClose(); }}>Sync now</button>
       )}
-      <div className="af-ctx__divider" />
-      <button className="af-ctx__danger" onClick={() => { onDelete(menu.entry); onClose(); }}>Delete</button>
+      <div className="h-px bg-iron my-[3px]" />
+      <button className={`${btnCls} text-ember`} onClick={() => { onDelete(menu.entry); onClose(); }}>Delete</button>
     </div>
   );
 }
@@ -186,17 +210,26 @@ function RenameModal({ entry, onConfirm, onCancel }: {
 }) {
   const [name, setName] = useState(entry.name);
   return (
-    <div className="af-modal-overlay" onClick={onCancel}>
-      <div className="af-modal" onClick={(e) => e.stopPropagation()}>
-        <p className="af-modal__title">Rename</p>
-        <input className="af-modal__input" value={name}
+    <div className="fixed inset-0 bg-black/65 flex items-center justify-center z-[900]" onClick={onCancel}>
+      <div className="bg-slate border border-iron rounded-[6px] p-4 w-[320px] flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+        <p className="text-[13px] font-semibold text-chalk m-0">Rename</p>
+        <input
+          className="bg-obsidian border border-iron rounded-[3px] text-chalk font-sans text-[13px] px-[10px] py-[6px] outline-none transition-colors focus:border-gold"
+          value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") onConfirm(name.trim()); if (e.key === "Escape") onCancel(); }}
-          autoFocus />
-        <div className="af-modal__actions">
-          <button className="af-btn--secondary" onClick={onCancel}>Cancel</button>
-          <button className="af-btn--primary" onClick={() => onConfirm(name.trim())}
-            disabled={!name.trim() || name.trim() === entry.name}>Rename</button>
+          autoFocus
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            className="bg-transparent text-ash border border-iron rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+            onClick={onCancel}
+          >Cancel</button>
+          <button
+            className="bg-gold text-void border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
+            onClick={() => onConfirm(name.trim())}
+            disabled={!name.trim() || name.trim() === entry.name}
+          >Rename</button>
         </div>
       </div>
     </div>
@@ -208,16 +241,27 @@ function NewFolderModal({ onConfirm, onCancel }: {
 }) {
   const [name, setName] = useState("");
   return (
-    <div className="af-modal-overlay" onClick={onCancel}>
-      <div className="af-modal" onClick={(e) => e.stopPropagation()}>
-        <p className="af-modal__title">New Folder</p>
-        <input className="af-modal__input" placeholder="Folder name" value={name}
+    <div className="fixed inset-0 bg-black/65 flex items-center justify-center z-[900]" onClick={onCancel}>
+      <div className="bg-slate border border-iron rounded-[6px] p-4 w-[320px] flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+        <p className="text-[13px] font-semibold text-chalk m-0">New Folder</p>
+        <input
+          className="bg-obsidian border border-iron rounded-[3px] text-chalk font-sans text-[13px] px-[10px] py-[6px] outline-none transition-colors focus:border-gold"
+          placeholder="Folder name"
+          value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) onConfirm(name.trim()); if (e.key === "Escape") onCancel(); }}
-          autoFocus />
-        <div className="af-modal__actions">
-          <button className="af-btn--secondary" onClick={onCancel}>Cancel</button>
-          <button className="af-btn--primary" onClick={() => onConfirm(name.trim())} disabled={!name.trim()}>Create</button>
+          autoFocus
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            className="bg-transparent text-ash border border-iron rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+            onClick={onCancel}
+          >Cancel</button>
+          <button
+            className="bg-gold text-void border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
+            onClick={() => onConfirm(name.trim())}
+            disabled={!name.trim()}
+          >Create</button>
         </div>
       </div>
     </div>
@@ -254,13 +298,11 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   // ── Cloud sync state ─────────────────────────────────────────────────────────
-  // Map of artifact_id -> CloudSyncInfo for artifacts in current view.
   const [syncInfoMap, setSyncInfoMap] = useState<Map<string, CloudSyncInfo>>(new Map());
   const [sharing, setSharing] = useState<ArtifactEntry | null>(null);
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
   const [cloudEntries, setCloudEntries] = useState<CloudSyncInfo[]>([]);
 
-  // Debounce search input — avoid hammering SQLite on every keystroke.
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(t);
@@ -277,7 +319,6 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   const loadEntries = useCallback(async () => {
     setError(null);
     try {
-      // Cloud sections show sync info, not local artifact entries directly.
       if (nav.kind === "cloud_branch" || nav.kind === "cloud_shared") {
         const section = nav.kind === "cloud_branch" ? "branch" : "shared";
         const infos = await invoke<CloudSyncInfo[]>("list_cloud_artifacts", { section });
@@ -398,69 +439,114 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
     filter === "all" || (!e.is_dir && mimeCategory(e.mime_type) === filter)
   );
 
+  const metaCellCls = "text-smoke font-mono text-[11px] whitespace-nowrap";
+  const viewBtnCls = (active: boolean) => [
+    "bg-transparent border border-iron text-ash w-7 h-6 rounded-[3px] cursor-pointer text-sm",
+    "flex items-center justify-center transition-colors hover:text-chalk",
+    active ? "border-gold text-gold" : "",
+  ].join(" ");
+
   return (
-    <div className="af-root">
+    <div data-qa="artifacts-root" className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden">
       {/* Topbar */}
-      <header className="af-topbar">
-        <button className="af-topbar__back" onClick={onBack}>← Operator</button>
-        <span className="af-topbar__title">Artifacts</span>
-        <div className="af-topbar__actions">
-          <button className={`af-view-btn${viewMode === "list" ? " af-view-btn--active" : ""}`} onClick={() => setViewMode("list")} title="List view">≡</button>
-          <button className={`af-view-btn${viewMode === "grid" ? " af-view-btn--active" : ""}`} onClick={() => setViewMode("grid")} title="Grid view">⊞</button>
+      <header data-qa="artifacts-topbar" className="flex items-center gap-3 px-4 h-11 border-b border-iron shrink-0">
+        <button
+          data-qa="artifacts-back-btn"
+          className="bg-transparent border-none text-xs text-ash cursor-pointer font-sans p-0 transition-colors hover:text-chalk"
+          onClick={onBack}
+        >← Operator</button>
+        <span className="text-[13px] font-semibold tracking-[0.06em] uppercase text-chalk flex-1">Artifacts</span>
+        <div className="flex gap-1">
+          <button
+            data-qa="artifacts-view-list"
+            className={viewBtnCls(viewMode === "list")}
+            onClick={() => setViewMode("list")}
+            title="List view"
+          >≡</button>
+          <button
+            data-qa="artifacts-view-grid"
+            className={viewBtnCls(viewMode === "grid")}
+            onClick={() => setViewMode("grid")}
+            title="Grid view"
+          >⊞</button>
         </div>
       </header>
 
-      <div className="af-body">
+      <div className="flex flex-1 overflow-hidden">
         <Sidebar projects={projects} nav={nav} onNav={handleNav} usage={storageUsage} />
 
-        <main className="af-main">
+        <main className="flex-1 flex flex-col overflow-hidden bg-void">
           {/* Toolbar */}
-          <div className="af-toolbar">
-            <div className="af-breadcrumb">
-              <button className="af-breadcrumb__item" onClick={() => handleCrumb(-1)}>{sectionTitle}</button>
+          <div className="flex items-center justify-between px-4 py-2 border-b border-iron shrink-0 gap-3">
+            <div className="flex items-center gap-[2px] text-xs min-w-0 flex-1">
+              <button
+                className="bg-transparent border-none font-sans text-xs text-ash cursor-pointer px-1 py-[2px] rounded-[3px] whitespace-nowrap hover:text-chalk"
+                onClick={() => handleCrumb(-1)}
+              >{sectionTitle}</button>
               {crumbs.map((c, i) => (
                 <span key={i}>
-                  <span className="af-breadcrumb__sep">/</span>
-                  <button className="af-breadcrumb__item" onClick={() => handleCrumb(i)}>{c.label}</button>
+                  <span className="text-smoke mx-[2px]">/</span>
+                  <button
+                    className="bg-transparent border-none font-sans text-xs text-ash cursor-pointer px-1 py-[2px] rounded-[3px] whitespace-nowrap hover:text-chalk"
+                    onClick={() => handleCrumb(i)}
+                  >{c.label}</button>
                 </span>
               ))}
             </div>
-            <div className="af-toolbar__right">
-              <input className="af-search" type="search" placeholder="Search files…"
-                value={query} onChange={(e) => setQuery(e.target.value)} />
-              <button className="af-action-btn" onClick={() => setNewFolder(true)}>+ Folder</button>
+            <div className="flex items-center gap-2 shrink-0">
+              <input
+                data-qa="artifacts-search"
+                className="bg-obsidian border border-iron rounded-[3px] text-chalk font-sans text-xs px-2 py-1 w-[180px] outline-none transition-colors focus:border-gold placeholder:text-smoke"
+                type="search"
+                placeholder="Search files…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <button
+                data-qa="artifacts-new-folder-btn"
+                className="font-sans text-[11px] font-medium text-ash bg-transparent border border-iron rounded-[3px] py-1 px-[10px] cursor-pointer whitespace-nowrap transition-colors hover:text-chalk hover:border-ash"
+                onClick={() => setNewFolder(true)}
+              >+ Folder</button>
             </div>
           </div>
 
           {/* Filter pills */}
-          <div className="af-filters">
+          <div className="flex gap-[6px] px-4 py-2 border-b border-iron shrink-0">
             {FILTERS.map((f) => (
-              <button key={f.value}
-                className={`af-pill${filter === f.value ? " af-pill--active" : ""}`}
-                onClick={() => setFilter(f.value)}>{f.label}</button>
+              <button
+                key={f.value}
+                data-qa={`artifacts-filter-${f.value}`}
+                className={[
+                  "font-sans text-[10px] font-medium tracking-[0.04em] uppercase rounded-[20px] py-[3px] px-[10px] cursor-pointer transition-colors",
+                  filter === f.value
+                    ? "text-void bg-gold border border-gold"
+                    : "bg-transparent border border-iron text-ash hover:text-chalk hover:border-ash",
+                ].join(" ")}
+                onClick={() => setFilter(f.value)}
+              >{f.label}</button>
             ))}
           </div>
 
-          {error && <p className="af-error">{error}</p>}
+          {error && <p className="text-[11px] text-ember px-4 py-2 m-0">{error}</p>}
 
           {/* Cloud section panels */}
           {(nav.kind === "cloud_branch" || nav.kind === "cloud_shared") && (
-            <div className="af-cloud-panel">
+            <div className="flex-1 overflow-y-auto py-2">
               {cloudEntries.length === 0 ? (
-                <p className="af-empty">No synced files in this section.</p>
+                <p className="text-center text-smoke text-xs py-12">No synced files in this section.</p>
               ) : cloudEntries.map((info) => (
-                <div key={info.artifact_id} className="af-cloud-row">
+                <div key={info.artifact_id} className="flex items-center gap-[10px] px-4 py-2 border-b border-iron/50 text-[13px]">
                   <SyncBadge status={info.status} />
-                  <span className="af-cloud-key" title={info.cloud_key ?? ""}>
+                  <span className="flex-1 text-chalk overflow-hidden text-ellipsis whitespace-nowrap" title={info.cloud_key ?? ""}>
                     {info.cloud_key?.split("/").pop() ?? info.artifact_id}
                   </span>
-                  <span className="af-cloud-meta">
+                  <span className="text-[11px] text-ash font-mono shrink-0">
                     {info.last_synced_ms
                       ? `Synced ${formatDate(info.last_synced_ms)}`
                       : "Not yet synced"}
                   </span>
                   {info.sync_error && (
-                    <span className="af-cloud-error" title={info.sync_error}>⚠ {info.sync_error.slice(0, 40)}</span>
+                    <span className="text-[11px] text-ember shrink-0" title={info.sync_error}>⚠ {info.sync_error.slice(0, 40)}</span>
                   )}
                 </div>
               ))}
@@ -470,28 +556,39 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           {/* File list */}
           {nav.kind !== "cloud_branch" && nav.kind !== "cloud_shared" && (
             viewMode === "list" ? (
-              <div className="af-table-wrap">
-                <table className="af-table">
+              <div className="flex-1 overflow-y-auto">
+                <table className="w-full border-collapse text-xs">
                   <thead>
-                    <tr><th>Name</th><th>Type</th><th>Size</th><th>Modified</th><th></th></tr>
+                    <tr>
+                      {["Name", "Type", "Size", "Modified", ""].map((h) => (
+                        <th key={h} className="text-left text-[9px] font-semibold tracking-[0.08em] uppercase text-smoke px-4 py-[6px] border-b border-iron sticky top-0 bg-void">{h}</th>
+                      ))}
+                    </tr>
                   </thead>
                   <tbody>
                     {visible.length === 0 ? (
-                      <tr><td colSpan={5} className="af-empty">{query ? "No results." : "No files here yet."}</td></tr>
+                      <tr><td colSpan={5} className="text-center text-smoke text-xs py-12">{query ? "No results." : "No files here yet."}</td></tr>
                     ) : visible.map((e) => {
                       const sync = syncInfoMap.get(e.id);
                       return (
-                        <tr key={e.id} className="af-row" onContextMenu={(ev) => handleCtx(ev, e)}
-                          onDoubleClick={() => handleNavigate(e)}>
-                          <td className="af-row__name">
-                            <span className="af-row__icon">{entryIcon(e)}</span>
-                            {e.name}
-                            {e.starred && <span className="af-row__star">★</span>}
+                        <tr
+                          key={e.id}
+                          data-qa="artifacts-row"
+                          className="cursor-default border-b border-iron/50 transition-colors hover:bg-white/[0.025]"
+                          onContextMenu={(ev) => handleCtx(ev, e)}
+                          onDoubleClick={() => handleNavigate(e)}
+                        >
+                          <td className="px-4 py-[6px] align-middle">
+                            <div className="flex items-center gap-2 text-chalk font-normal">
+                              <span className="text-sm shrink-0">{entryIcon(e)}</span>
+                              {e.name}
+                              {e.starred && <span className="text-gold ml-[6px] text-[11px]">★</span>}
+                            </div>
                           </td>
-                          <td className="af-row__type">{e.is_dir ? "Folder" : (e.mime_type?.split("/")[1]?.toUpperCase() ?? "File")}</td>
-                          <td className="af-row__size">{e.is_dir ? "—" : formatBytes(e.size_bytes)}</td>
-                          <td className="af-row__date">{formatDate(e.modified_at_ms)}</td>
-                          <td className="af-row__sync">
+                          <td className={`px-4 py-[6px] align-middle ${metaCellCls}`}>{e.is_dir ? "Folder" : (e.mime_type?.split("/")[1]?.toUpperCase() ?? "File")}</td>
+                          <td className={`px-4 py-[6px] align-middle ${metaCellCls}`}>{e.is_dir ? "—" : formatBytes(e.size_bytes)}</td>
+                          <td className={`px-4 py-[6px] align-middle ${metaCellCls}`}>{formatDate(e.modified_at_ms)}</td>
+                          <td className="px-4 py-[6px] align-middle w-6 text-center">
                             {sync?.sync_enabled && <SyncBadge status={sync.status} />}
                           </td>
                         </tr>
@@ -501,19 +598,24 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                 </table>
               </div>
             ) : (
-              <div className="af-grid">
+              <div className="flex-1 flex flex-wrap content-start gap-3 p-4 overflow-y-auto">
                 {visible.length === 0
-                  ? <p className="af-empty">{query ? "No results." : "No files here yet."}</p>
+                  ? <p className="text-center text-smoke text-xs py-12">{query ? "No results." : "No files here yet."}</p>
                   : visible.map((e) => {
                     const sync = syncInfoMap.get(e.id);
                     return (
-                      <div key={e.id} className="af-tile" onContextMenu={(ev) => handleCtx(ev, e)}
-                        onDoubleClick={() => handleNavigate(e)}>
-                        <div className="af-tile__icon">{entryIcon(e)}</div>
-                        <span className="af-tile__name" title={e.name}>{e.name}</span>
-                        {e.starred && <span className="af-tile__star">★</span>}
+                      <div
+                        key={e.id}
+                        data-qa="artifacts-tile"
+                        className="relative w-24 flex flex-col items-center gap-[6px] px-2 py-3 rounded border border-transparent cursor-default transition-colors hover:bg-white/[0.04] hover:border-iron"
+                        onContextMenu={(ev) => handleCtx(ev, e)}
+                        onDoubleClick={() => handleNavigate(e)}
+                      >
+                        <div className="text-[32px] leading-none">{entryIcon(e)}</div>
+                        <span className="text-[11px] text-chalk text-center max-w-[80px] overflow-hidden text-ellipsis whitespace-nowrap w-full" title={e.name}>{e.name}</span>
+                        {e.starred && <span className="absolute top-[6px] right-[6px] text-gold text-[10px]">★</span>}
                         {sync?.sync_enabled && (
-                          <span className="af-tile__sync"><SyncBadge status={sync.status} /></span>
+                          <span className="absolute top-1 right-1"><SyncBadge status={sync.status} /></span>
                         )}
                       </div>
                     );
@@ -524,16 +626,21 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           )}
 
           {/* Status bar */}
-          <div className="af-statusbar">
-            <span className="af-statusbar__count">
+          <div className="flex items-center justify-between px-4 py-1 border-t border-iron shrink-0 gap-4">
+            <span className="font-mono text-[10px] text-smoke shrink-0">
               {nav.kind === "cloud_branch" || nav.kind === "cloud_shared"
                 ? `${cloudEntries.length} synced item${cloudEntries.length !== 1 ? "s" : ""}`
                 : `${visible.length} item${visible.length !== 1 ? "s" : ""}`}
             </span>
             {storageUsage?.last_updated_ms ? (
-              <span className="af-statusbar__sync">Last sync: {formatDate(storageUsage.last_updated_ms)}</span>
+              <span className="text-[11px] text-ash font-mono">Last sync: {formatDate(storageUsage.last_updated_ms)}</span>
             ) : null}
-            {settings && <span className="af-statusbar__path" title={settings.base_path}>{settings.base_path}</span>}
+            {settings && (
+              <span
+                className="font-mono text-[10px] text-smoke whitespace-nowrap overflow-hidden text-ellipsis min-w-0 [direction:rtl] text-right"
+                title={settings.base_path}
+              >{settings.base_path}</span>
+            )}
           </div>
         </main>
       </div>
