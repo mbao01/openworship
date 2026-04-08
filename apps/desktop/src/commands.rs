@@ -1726,11 +1726,21 @@ pub fn get_email_settings(state: State<'_, AppState>) -> Result<EmailSettings, S
 }
 
 /// Persist updated email / SMTP settings.
+///
+/// The SMTP password is stored in the OS keychain and never written to disk.
 #[tauri::command]
 pub fn set_email_settings(
     settings: EmailSettings,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    // Only update the keychain when the caller supplies a non-empty password.
+    // An empty string means "keep the existing keychain entry" (the frontend
+    // receives no smtp_password field from get_email_settings and submits ""
+    // when the user hasn't changed the field).
+    if !settings.smtp_password.is_empty() {
+        crate::keychain::set_smtp_password(&settings.smtp_password)
+            .map_err(|e| format!("keychain error: {e}"))?;
+    }
     let mut guard = state.email_settings.write().map_err(|e| e.to_string())?;
     *guard = settings.clone();
     save_email_settings(&settings).map_err(|e| e.to_string())
