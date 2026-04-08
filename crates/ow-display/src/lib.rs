@@ -183,6 +183,10 @@ impl ContentEvent {
             text: String::new(),
             translation: String::new(),
             line_index: None,
+            image_url: None,
+            duration_secs: None,
+            slide_index: None,
+            total_slides: None,
         }
     }
 }
