@@ -5,6 +5,7 @@ import type { ChurchIdentity } from "./lib/types";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OperatorPage } from "./pages/OperatorPage";
 import { DisplayPage } from "./pages/DisplayPage";
+import { SpeakerPage } from "./pages/SpeakerPage";
 import "./styles/tokens.css";
 import "./styles/global.css";
 
@@ -29,6 +30,7 @@ function App() {
   return (
     <Routes>
       <Route path="/display" element={<DisplayPage />} />
+      <Route path="/speaker" element={<SpeakerPage />} />
       <Route
         path="/"
         element={

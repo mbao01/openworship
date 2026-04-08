@@ -2,6 +2,8 @@ use crate::service::{ContentBankEntry, ProjectItem, ServiceProject};
 use crate::settings::AudioSettings;
 #[cfg(feature = "deepgram")]
 use crate::settings::SttBackend;
+use crate::slides::{AnnouncementItem, SermonNote};
+use crate::slides::{save_announcements, save_sermon_notes};
 use crate::songs::Song;
 use crate::state::AppState;
 use ow_audio::{AudioConfig, MockTranscriber, SttStatus};
@@ -1255,6 +1257,272 @@ pub fn get_song_semantic_status(state: State<'_, AppState>) -> Result<SongSemant
         })
         .unwrap_or((false, 0));
     Ok(SongSemanticStatus { ready, song_count })
+}
+
+// ─── Announcements ────────────────────────────────────────────────────────────
+
+/// List all stored announcements and custom slides.
+#[tauri::command]
+pub fn list_announcements(state: State<'_, AppState>) -> Vec<AnnouncementItem> {
+    state.announcements.read().map(|g| g.clone()).unwrap_or_default()
+}
+
+/// Create a new announcement (persisted to disk).
+#[tauri::command]
+pub fn create_announcement(
+    title: String,
+    body: String,
+    image_url: Option<String>,
+    keyword_cue: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<AnnouncementItem, String> {
+    let item = AnnouncementItem::new_announcement(title, body, image_url, keyword_cue);
+    let mut guard = state.announcements.write().map_err(|e| e.to_string())?;
+    guard.push(item.clone());
+    save_announcements(&guard).map_err(|e| e.to_string())?;
+    Ok(item)
+}
+
+/// Delete an announcement by ID.
+#[tauri::command]
+pub fn delete_announcement(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut guard = state.announcements.write().map_err(|e| e.to_string())?;
+    guard.retain(|a| a.id != id);
+    save_announcements(&guard).map_err(|e| e.to_string())
+}
+
+/// Push a stored announcement to the main display, add it to the queue, and
+/// append it to the active service project.
+#[tauri::command]
+pub fn push_announcement_to_display(
+    id: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let announcement = {
+        let guard = state.announcements.read().map_err(|e| e.to_string())?;
+        guard.iter().find(|a| a.id == id).cloned()
+    }
+    .ok_or_else(|| format!("announcement {id} not found"))?;
+
+    let ev = ContentEvent::announcement(
+        announcement.title.clone(),
+        announcement.body.clone(),
+        announcement.image_url.clone(),
+    );
+    let _ = state.display_tx.send(ev);
+
+    let mut item = ow_core::QueueItem::new_announcement(
+        announcement.title.clone(),
+        announcement.body.clone(),
+        announcement.image_url.clone(),
+    );
+    item.status = ow_core::QueueStatus::Live;
+    {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        q.push_back(item);
+    }
+    let _ = app.emit("detection://queue-updated", ());
+    Ok(())
+}
+
+// ─── Custom slides ────────────────────────────────────────────────────────────
+
+/// Immediately push a custom slide to the main display and queue.
+/// Custom slides are one-off (not persisted to the announcement library).
+#[tauri::command]
+pub fn push_custom_slide(
+    title: String,
+    body: String,
+    image_url: Option<String>,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let ev = ContentEvent::custom_slide(title.clone(), body.clone(), image_url.clone());
+    let _ = state.display_tx.send(ev);
+
+    let mut item =
+        ow_core::QueueItem::new_custom_slide(title, body, image_url);
+    item.status = ow_core::QueueStatus::Live;
+    {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        q.push_back(item);
+    }
+    let _ = app.emit("detection://queue-updated", ());
+    Ok(())
+}
+
+// ─── Countdown timers ─────────────────────────────────────────────────────────
+
+/// Push a countdown timer to the main display.
+/// The display page renders the countdown and fires a `countdown://done` event
+/// when it reaches zero.
+#[tauri::command]
+pub fn start_countdown(
+    title: String,
+    duration_secs: u32,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let ev = ContentEvent::countdown(title.clone(), duration_secs);
+    let _ = state.display_tx.send(ev);
+
+    let mut item = ow_core::QueueItem::new_countdown(title, duration_secs);
+    item.status = ow_core::QueueStatus::Live;
+    {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        q.push_back(item);
+    }
+    let _ = app.emit("detection://queue-updated", ());
+    Ok(())
+}
+
+// ─── Sermon notes ─────────────────────────────────────────────────────────────
+
+/// List all stored sermon note decks.
+#[tauri::command]
+pub fn list_sermon_notes(state: State<'_, AppState>) -> Vec<SermonNote> {
+    state.sermon_notes.read().map(|g| g.clone()).unwrap_or_default()
+}
+
+/// Create a new sermon note deck (persisted to disk).
+#[tauri::command]
+pub fn create_sermon_note(
+    title: String,
+    slides: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<SermonNote, String> {
+    let note = SermonNote::new(title, slides);
+    let mut guard = state.sermon_notes.write().map_err(|e| e.to_string())?;
+    guard.push(note.clone());
+    save_sermon_notes(&guard).map_err(|e| e.to_string())?;
+    Ok(note)
+}
+
+/// Update an existing sermon note's title and slides.
+#[tauri::command]
+pub fn update_sermon_note(
+    id: String,
+    title: String,
+    slides: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let mut guard = state.sermon_notes.write().map_err(|e| e.to_string())?;
+    let note = guard
+        .iter_mut()
+        .find(|n| n.id == id)
+        .ok_or_else(|| format!("sermon note {id} not found"))?;
+    note.title = title;
+    note.slides = slides;
+    save_sermon_notes(&guard).map_err(|e| e.to_string())
+}
+
+/// Delete a sermon note deck by ID.
+#[tauri::command]
+pub fn delete_sermon_note(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut guard = state.sermon_notes.write().map_err(|e| e.to_string())?;
+    guard.retain(|n| n.id != id);
+    // Clear active state if it referenced this note.
+    if let Ok(mut active) = state.active_sermon_note.write() {
+        if active.as_ref().map(|(nid, _)| nid == &id).unwrap_or(false) {
+            *active = None;
+        }
+    }
+    save_sermon_notes(&guard).map_err(|e| e.to_string())
+}
+
+/// Push a sermon note deck's first slide to the speaker display and mark it
+/// active so `advance_sermon_note` can advance through subsequent slides.
+#[tauri::command]
+pub fn push_sermon_note(
+    id: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let note = {
+        let guard = state.sermon_notes.read().map_err(|e| e.to_string())?;
+        guard.iter().find(|n| n.id == id).cloned()
+    }
+    .ok_or_else(|| format!("sermon note {id} not found"))?;
+
+    if note.slides.is_empty() {
+        return Err("sermon note has no slides".into());
+    }
+
+    let total = note.slides.len() as u32;
+    let ev = ContentEvent::sermon_note(
+        note.title.clone(),
+        note.slides[0].clone(),
+        0,
+        total,
+    );
+    let _ = state.display_tx.send(ev);
+
+    // Mark as active at slide 0.
+    {
+        let mut active = state.active_sermon_note.write().map_err(|e| e.to_string())?;
+        *active = Some((id.clone(), 0));
+    }
+
+    // Add a queue reference item.
+    let mut item = ow_core::QueueItem::new_sermon_note_ref(note.title.clone(), id);
+    item.status = ow_core::QueueStatus::Live;
+    {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        q.push_back(item);
+    }
+    let _ = app.emit("detection://queue-updated", ());
+    let _ = app.emit("speaker://note-changed", ());
+    Ok(())
+}
+
+/// Advance the currently active sermon note to the next slide on the speaker
+/// display. Returns an error if no sermon note is active or already at the last
+/// slide.
+#[tauri::command]
+pub fn advance_sermon_note(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let (note, next_index) = {
+        let mut active = state.active_sermon_note.write().map_err(|e| e.to_string())?;
+        let (note_id, current) = active
+            .as_ref()
+            .cloned()
+            .ok_or("no active sermon note")?;
+        let guard = state.sermon_notes.read().map_err(|e| e.to_string())?;
+        let note = guard
+            .iter()
+            .find(|n| n.id == note_id)
+            .cloned()
+            .ok_or("active sermon note not found")?;
+        let next = current + 1;
+        if next as usize >= note.slides.len() {
+            return Err("already at last slide".into());
+        }
+        *active = Some((note_id, next));
+        (note, next)
+    };
+
+    let total = note.slides.len() as u32;
+    let ev = ContentEvent::sermon_note(
+        note.title.clone(),
+        note.slides[next_index as usize].clone(),
+        next_index,
+        total,
+    );
+    let _ = state.display_tx.send(ev);
+    let _ = app.emit("speaker://note-changed", ());
+    Ok(())
+}
+
+/// Return the currently active sermon note and its current slide index.
+#[tauri::command]
+pub fn get_active_sermon_note(
+    state: State<'_, AppState>,
+) -> Option<(SermonNote, u32)> {
+    let active = state.active_sermon_note.read().ok()?;
+    let (note_id, slide_idx) = active.as_ref()?;
+    let guard = state.sermon_notes.read().ok()?;
+    let note = guard.iter().find(|n| &n.id == note_id)?.clone();
+    Some((note, *slide_idx))
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
