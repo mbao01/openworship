@@ -9,5 +9,8 @@
     "lint": "pnpm --filter @openworship/web lint",
     "type-check": "pnpm --filter @openworship/web type-check",
     "test": "pnpm --filter @openworship/web test"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
   }
 }
