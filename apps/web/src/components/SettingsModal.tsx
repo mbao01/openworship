@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { invoke } from "../lib/tauri";
 import type { AudioSettings, ChurchIdentity, EmailSettings, EmailSubscriber, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
 
@@ -23,7 +24,7 @@ const CATEGORIES: { id: Category; label: string }[] = [
 export function SettingsModal({ identity, onClose }: SettingsModalProps) {
   const [activeCategory, setActiveCategory] = useState<Category>("church");
   const [audioSettings, setAudioSettings] = useState<AudioSettings>({
-    backend: "offline",
+    backend: "whisper",
     deepgram_api_key: "",
     semantic_enabled: true,
     semantic_threshold_auto: 0.75,
@@ -164,6 +165,12 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
 
 // ─── Audio section ─────────────────────────────────────────────────────────────
 
+interface ModelDownloadProgress {
+  downloaded_bytes: number;
+  total_bytes: number | null;
+  percent: number | null;
+}
+
 interface AudioSectionProps {
   settings: AudioSettings;
   keyVisible: boolean;
@@ -179,43 +186,100 @@ function AudioSection({
   onApiKeyChange,
   onToggleKeyVisible,
 }: AudioSectionProps) {
-  const isOnline = settings.backend === "online";
+  const [downloadState, setDownloadState] = useState<
+    "idle" | "downloading" | "done" | "error"
+  >("idle");
+  const [downloadProgress, setDownloadProgress] = useState<ModelDownloadProgress | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  // Subscribe to model download progress events from the Rust backend.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let unlistenComplete: (() => void) | undefined;
+
+    listen<ModelDownloadProgress>("stt://model-download-progress", (evt) => {
+      setDownloadProgress(evt.payload);
+      setDownloadState("downloading");
+    }).then((fn) => { unlisten = fn; });
+
+    listen<string>("stt://model-download-complete", () => {
+      setDownloadState("done");
+      setDownloadProgress(null);
+    }).then((fn) => { unlistenComplete = fn; });
+
+    return () => {
+      unlisten?.();
+      unlistenComplete?.();
+    };
+  }, []);
+
+  const handleDownload = async () => {
+    setDownloadState("downloading");
+    setDownloadError(null);
+    setDownloadProgress(null);
+    try {
+      await invoke("download_whisper_model");
+    } catch (e) {
+      setDownloadState("error");
+      setDownloadError(String(e));
+    }
+  };
+
+  const formatBytes = (b: number) => {
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} KB`;
+    return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const isDeepgram = settings.backend === "deepgram";
+  const isWhisper = settings.backend === "whisper";
+  const isOff = settings.backend === "off";
 
   return (
     <div className="flex-1 p-6">
       <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">Audio</h2>
 
-      {/* STT Backend toggle */}
+      {/* STT Engine selector */}
       <div className="mb-6">
-        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">SPEECH-TO-TEXT BACKEND</p>
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">SPEECH-TO-TEXT ENGINE</p>
         <div className="flex gap-2">
           <button
-            data-qa="stt-backend-offline"
+            data-qa="stt-backend-whisper"
             className={[
               "flex-1 flex flex-col gap-1 rounded-sm px-4 py-3 text-left cursor-pointer transition-colors",
-              !isOnline ? "bg-gold/[0.07] border border-gold" : "bg-slate border border-iron hover:border-ash",
+              isWhisper ? "bg-gold/[0.07] border border-gold" : "bg-slate border border-iron hover:border-ash",
             ].join(" ")}
-            onClick={() => onBackendChange("offline")}
+            onClick={() => onBackendChange("whisper")}
           >
-            <span className={`font-sans text-xs font-medium tracking-[0.04em] ${!isOnline ? "text-gold" : "text-chalk"}`}>Offline</span>
-            <span className="text-[11px] text-ash leading-[1.4]">Whisper.cpp — no internet required</span>
+            <span className={`font-sans text-xs font-medium tracking-[0.04em] ${isWhisper ? "text-gold" : "text-chalk"}`}>Whisper</span>
+            <span className="text-[11px] text-ash leading-[1.4]">Offline — no internet required</span>
           </button>
           <button
-            data-qa="stt-backend-online"
+            data-qa="stt-backend-deepgram"
             className={[
               "flex-1 flex flex-col gap-1 rounded-sm px-4 py-3 text-left cursor-pointer transition-colors",
-              isOnline ? "bg-gold/[0.07] border border-gold" : "bg-slate border border-iron hover:border-ash",
+              isDeepgram ? "bg-gold/[0.07] border border-gold" : "bg-slate border border-iron hover:border-ash",
             ].join(" ")}
-            onClick={() => onBackendChange("online")}
+            onClick={() => onBackendChange("deepgram")}
           >
-            <span className={`font-sans text-xs font-medium tracking-[0.04em] ${isOnline ? "text-gold" : "text-chalk"}`}>Online</span>
-            <span className="text-[11px] text-ash leading-[1.4]">Deepgram — lower latency streaming</span>
+            <span className={`font-sans text-xs font-medium tracking-[0.04em] ${isDeepgram ? "text-gold" : "text-chalk"}`}>Deepgram</span>
+            <span className="text-[11px] text-ash leading-[1.4]">Online — lower latency streaming</span>
+          </button>
+          <button
+            data-qa="stt-backend-off"
+            className={[
+              "flex-1 flex flex-col gap-1 rounded-sm px-4 py-3 text-left cursor-pointer transition-colors",
+              isOff ? "bg-gold/[0.07] border border-gold" : "bg-slate border border-iron hover:border-ash",
+            ].join(" ")}
+            onClick={() => onBackendChange("off")}
+          >
+            <span className={`font-sans text-xs font-medium tracking-[0.04em] ${isOff ? "text-gold" : "text-chalk"}`}>Off</span>
+            <span className="text-[11px] text-ash leading-[1.4]">Disable transcription</span>
           </button>
         </div>
       </div>
 
-      {/* Deepgram API key — only shown when Online is selected */}
-      {isOnline && (
+      {/* Deepgram API key — only shown when Deepgram is selected */}
+      {isDeepgram && (
         <div className="mb-6">
           <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">DEEPGRAM API KEY</p>
           <div className="flex items-center gap-2">
@@ -238,20 +302,57 @@ function AudioSection({
           </div>
           {!settings.deepgram_api_key && (
             <p className="text-xs text-smoke mt-2 leading-[1.5]">
-              Key required. Without it, falls back to offline mode.
+              Key required. Without it, falls back to Whisper automatically.
             </p>
           )}
+          <p className="text-xs text-smoke mt-2 leading-[1.5]">
+            If the Deepgram connection fails, the engine falls back to Whisper automatically.
+          </p>
         </div>
       )}
 
-      {/* Fallback note */}
-      <div className="mb-6">
-        <p className="text-xs text-smoke mt-2 leading-[1.5]">
-          {isOnline
-            ? "If the Deepgram connection fails or the API key is missing, the engine falls back to Whisper.cpp automatically."
-            : "Requires the Whisper ggml-tiny.en model at ~/.openworship/models/ggml-tiny.en.bin."}
-        </p>
-      </div>
+      {/* Whisper model download — shown when Whisper is selected */}
+      {isWhisper && (
+        <div className="mb-6">
+          <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">WHISPER MODEL</p>
+          {downloadState === "done" ? (
+            <p className="text-xs text-chalk mt-1 leading-[1.5]">
+              Model ready — ggml-base.en.bin downloaded successfully.
+            </p>
+          ) : downloadState === "downloading" ? (
+            <div className="mt-2">
+              <div className="h-[3px] bg-iron rounded-full overflow-hidden mb-2">
+                <div
+                  className="h-full bg-gold rounded-full transition-all duration-300"
+                  style={{ width: downloadProgress?.percent != null ? `${downloadProgress.percent.toFixed(0)}%` : "100%", animationName: downloadProgress?.percent == null ? "pulse" : "none" }}
+                />
+              </div>
+              <p className="text-[11px] text-ash">
+                {downloadProgress
+                  ? `${formatBytes(downloadProgress.downloaded_bytes)}${downloadProgress.total_bytes ? ` / ${formatBytes(downloadProgress.total_bytes)}` : ""}${downloadProgress.percent != null ? ` (${downloadProgress.percent.toFixed(0)}%)` : ""}`
+                  : "Starting download…"}
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-smoke leading-[1.5] mb-3">
+                Requires <span className="font-mono text-ash">ggml-base.en.bin</span> (~148 MB) at{" "}
+                <span className="font-mono text-ash">~/.openworship/models/</span>. Download once; works offline.
+              </p>
+              {downloadState === "error" && downloadError && (
+                <p className="text-xs text-ember mb-2">{downloadError}</p>
+              )}
+              <button
+                data-qa="whisper-download-btn"
+                className="font-sans text-[11px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm py-[6px] px-4 cursor-pointer transition-[filter] hover:brightness-[1.15]"
+                onClick={handleDownload}
+              >
+                Download Model
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

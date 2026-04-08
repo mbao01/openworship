@@ -123,7 +123,7 @@ async fn run_session(
     // Writer: receive f32 audio chunks and forward as 16-bit PCM binary frames.
     while let Some(samples) = audio_rx.recv().await {
         let bytes = f32_to_i16_le(samples.as_slice());
-        if write.send(Message::Binary(bytes)).await.is_err() {
+        if write.send(Message::Binary(bytes.into())).await.is_err() {
             break;
         }
     }

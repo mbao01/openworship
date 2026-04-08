@@ -14,10 +14,16 @@ use std::path::PathBuf;
 #[serde(rename_all = "snake_case")]
 pub enum SttBackend {
     /// Offline Whisper.cpp (default).
+    /// Deserialises from both `"whisper"` (current) and `"offline"` (legacy).
     #[default]
-    Offline,
+    #[serde(alias = "offline")]
+    Whisper,
     /// Online Deepgram streaming WebSocket.
-    Online,
+    /// Deserialises from both `"deepgram"` (current) and `"online"` (legacy).
+    #[serde(alias = "online")]
+    Deepgram,
+    /// STT disabled — no transcription will run.
+    Off,
 }
 
 /// Operator-controlled audio settings, persisted across restarts.
@@ -162,16 +168,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_backend_is_offline() {
+    fn default_backend_is_whisper() {
         let s = AudioSettings::default();
-        assert_eq!(s.backend, SttBackend::Offline);
+        assert_eq!(s.backend, SttBackend::Whisper);
         assert!(s.deepgram_api_key.is_empty());
     }
 
     #[test]
     fn key_not_serialized_to_json() {
         let s = AudioSettings {
-            backend: SttBackend::Online,
+            backend: SttBackend::Deepgram,
             deepgram_api_key: "secret-key".into(),
             ..AudioSettings::default()
         };
@@ -184,7 +190,7 @@ mod tests {
     fn missing_fields_use_defaults() {
         let json = r#"{}"#;
         let s: AudioSettings = serde_json::from_str(json).unwrap();
-        assert_eq!(s.backend, SttBackend::Offline);
+        assert_eq!(s.backend, SttBackend::Whisper);
         assert!(s.deepgram_api_key.is_empty());
     }
 
@@ -193,8 +199,24 @@ mod tests {
         // Old format that included the key in JSON — migration path must parse it.
         let json = r#"{"backend":"online","deepgram_api_key":"old-plaintext-key"}"#;
         let file: AudioSettingsFile = serde_json::from_str(json).unwrap();
-        assert_eq!(file.backend, SttBackend::Online);
+        assert_eq!(file.backend, SttBackend::Deepgram);
         assert_eq!(file.deepgram_api_key, "old-plaintext-key");
+    }
+
+    #[test]
+    fn legacy_offline_backend_deserialises_as_whisper() {
+        let json = r#"{"backend":"offline"}"#;
+        let s: AudioSettings = serde_json::from_str(json).unwrap();
+        assert_eq!(s.backend, SttBackend::Whisper);
+    }
+
+    #[test]
+    fn new_backend_values_round_trip() {
+        for backend in [SttBackend::Whisper, SttBackend::Deepgram, SttBackend::Off] {
+            let json = serde_json::to_string(&AudioSettings { backend: backend.clone(), ..Default::default() }).unwrap();
+            let parsed: AudioSettings = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed.backend, backend);
+        }
     }
 
     #[test]

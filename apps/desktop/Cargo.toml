@@ -11,7 +11,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [features]
-default = []
+default = ["whisper", "deepgram"]
 # Enable real Whisper.cpp transcription (requires model at runtime).
 whisper = ["ow-audio/whisper"]
 # Enable CoreML acceleration on Apple Silicon.
@@ -35,7 +35,8 @@ ow-embed = { path = "../../crates/ow-embed" }
 keyring = "3"
 rusqlite = { workspace = true }
 mime_guess = "2"
-reqwest = { workspace = true }
+reqwest = { workspace = true, features = ["stream"] }
+futures-util = { workspace = true }
 lettre = { workspace = true }
 sha2 = { workspace = true }
 hmac = { workspace = true }

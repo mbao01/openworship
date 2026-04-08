@@ -1,7 +1,5 @@
 use crate::service::{ContentBankEntry, ProjectItem, ServiceProject};
-use crate::settings::AudioSettings;
-#[cfg(feature = "deepgram")]
-use crate::settings::SttBackend;
+use crate::settings::{AudioSettings, SttBackend};
 use crate::slides::{AnnouncementItem, SermonNote};
 use crate::slides::{save_announcements, save_sermon_notes};
 use crate::songs::Song;
@@ -189,19 +187,23 @@ pub fn start_stt(app: AppHandle, state: State<'_, AppState>) -> Result<(), Strin
 fn start_stt_with_settings(
     engine: &mut ow_audio::SttEngine,
     config: AudioConfig,
-    #[cfg_attr(not(feature = "deepgram"), allow(unused_variables))]
     settings: &AudioSettings,
-    #[cfg_attr(not(feature = "deepgram"), allow(unused_variables))]
     app: &AppHandle,
 ) -> anyhow::Result<()> {
-    // Try online (Deepgram) backend first.
+    // Off — operator explicitly disabled STT.
+    if settings.backend == SttBackend::Off {
+        eprintln!("[stt] STT disabled by operator");
+        return Ok(());
+    }
+
+    // Deepgram backend — only when selected AND feature compiled in.
     #[cfg(feature = "deepgram")]
-    if settings.backend == SttBackend::Online {
+    if settings.backend == SttBackend::Deepgram {
         if settings.deepgram_api_key.is_empty() {
-            eprintln!("[stt] Deepgram selected but API key not configured, falling back to offline");
+            eprintln!("[stt] Deepgram selected but API key not configured, falling back to Whisper");
             let _ = app.emit(
                 "stt://error",
-                "Deepgram unavailable: API key not configured — fell back to offline",
+                "Deepgram unavailable: API key not configured — fell back to Whisper",
             );
         } else {
             use ow_audio::DeepgramTranscriber;
@@ -211,17 +213,17 @@ fn start_stt_with_settings(
                     return engine.start(t, config);
                 }
                 Err(e) => {
-                    eprintln!("[stt] Deepgram init failed ({e}), falling back to offline");
+                    eprintln!("[stt] Deepgram init failed ({e}), falling back to Whisper");
                     let _ = app.emit(
                         "stt://error",
-                        format!("Deepgram unavailable: {e} — fell back to offline"),
+                        format!("Deepgram unavailable: {e} — fell back to Whisper"),
                     );
                 }
             }
         }
     }
 
-    // Offline Whisper.cpp (requires `whisper` feature + model file).
+    // Whisper.cpp (requires `whisper` feature + model file on disk).
     #[cfg(feature = "whisper")]
     {
         use ow_audio::WhisperTranscriber;
@@ -231,14 +233,117 @@ fn start_stt_with_settings(
                 return engine.start(t, config);
             }
             Err(e) => {
-                eprintln!("[stt] Whisper model unavailable ({e}), falling back to mock");
+                eprintln!("[stt] Whisper model unavailable: {e}");
+                let _ = app.emit("stt://model-needed", e.to_string());
+                // In release builds, don't silently fall back to mock — surface
+                // the error so the operator knows to download the model.
+                #[cfg(not(debug_assertions))]
+                return Err(e);
             }
         }
     }
 
-    // Always-available mock fallback.
-    eprintln!("[stt] starting mock transcriber (no model/key available)");
-    engine.start(MockTranscriber::new(), config)
+    // Debug / CI fallback: mock transcriber.
+    #[cfg(debug_assertions)]
+    {
+        eprintln!("[stt] starting mock transcriber (debug build, no model available)");
+        return engine.start(MockTranscriber::new(), config);
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        anyhow::bail!("No STT backend available. Download the Whisper model from Settings → Audio.")
+    }
+}
+
+/// Download the Whisper base.en model to `~/.openworship/models/ggml-base.en.bin`.
+///
+/// Emits `stt://model-download-progress` events during download with payload
+/// `{ downloaded_bytes: u64, total_bytes: u64 | null, percent: number | null }`.
+/// Emits `stt://model-download-complete` on success.
+/// Returns an error string on failure.
+#[tauri::command]
+pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
+    use reqwest::header::CONTENT_LENGTH;
+    use tokio::io::AsyncWriteExt;
+
+    const MODEL_URL: &str =
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin";
+
+    let dest = {
+        #[cfg(feature = "whisper")]
+        {
+            ow_audio::default_model_path()
+        }
+        #[cfg(not(feature = "whisper"))]
+        {
+            let home = std::env::var("HOME").unwrap_or_default();
+            std::path::PathBuf::from(home)
+                .join(".openworship")
+                .join("models")
+                .join("ggml-base.en.bin")
+        }
+    };
+
+    if let Some(parent) = dest.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("Failed to create models directory: {e}"))?;
+    }
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(MODEL_URL)
+        .send()
+        .await
+        .map_err(|e| format!("Download request failed: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Download failed with HTTP {}", response.status()));
+    }
+
+    let total_bytes: Option<u64> = response
+        .headers()
+        .get(CONTENT_LENGTH)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok());
+
+    let tmp = dest.with_extension("bin.tmp");
+    let mut file = tokio::fs::File::create(&tmp)
+        .await
+        .map_err(|e| format!("Failed to create temp file: {e}"))?;
+
+    let mut downloaded: u64 = 0;
+    let mut stream = response.bytes_stream();
+
+    use futures_util::StreamExt;
+    while let Some(chunk) = stream.next().await {
+        let bytes = chunk.map_err(|e| format!("Download stream error: {e}"))?;
+        file.write_all(&bytes)
+            .await
+            .map_err(|e| format!("File write error: {e}"))?;
+        downloaded += bytes.len() as u64;
+        let percent = total_bytes.map(|t| downloaded as f32 / t as f32 * 100.0);
+        let _ = app.emit(
+            "stt://model-download-progress",
+            serde_json::json!({
+                "downloaded_bytes": downloaded,
+                "total_bytes": total_bytes,
+                "percent": percent,
+            }),
+        );
+    }
+
+    file.flush().await.map_err(|e| format!("File flush error: {e}"))?;
+    drop(file);
+
+    tokio::fs::rename(&tmp, &dest)
+        .await
+        .map_err(|e| format!("Failed to finalise model file: {e}"))?;
+
+    let _ = app.emit("stt://model-download-complete", dest.to_string_lossy().as_ref());
+    eprintln!("[stt] Whisper model downloaded to {}", dest.display());
+    Ok(())
 }
 
 /// Stop the STT engine.
