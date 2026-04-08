@@ -83,6 +83,14 @@ export interface ChurchIdentity {
   invite_code: string | null;
 }
 
+/** Matches Rust `BranchSyncStatus` struct. */
+export interface BranchSyncStatus {
+  last_pushed_ms: number | null;
+  last_pulled_ms: number | null;
+  hq_branch_name: string | null;
+  error: string | null;
+}
+
 
 /** Matches Rust `QueueStatus` enum. */
 export type QueueStatus = "pending" | "live" | "dismissed";

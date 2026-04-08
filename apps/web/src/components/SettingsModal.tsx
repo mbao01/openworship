@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "../lib/tauri";
-import type { AudioSettings, ChurchIdentity, DisplaySettings, EmailSettings, EmailSubscriber, MonitorInfo, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
+import type { AudioSettings, BranchSyncStatus, ChurchIdentity, DisplaySettings, EmailSettings, EmailSubscriber, MonitorInfo, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
 
 interface SettingsModalProps {
   identity: ChurchIdentity;
@@ -713,13 +713,57 @@ function AboutSection() {
 
 function ChurchSection({ identity }: { identity: ChurchIdentity }) {
   const [copied, setCopied] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<BranchSyncStatus | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const isHq = identity.role === "hq";
+
+  useEffect(() => {
+    invoke<BranchSyncStatus>("get_branch_sync_status")
+      .then(setSyncStatus)
+      .catch(() => {});
+  }, []);
 
   const handleCopy = () => {
     if (!identity.invite_code) return;
     navigator.clipboard.writeText(identity.invite_code).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  const handlePush = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const status = await invoke<BranchSyncStatus>("push_to_branches");
+      setSyncStatus(status);
+    } catch (e) {
+      setSyncError(String(e));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handlePull = async () => {
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const status = await invoke<BranchSyncStatus>("pull_from_hq");
+      setSyncStatus(status);
+    } catch (e) {
+      setSyncError(String(e));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const formatSyncTime = (ms: number | null | undefined) => {
+    if (!ms) return null;
+    const d = new Date(ms);
+    return d.toLocaleString(undefined, {
+      month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit",
     });
   };
 
@@ -770,12 +814,69 @@ function ChurchSection({ identity }: { identity: ChurchIdentity }) {
         </div>
       )}
 
-      {isHq && (
-        <div className="mb-6">
-          <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">MEMBER BRANCHES</p>
-          <p className="text-xs text-smoke mt-2 leading-[1.5]">Branch sync coming soon.</p>
-        </div>
-      )}
+      {/* ── Branch sync ─────────────────────────────────────────────────────── */}
+      <div className="mb-6">
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">
+          {isHq ? "PUSH TO BRANCHES" : "SYNC FROM HQ"}
+        </p>
+
+        {isHq ? (
+          <>
+            <p className="text-xs text-smoke mb-3 leading-[1.5]">
+              Push songs, announcements, and sermon notes to all member branches.
+              Members pull on demand — content is not pushed automatically.
+            </p>
+            <button
+              data-qa="push-to-branches-btn"
+              disabled={syncing}
+              className={[
+                "font-sans text-[11px] font-medium tracking-[0.08em] uppercase py-[6px] px-4 rounded-sm border transition-colors",
+                syncing
+                  ? "text-ash border-iron cursor-not-allowed"
+                  : "text-chalk border-iron hover:border-chalk cursor-pointer bg-transparent",
+              ].join(" ")}
+              onClick={handlePush}
+            >
+              {syncing ? "Pushing…" : "Push to Branches"}
+            </button>
+            {syncStatus?.last_pushed_ms && (
+              <p className="text-[11px] text-smoke mt-2 leading-[1.5]">
+                Last pushed {formatSyncTime(syncStatus.last_pushed_ms)}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="text-xs text-smoke mb-3 leading-[1.5]">
+              Pull the latest songs, announcements, and sermon notes from HQ.
+              New songs are merged; announcements and sermon notes replace local copies.
+            </p>
+            <button
+              data-qa="pull-from-hq-btn"
+              disabled={syncing}
+              className={[
+                "font-sans text-[11px] font-medium tracking-[0.08em] uppercase py-[6px] px-4 rounded-sm border transition-colors",
+                syncing
+                  ? "text-ash border-iron cursor-not-allowed"
+                  : "text-chalk border-iron hover:border-chalk cursor-pointer bg-transparent",
+              ].join(" ")}
+              onClick={handlePull}
+            >
+              {syncing ? "Syncing…" : "Sync from HQ"}
+            </button>
+            {syncStatus?.last_pulled_ms && (
+              <p className="text-[11px] text-smoke mt-2 leading-[1.5]">
+                Last synced {formatSyncTime(syncStatus.last_pulled_ms)}
+                {syncStatus.hq_branch_name ? ` from ${syncStatus.hq_branch_name}` : ""}
+              </p>
+            )}
+          </>
+        )}
+
+        {syncError && (
+          <p className="text-[11px] text-red-400 mt-2 leading-[1.5]">{syncError}</p>
+        )}
+      </div>
     </div>
   );
 }
