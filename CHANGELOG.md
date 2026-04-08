@@ -2,6 +2,29 @@
 
 All notable changes to OpenWorship are documented here.
 
+## [0.3.1.0] - 2026-04-08
+
+### Added
+
+- **Artifacts Screen**: Standalone local file manager accessible from the Operator titlebar. Browse, organize, and open media files (images, video, audio, documents, presentations) associated with each service — or the global local library.
+- **List + Grid Views**: Toggle between a compact table view (name, type, size, date) and an icon grid view. Filter by file type via pill buttons (Image, Video, Audio, Document, Slide, Archive).
+- **Folder Navigation**: Create folders, navigate into them with breadcrumb trails, and rename or move files via right-click context menu.
+- **Sidebar Navigation**: Three built-in views (All Files, Recent, Starred) plus per-service folders for open service projects.
+- **File Import**: Import files from disk into the artifacts library via a file picker. Files are copied into the configured base directory.
+- **Star + Rename + Delete**: Star any artifact for quick access; rename files and folders; delete with confirmation (directories warn before removing all contents).
+- **ArtifactsDb (SQLite)**: Lightweight metadata index at `~/.openworship/artifacts.db` — stores path, MIME type, star state, timestamps. The actual files live on the filesystem; the DB is just an index.
+- **13 Tauri Commands**: `list_artifacts`, `list_recent_artifacts`, `list_starred_artifacts`, `search_artifacts`, `create_artifact_dir`, `import_artifact_file`, `rename_artifact`, `delete_artifact`, `move_artifact`, `star_artifact`, `get_artifacts_settings`, `set_artifacts_base_path`, `open_artifact`.
+- **`/artifacts` Route**: Accessible from the grid-icon button in the Operator titlebar; returns to the main view with the Back button.
+
+### Fixed
+
+- Path traversal blocked: `create_dir`, `rename_artifact`, and `move_artifact` now validate names and assert the resolved path stays within the artifacts base directory.
+- Active service projects now shown in Artifacts sidebar (was incorrectly showing closed projects).
+- Search input debounced (300 ms) to avoid SQLite lock contention on fast typing.
+- Delete operations now require confirmation; directory deletes warn that contents will be permanently removed.
+- `rename_artifact` SQL prefix-replace now uses `substr()` instead of `replace()` to avoid corrupting paths where the folder name appeared as a mid-string substring.
+- DB entries deleted before filesystem operations in `delete_artifact` so a crash mid-delete doesn't leave ghost rows pointing to missing files.
+
 ## [0.3.0.0] - 2026-04-08
 
 ### Added
