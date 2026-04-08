@@ -5,6 +5,7 @@ import type {
   ContentBankEntry,
   ProjectItem,
   ServiceProject,
+  Song,
   TranslationInfo,
   VerseResult,
 } from "../lib/types";
@@ -108,6 +109,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
   const [query, setQuery] = useState("");
   const [bankResults, setBankResults] = useState<ContentBankEntry[]>([]);
   const [searchResults, setSearchResults] = useState<VerseResult[]>([]);
+  const [songResults, setSongResults] = useState<Song[]>([]);
   const [translation, setTranslation] = useState("KJV");
   const [translations, setTranslations] = useState<TranslationInfo[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -133,6 +135,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
     async (q: string, t: string) => {
       if (!q.trim()) {
         setSearchResults([]);
+        setSongResults([]);
         // Reload bank with empty query to show recents
         invoke<ContentBankEntry[]>("search_content_bank", { query: "" })
           .then(setBankResults)
@@ -141,15 +144,18 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
       }
       setIsSearching(true);
       try {
-        const [scripture, bank] = await Promise.all([
+        const [scripture, bank, songs] = await Promise.all([
           invoke<VerseResult[]>("search_scriptures", { query: q, translation: t || null }),
           invoke<ContentBankEntry[]>("search_content_bank", { query: q }),
+          invoke<Song[]>("search_songs", { query: q, limit: 10 }),
         ]);
         setSearchResults(scripture);
         setBankResults(bank);
+        setSongResults(songs);
       } catch {
         setSearchResults([]);
         setBankResults([]);
+        setSongResults([]);
       } finally {
         setIsSearching(false);
       }
@@ -168,6 +174,16 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
     try {
       await invoke("push_to_display", { reference, text, translation: tr });
       setPushed(reference);
+      setTimeout(() => setPushed(null), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handlePushSong = async (song: Song) => {
+    try {
+      await invoke("push_song_to_display", { id: song.id });
+      setPushed(`song:${song.id}`);
       setTimeout(() => setPushed(null), 2000);
     } catch {
       // ignore
@@ -297,7 +313,41 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
             </>
           )}
 
-          {query.trim() && !isSearching && searchResults.length === 0 && bankResults.length === 0 && (
+          {/* Song search results */}
+          {songResults.length > 0 && (
+            <>
+              <p className="content-bank__section-label">Songs</p>
+              <ul className="content-bank__results" role="list">
+                {songResults.map((song) => {
+                  const key = `song:${song.id}`;
+                  const isLive = pushed === key;
+                  return (
+                    <li
+                      key={song.id}
+                      className={`content-bank__result${isLive ? " content-bank__result--live" : ""}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handlePushSong(song)}
+                      onKeyDown={(e) => e.key === "Enter" && handlePushSong(song)}
+                    >
+                      <div className="content-bank__result-meta">
+                        <span className="content-bank__kind-badge" aria-hidden="true">♪</span>
+                        <span className="content-bank__reference">{song.title}</span>
+                        {song.artist && (
+                          <span className="content-bank__translation">{song.artist}</span>
+                        )}
+                        {isLive && (
+                          <span className="content-bank__live-dot" aria-label="Live" />
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+
+          {query.trim() && !isSearching && searchResults.length === 0 && bankResults.length === 0 && songResults.length === 0 && (
             <p className="content-bank__empty">No results for "{query}"</p>
           )}
         </div>

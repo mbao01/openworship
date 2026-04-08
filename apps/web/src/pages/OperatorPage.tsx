@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DetectionQueue } from "../components/DetectionQueue";
 import { SchedulePanel } from "../components/SchedulePanel";
 import { SettingsModal } from "../components/SettingsModal";
+import { SongLibrary } from "../components/SongLibrary";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import type { ChurchIdentity } from "../lib/types";
 import "../styles/operator.css";
@@ -47,9 +48,11 @@ export function OperatorPage({ identity }: OperatorPageProps) {
 
       {/* Main layout — three columns */}
       <div className="operator-body">
-        {/* Left: Schedule + Content Bank */}
+        {/* Left: Schedule + Content Bank + Song Library */}
         <aside className="operator-col operator-col--left">
           <SchedulePanel />
+          <div className="operator-divider" aria-hidden="true" />
+          <SongLibrary />
         </aside>
 
         {/* Center: Live transcript */}

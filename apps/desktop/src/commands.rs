@@ -2,6 +2,7 @@ use crate::service::{ContentBankEntry, ProjectItem, ServiceProject};
 use crate::settings::AudioSettings;
 #[cfg(feature = "deepgram")]
 use crate::settings::SttBackend;
+use crate::songs::Song;
 use crate::state::AppState;
 use ow_audio::{AudioConfig, MockTranscriber, SttStatus};
 use ow_core::{DetectionMode, QueueItem, QueueStatus, ScriptureDetector};
@@ -889,4 +890,251 @@ pub async fn search_semantic(
         .unwrap_or_default();
 
     Ok(results)
+}
+
+// ─── Song library commands ─────────────────────────────────────────────────────
+
+/// Return all songs ordered by title.
+#[tauri::command]
+pub fn list_songs(state: State<'_, AppState>) -> Result<Vec<Song>, String> {
+    state
+        .songs_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .list_songs()
+        .map_err(|e| e.to_string())
+}
+
+/// Full-text search the song library (title, artist, lyrics).
+///
+/// Empty query returns all songs (up to `limit`).
+#[tauri::command]
+pub fn search_songs(
+    query: String,
+    limit: Option<usize>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Song>, String> {
+    state
+        .songs_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .search(&query, limit.unwrap_or(50))
+        .map_err(|e| e.to_string())
+}
+
+/// Fetch a single song by ID.
+#[tauri::command]
+pub fn get_song(id: i64, state: State<'_, AppState>) -> Result<Option<Song>, String> {
+    state
+        .songs_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get_song(id)
+        .map_err(|e| e.to_string())
+}
+
+/// Add a song manually and refresh the detection index.
+#[tauri::command]
+pub fn add_song(
+    title: String,
+    artist: Option<String>,
+    lyrics: String,
+    state: State<'_, AppState>,
+) -> Result<Song, String> {
+    let song = state
+        .songs_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .add_song(&title, artist.as_deref(), &lyrics, Some("manual"), None)
+        .map_err(|e| e.to_string())?;
+
+    refresh_song_refs(&state);
+    Ok(song)
+}
+
+/// Update an existing song's title, artist, and lyrics.
+#[tauri::command]
+pub fn update_song(
+    id: i64,
+    title: String,
+    artist: Option<String>,
+    lyrics: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    state
+        .songs_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .update_song(id, &title, artist.as_deref(), &lyrics)
+        .map_err(|e| e.to_string())?;
+    refresh_song_refs(&state);
+    Ok(())
+}
+
+/// Delete a song from the library.
+#[tauri::command]
+pub fn delete_song(id: i64, state: State<'_, AppState>) -> Result<(), String> {
+    state
+        .songs_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .delete_song(id)
+        .map_err(|e| e.to_string())?;
+    refresh_song_refs(&state);
+    Ok(())
+}
+
+/// Import songs from a CCLI SongSelect plain-text export.
+///
+/// Returns the songs that were actually inserted (skips exact-title duplicates).
+#[tauri::command]
+pub fn import_songs_ccli(text: String, state: State<'_, AppState>) -> Result<Vec<Song>, String> {
+    let imports = crate::songs::parse_ccli_text(&text).map_err(|e| e.to_string())?;
+    let inserted = state
+        .songs_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .import_batch(&imports)
+        .map_err(|e| e.to_string())?;
+    if !inserted.is_empty() {
+        refresh_song_refs(&state);
+    }
+    Ok(inserted)
+}
+
+/// Import songs from an OpenLP 2.x XML export.
+///
+/// Returns the songs that were actually inserted (skips exact-title duplicates).
+#[tauri::command]
+pub fn import_songs_openlp(xml: String, state: State<'_, AppState>) -> Result<Vec<Song>, String> {
+    let imports = crate::songs::parse_openlp_xml(&xml).map_err(|e| e.to_string())?;
+    let inserted = state
+        .songs_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .import_batch(&imports)
+        .map_err(|e| e.to_string())?;
+    if !inserted.is_empty() {
+        refresh_song_refs(&state);
+    }
+    Ok(inserted)
+}
+
+/// Push a song to the fullscreen display.
+///
+/// Side-effects (same as `push_to_display` for scripture):
+/// - Updates the content bank.
+/// - Appends to the active service project.
+/// - Emits `service://project-updated`.
+#[tauri::command]
+pub fn push_song_to_display(
+    id: i64,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let song = state
+        .songs_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get_song(id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("song {id} not found"))?;
+
+    let artist = song.artist.clone().unwrap_or_default();
+    let event = ContentEvent::song(song.title.clone(), song.lyrics.clone(), artist.clone());
+    let _ = state.display_tx.send(event);
+
+    // ── Update content bank ──────────────────────────────────────────────────
+    let reference = song.title.clone();
+    let text = song.lyrics.clone();
+    let translation = artist.clone();
+    {
+        let mut bank = state.content_bank.write().map_err(|e| e.to_string())?;
+        let now = crate::service::now_ms();
+        if let Some(entry) = bank.iter_mut().find(|e| e.reference == reference) {
+            entry.last_used_ms = now;
+            entry.use_count += 1;
+        } else {
+            bank.push(ContentBankEntry {
+                id: crate::service::new_id(),
+                reference: reference.clone(),
+                text: text.clone(),
+                translation: translation.clone(),
+                last_used_ms: now,
+                use_count: 1,
+            });
+        }
+        crate::service::save_content_bank(&bank).map_err(|e| e.to_string())?;
+    }
+
+    // ── Append to active project (if open) ───────────────────────────────────
+    let active_id = state
+        .active_project_id
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
+
+    if let Some(pid) = active_id {
+        let updated = {
+            let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+            if let Some(p) = projects.iter_mut().find(|p| p.id == pid && p.is_open()) {
+                if !p.items.iter().any(|i| i.reference == reference) {
+                    let position = p.items.len();
+                    p.items.push(ProjectItem {
+                        id: crate::service::new_id(),
+                        reference,
+                        text,
+                        translation,
+                        position,
+                        added_at_ms: crate::service::now_ms(),
+                    });
+                    let p = p.clone();
+                    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+                    Some(p)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        };
+        if let Some(project) = updated {
+            let _ = app.emit("service://project-updated", &project);
+        }
+    }
+
+    Ok(())
+}
+
+/// Status of the song semantic index.
+#[derive(serde::Serialize)]
+pub struct SongSemanticStatus {
+    pub ready: bool,
+    pub song_count: usize,
+}
+
+#[tauri::command]
+pub fn get_song_semantic_status(state: State<'_, AppState>) -> Result<SongSemanticStatus, String> {
+    let (ready, song_count) = state
+        .song_semantic_index
+        .read()
+        .map(|g| match g.as_ref() {
+            Some(idx) => (true, idx.len()),
+            None => (false, 0),
+        })
+        .unwrap_or((false, 0));
+    Ok(SongSemanticStatus { ready, song_count })
+}
+
+// ─── Internal helpers ─────────────────────────────────────────────────────────
+
+/// Refresh the in-memory song title cache used by the detection loop.
+fn refresh_song_refs(state: &State<'_, AppState>) {
+    if let Ok(db) = state.songs_db.lock() {
+        if let Ok(refs) = db.all_refs() {
+            if let Ok(mut guard) = state.song_refs.write() {
+                *guard = refs;
+            }
+        }
+    }
 }

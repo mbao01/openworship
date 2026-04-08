@@ -2806,6 +2806,7 @@ dependencies = [
  "ow-display",
  "ow-embed",
  "ow-search",
+ "rusqlite",
  "serde",
  "serde_json",
  "tauri",

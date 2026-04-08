@@ -1,8 +1,9 @@
 use crate::identity::ChurchIdentity;
 use crate::service::{ContentBankEntry, ServiceProject};
 use crate::settings::AudioSettings;
+use crate::songs::{SongSemanticIndex, SongsDb};
 use ow_audio::{SttEngine, SttStatus};
-use ow_core::{DetectionMode, QueueItem};
+use ow_core::{DetectionMode, QueueItem, SongRef};
 use ow_display::ContentEvent;
 use ow_embed::{OllamaClient, SemanticIndex};
 use ow_search::SearchEngine;
@@ -17,7 +18,7 @@ pub struct AppState {
     pub stt: Mutex<SttEngine>,
     /// Current detection mode (Auto / Copilot / Airplane / Offline).
     pub detection_mode: Arc<RwLock<DetectionMode>>,
-    /// FIFO content queue of detected verses.
+    /// FIFO content queue of detected content items.
     pub queue: Arc<Mutex<VecDeque<QueueItem>>>,
     /// Operator audio/STT settings, persisted to disk.
     pub audio_settings: Arc<RwLock<AudioSettings>>,
@@ -29,11 +30,17 @@ pub struct AppState {
     pub active_project_id: Arc<RwLock<Option<String>>>,
     /// Global content bank, persisted to `~/.openworship/content_bank.json`.
     pub content_bank: Arc<RwLock<Vec<ContentBankEntry>>>,
-    /// Semantic scripture index — `None` until the background embedding task
+    /// Scripture semantic index — `None` until the background embedding task
     /// completes (or when Ollama is not available).
     pub semantic_index: Arc<RwLock<Option<SemanticIndex>>>,
     /// Ollama client used for real-time query embedding during detection.
     pub ollama: Arc<OllamaClient>,
+    /// Song library database.
+    pub songs_db: Arc<Mutex<SongsDb>>,
+    /// Semantic index over song lyric phrases.
+    pub song_semantic_index: Arc<RwLock<Option<SongSemanticIndex>>>,
+    /// Cached song title list for the detection loop (refreshed on add/delete).
+    pub song_refs: Arc<RwLock<Vec<SongRef>>>,
 }
 
 impl AppState {

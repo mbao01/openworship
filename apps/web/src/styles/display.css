@@ -45,6 +45,72 @@
   display: none;
 }
 
+/* ── Song lyrics display (Phase 10) ──────────────────────────────────────── */
+
+/* Song title — same gold as scripture reference */
+.display-song-title {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: small-caps;
+  color: var(--color-gold);
+  margin-bottom: var(--space-4);
+}
+
+/* Lyrics container — click/space to advance */
+.display-lyrics {
+  cursor: pointer;
+  outline: none;
+}
+
+/* Individual lyric line — large, readable */
+.display-lyric-line {
+  margin: 0 0 var(--space-3) 0;
+  font-family: var(--font-serif);
+  font-size: clamp(2.8rem, 5.5vw, 5.5rem);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-chalk);
+  text-align: left;
+}
+
+/* Section header label (e.g. [Chorus]) — dimmed */
+.display-lyric-header {
+  margin: 0 0 var(--space-2) 0;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-smoke);
+}
+
+/* Artist attribution — bottom-right */
+.display-song-artist {
+  position: absolute;
+  bottom: calc(var(--space-6) + 1.5rem);
+  right: 10%;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  color: var(--color-smoke);
+  text-transform: lowercase;
+}
+
+/* Lyric progress indicator — e.g. "2 / 5" */
+.display-lyric-progress {
+  position: absolute;
+  bottom: var(--space-6);
+  right: 10%;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: var(--color-smoke);
+  opacity: 0.6;
+}
+
 /* Faint watermark — bottom-left */
 .display-watermark {
   position: absolute;

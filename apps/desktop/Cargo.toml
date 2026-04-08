@@ -33,3 +33,4 @@ ow-audio = { path = "../../crates/ow-audio" }
 ow-core = { path = "../../crates/ow-core" }
 ow-embed = { path = "../../crates/ow-embed" }
 keyring = "3"
+rusqlite = { workspace = true }
