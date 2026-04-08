@@ -1118,6 +1118,50 @@ pub fn get_active_translation(state: State<'_, AppState>) -> String {
         .unwrap_or_else(|_| "KJV".into())
 }
 
+/// Host correction: dismiss the currently live item and promote the next
+/// pending item to live.  If there is no pending item the display clears.
+///
+/// This is the "NOT THIS ONE" action — called when the operator recognises that
+/// the auto-detected verse is wrong.
+#[tauri::command]
+pub fn reject_live_item(
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let new_live = {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        // Dismiss the live item.
+        if let Some(item) = q.iter_mut().find(|i| i.status == QueueStatus::Live) {
+            item.status = QueueStatus::Dismissed;
+        }
+        // Promote the first pending item to live.
+        if let Some(next) = q.iter_mut().find(|i| i.status == QueueStatus::Pending) {
+            next.status = QueueStatus::Live;
+            Some((next.reference.clone(), next.text.clone(), next.translation.clone()))
+        } else {
+            None
+        }
+    };
+
+    if let Some((reference, text, translation)) = new_live {
+        let _ = state
+            .display_tx
+            .send(ContentEvent::scripture(reference, text, translation));
+    } else {
+        let _ = state.display_tx.send(ContentEvent::clear());
+    }
+
+    let snapshot: Vec<QueueItem> = state
+        .queue
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .cloned()
+        .collect();
+    let _ = app.emit(crate::detection::QUEUE_UPDATED_EVENT, snapshot);
+    Ok(())
+}
+
 /// Switch the active Bible translation.
 ///
 /// If a verse is currently live on the display, re-fetches it in the new
@@ -1134,6 +1178,12 @@ pub fn switch_live_translation(
         let mut active = state.active_translation.write().map_err(|e| e.to_string())?;
         *active = translation.clone();
     }
+
+    // Persist preferred translation to session memory (best-effort).
+    let mem = crate::service::SessionMemory {
+        preferred_translation: Some(translation.clone()),
+    };
+    let _ = crate::service::save_session_memory(&mem);
 
     // Find the current Live queue item (first one in Live status).
     let live_item = {

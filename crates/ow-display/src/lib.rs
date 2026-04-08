@@ -65,6 +65,17 @@ impl ContentEvent {
             line_index: Some(index),
         }
     }
+
+    /// Clear the display (send blank content to connected clients).
+    pub fn clear() -> Self {
+        Self {
+            kind: "clear".into(),
+            reference: String::new(),
+            text: String::new(),
+            translation: String::new(),
+            line_index: None,
+        }
+    }
 }
 
 /// Start the WebSocket display server.
