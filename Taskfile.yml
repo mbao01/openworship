@@ -70,21 +70,21 @@ tasks:
   # ── Desktop (Tauri) ──────────────────────────────────────────────────────────
   desktop:dev:
     desc: Start Tauri desktop dev mode
-    dir: apps/web
+    dir: apps/desktop
     cmds:
-      - "{{.PNPM}} tauri dev --config ../desktop/tauri.conf.json"
+      - "{{.PNPM}} tauri dev"
 
   desktop:build:
     desc: Build the Tauri desktop app (release)
-    dir: apps/web
+    dir: apps/desktop
     cmds:
-      - "{{.PNPM}} tauri build --config ../desktop/tauri.conf.json"
+      - "{{.PNPM}} tauri build"
 
   desktop:icon:
     desc: Generate Tauri app icons from source image
-    dir: apps/web
+    dir: apps/desktop
     cmds:
-      - "{{.PNPM}} tauri icon --config ../desktop/tauri.conf.json"
+      - "{{.PNPM}} tauri icon"
 
   # ── Rust (workspace) ─────────────────────────────────────────────────────────
   rust:check:
