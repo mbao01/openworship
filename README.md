@@ -80,11 +80,11 @@ openworship/
 │       └── vite.config.ts
 │
 ├── crates/
-│   ├── ow-core/            # Core domain logic (no Tauri deps) — Phase 2+
-│   ├── ow-search/          # Tantivy scripture search index — Phase 2+
-│   ├── ow-audio/           # STT pipeline (Whisper.cpp / Deepgram) — Phase 2+
-│   ├── ow-display/         # Local WebSocket display server — Phase 2+
-│   └── ow-db/              # SQLite persistence layer — Phase 2+
+│   ├── ow-core/            # Core domain logic (no Tauri deps)
+│   ├── ow-search/          # Tantivy scripture search index
+│   ├── ow-audio/           # Offline STT pipeline (Whisper.cpp, MockTranscriber)
+│   ├── ow-display/         # Local WebSocket display server
+│   └── ow-db/              # SQLite Bible DB (KJV, WEB, BSB)
 │
 ├── Cargo.toml              # Rust workspace
 ├── package.json            # Node workspace (pnpm)
