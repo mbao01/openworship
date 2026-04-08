@@ -2,6 +2,24 @@
 
 All notable changes to OpenWorship are documented here.
 
+## [0.3.0.0] - 2026-04-08
+
+### Added
+
+- **Semantic Scripture Matching** (`ow-embed` crate): nomic-embed-text via Ollama now detects paraphrased and story-based scripture references in addition to explicit book/chapter/verse citations. When Ollama is running, the app builds an in-memory cosine-similarity index of all Bible verses at startup and runs a semantic search pass on the rolling transcript window every 5 seconds.
+- **Detection Settings UI**: new Detection section in Settings lets users toggle semantic matching on/off, view index build status (verse count + ready indicator), and tune confidence thresholds independently for Auto mode (default 75%) and Copilot mode (default 82%).
+- **Semantic badge on queue cards**: detection cards show a `~` badge with confidence percentage for semantically matched verses, distinguishing them from exact reference detections.
+- **`get_semantic_status` Tauri command**: returns `{ ready, verse_count, enabled }` for UI polling.
+- **`search_semantic` Tauri command**: on-demand semantic search for manual lookups.
+
+### Fixed
+
+- Debounce logic corrected — semantic pass now gates on `debounce_elapsed AND text_changed` (was `OR`), preventing Ollama from being called on every transcript token during continuous speech.
+- Cosine similarity guards against dimension mismatch and near-zero norms (`< EPSILON`) to prevent silent NaN/Inf propagation.
+- `search_semantic` command clamps incoming threshold values against NaN and out-of-range floats.
+- Settings sliders guard against `parseFloat("")` producing NaN being saved to disk.
+- Stale `Instant::now()` clock anchors corrected — cooldown and debounce timestamps are re-sampled after the async embed call completes.
+
 ## [0.2.0.0] - 2026-04-08
 
 ### Added
