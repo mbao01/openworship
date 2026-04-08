@@ -39,6 +39,10 @@ export async function stubTauriIdentity(page: Page): Promise<void> {
         if (cmd === "import_songs_openlp") return Promise.resolve([]);
         if (cmd === "get_semantic_status")
           return Promise.resolve({ ready: false, verse_count: 0, enabled: false });
+        if (cmd === "get_audio_settings")
+          return Promise.resolve({ engine: "whisper", model: "base.en", deepgram_enabled: false });
+        if (cmd === "get_stt_status")
+          return Promise.resolve({ engine: "whisper", running: false, model_downloaded: false });
         return Promise.resolve(null);
       },
       listen: () => Promise.resolve(() => {}),
@@ -57,7 +61,7 @@ export const test = base.extend<{ operatorPage: Page }>({
   operatorPage: async ({ page }, use) => {
     await stubTauriIdentity(page);
     await page.goto("/");
-    await page.waitForSelector(".operator-root, .onboarding-root", {
+    await page.waitForSelector('[data-qa="operator-root"], [data-qa="onboarding-root"]', {
       timeout: 15_000,
     });
     await use(page);
