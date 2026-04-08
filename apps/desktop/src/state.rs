@@ -4,6 +4,7 @@ use crate::service::{ContentBankEntry, ServiceProject};
 use crate::settings::AudioSettings;
 use crate::slides::{AnnouncementItem, SermonNote};
 use crate::songs::{SongSemanticIndex, SongsDb};
+use crate::summaries::{EmailSettings, EmailSubscriber, ServiceSummary};
 use ow_audio::{SttEngine, SttStatus};
 use ow_core::{DetectionMode, QueueItem, SongRef};
 use ow_display::ContentEvent;
@@ -55,6 +56,14 @@ pub struct AppState {
     pub active_sermon_note: Arc<RwLock<Option<(String, u32)>>>,
     /// Artifact metadata database (Phase 15).
     pub artifacts_db: Arc<Mutex<ArtifactsDb>>,
+    /// Generated service summaries, persisted to `~/.openworship/summaries.json`.
+    pub summaries: Arc<RwLock<Vec<ServiceSummary>>>,
+    /// Email subscribers per church, persisted to `~/.openworship/subscribers.json`.
+    pub subscribers: Arc<RwLock<Vec<EmailSubscriber>>>,
+    /// SMTP settings + auto-send config.
+    pub email_settings: Arc<RwLock<EmailSettings>>,
+    /// Anthropic API key for Claude summary generation (from keychain).
+    pub anthropic_api_key: Arc<RwLock<String>>,
 }
 
 impl AppState {

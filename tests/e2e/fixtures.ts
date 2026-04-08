@@ -24,7 +24,7 @@ export async function stubTauriIdentity(page: Page): Promise<void> {
       transformCallback: () => 0,
       invoke: (cmd) => {
         if (cmd === "get_identity") return Promise.resolve(identity);
-        // Commands that return arrays — must not return null or components crash
+        // Commands that return arrays — must resolve to [] not null or components crash
         if (cmd === "list_translations") return Promise.resolve([]);
         if (cmd === "get_queue") return Promise.resolve([]);
         if (cmd === "list_service_projects") return Promise.resolve([]);
@@ -34,6 +34,7 @@ export async function stubTauriIdentity(page: Page): Promise<void> {
         if (cmd === "search_songs") return Promise.resolve([]);
         if (cmd === "list_announcements") return Promise.resolve([]);
         if (cmd === "list_sermon_notes") return Promise.resolve([]);
+        if (cmd === "list_service_summaries") return Promise.resolve([]);
         if (cmd === "import_songs_ccli") return Promise.resolve([]);
         if (cmd === "import_songs_openlp") return Promise.resolve([]);
         if (cmd === "get_semantic_status")
