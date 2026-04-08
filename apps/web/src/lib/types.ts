@@ -190,7 +190,7 @@ export interface EmailSettings {
   smtp_host: string;
   smtp_port: number;
   smtp_username: string;
-  /** Password stored in local JSON — treat as sensitive. */
+  /** Password stored in the OS keychain; not serialized by the backend. Empty string means "no change". */
   smtp_password: string;
   from_name: string;
   /** Hours to wait after service end before sending. 0 = immediate. */
