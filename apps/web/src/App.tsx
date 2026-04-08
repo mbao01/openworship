@@ -7,8 +7,18 @@ import { OperatorPage } from "./pages/OperatorPage";
 import { DisplayPage } from "./pages/DisplayPage";
 import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { SpeakerPage } from "./pages/SpeakerPage";
-import "./styles/tokens.css";
 import "./styles/global.css";
+
+// Dark-first: apply "dark" class to <html> on load and persist preference.
+const THEME_KEY = "ow-theme";
+function initTheme() {
+  const stored = localStorage.getItem(THEME_KEY);
+  // Default to dark if no preference stored.
+  if (stored !== "light") {
+    document.documentElement.classList.add("dark");
+  }
+}
+initTheme();
 
 function AppInner() {
   const navigate = useNavigate();
@@ -16,6 +26,21 @@ function AppInner() {
   const [identity, setIdentity] = useState<ChurchIdentity | null | undefined>(
     null
   );
+  const [isDark, setIsDark] = useState(
+    () => document.documentElement.classList.contains("dark")
+  );
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    if (next) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem(THEME_KEY, "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem(THEME_KEY, "light");
+    }
+  };
 
   useEffect(() => {
     invoke<ChurchIdentity | null>("get_identity")
@@ -46,6 +71,8 @@ function AppInner() {
             <OperatorPage
               identity={identity}
               onOpenArtifacts={() => navigate("/artifacts")}
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
             />
           )
         }

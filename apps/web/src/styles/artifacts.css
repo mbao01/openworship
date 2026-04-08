@@ -1,7 +1,9 @@
 /* ============================================================
    Artifacts Page — Phase 15
    Sacred Monochrome design system
+   Wrapped in @layer components for Tailwind v4 cascade integration
    ============================================================ */
+@layer components {
 
 /* ── Root layout ── */
 .af-root {
@@ -948,3 +950,5 @@
   transition: color 120ms, border-color 120ms;
 }
 .sd-btn--secondary:hover { color: var(--color-chalk); border-color: var(--color-ash); }
+
+} /* end @layer components */
