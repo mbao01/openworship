@@ -119,21 +119,21 @@ fn markdown_to_simple_html(markdown: &str) -> String {
 
     for line in markdown.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("## ") {
+        if let Some(heading) = trimmed.strip_prefix("## ") {
             html.push_str(&format!(
                 "<h2 style=\"color:#1a1a1a\">{}</h2>\n",
-                html_escape(&trimmed[3..])
+                html_escape(heading)
             ));
-        } else if trimmed.starts_with("# ") {
+        } else if let Some(heading) = trimmed.strip_prefix("# ") {
             html.push_str(&format!(
                 "<h1 style=\"color:#1a1a1a\">{}</h1>\n",
-                html_escape(&trimmed[2..])
+                html_escape(heading)
             ));
         } else if trimmed.starts_with("**") && trimmed.ends_with("**") {
             let inner = &trimmed[2..trimmed.len() - 2];
             html.push_str(&format!("<p><strong>{}</strong></p>\n", html_escape(inner)));
-        } else if trimmed.starts_with("- ") {
-            html.push_str(&format!("<li>{}</li>\n", inline_bold(html_escape(&trimmed[2..]))));
+        } else if let Some(item) = trimmed.strip_prefix("- ") {
+            html.push_str(&format!("<li>{}</li>\n", inline_bold(html_escape(item))));
         } else if trimmed.is_empty() {
             // paragraph break — skip blank lines between rendered elements
         } else {

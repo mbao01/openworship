@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::service::{new_id, now_ms};
 
@@ -130,7 +130,7 @@ fn email_settings_path() -> PathBuf {
     ow_dir().join("email_settings.json")
 }
 
-fn ensure_dir(path: &PathBuf) -> Result<()> {
+fn ensure_dir(path: &Path) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
