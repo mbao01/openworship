@@ -8,7 +8,7 @@ export function ScriptureSearch() {
   const [translations, setTranslations] = useState<TranslationInfo[]>([]);
   const [results, setResults] = useState<VerseResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [pushed, setPushed] = useState<string | null>(null);
+  const [pushed, setPushed] = useState<{ reference: string; translation: string } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export function ScriptureSearch() {
         text: verse.text,
         translation: verse.translation,
       });
-      setPushed(verse.reference);
+      setPushed({ reference: verse.reference, translation: verse.translation });
       setTimeout(() => setPushed(null), 2000);
     } catch {
       // silently ignore when display is not connected
@@ -97,7 +97,7 @@ export function ScriptureSearch() {
       {results.length > 0 && (
         <ul className="scripture-search__results" role="list">
           {results.map((v, i) => {
-            const isLive = pushed === v.reference;
+            const isLive = pushed?.reference === v.reference && pushed?.translation === v.translation;
             return (
               <li
                 key={`${v.translation}-${v.reference}-${i}`}

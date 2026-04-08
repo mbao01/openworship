@@ -339,4 +339,53 @@ mod tests {
         );
         assert_eq!(parse_reference("love one another"), None);
     }
+
+    #[test]
+    fn test_no_translation_filter_returns_all_translations() {
+        let engine = test_engine();
+        let results = engine.search("shepherd", None, 50).unwrap();
+        let translations: std::collections::HashSet<&str> =
+            results.iter().map(|r| r.translation.as_str()).collect();
+        assert!(translations.contains("KJV"));
+        assert!(translations.contains("WEB"));
+    }
+
+    #[test]
+    fn test_empty_index_returns_no_results() {
+        let engine = SearchEngine::build(&[]).expect("empty index build");
+        let results = engine.search("John 3:16", None, 10).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_malformed_query_does_not_panic() {
+        let engine = test_engine();
+        // These should gracefully use parse_query_lenient and not panic.
+        let r1 = engine.search("AND OR NOT", None, 10).unwrap();
+        let r2 = engine.search("+++ ---", None, 10).unwrap();
+        // We don't assert on results — just that no panic occurs.
+        let _ = r1;
+        let _ = r2;
+    }
+
+    #[test]
+    fn test_search_with_limit_zero() {
+        let engine = test_engine();
+        let results = engine.search("God", None, 0).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_result_fields_populated() {
+        let engine = test_engine();
+        let results = engine.search("John 3:16", Some("KJV"), 1).unwrap();
+        assert_eq!(results.len(), 1);
+        let v = &results[0];
+        assert_eq!(v.translation, "KJV");
+        assert_eq!(v.book, "John");
+        assert_eq!(v.chapter, 3);
+        assert_eq!(v.verse, 16);
+        assert_eq!(v.reference, "John 3:16");
+        assert!(!v.text.is_empty());
+    }
 }

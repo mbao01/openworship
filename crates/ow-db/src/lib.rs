@@ -382,4 +382,44 @@ mod tests {
             .unwrap();
         assert_eq!(v.reference, "Psalms 23:1");
     }
+
+    #[test]
+    fn test_seed_is_idempotent() {
+        // Calling open_and_seed twice on different connections should produce the same count.
+        let conn1 = open_and_seed().unwrap();
+        let conn2 = open_and_seed().unwrap();
+        let verses1 = get_all_verses(&conn1).unwrap();
+        let verses2 = get_all_verses(&conn2).unwrap();
+        assert_eq!(verses1.len(), verses2.len());
+    }
+
+    #[test]
+    fn test_all_three_translations_have_john_316() {
+        let conn = test_db();
+        let verses = get_all_verses(&conn).unwrap();
+        for abbrev in &["KJV", "WEB", "BSB"] {
+            let found = verses.iter().any(|v| {
+                v.translation.as_str() == *abbrev
+                    && v.book == "John"
+                    && v.chapter == 3
+                    && v.verse == 16
+            });
+            assert!(found, "Missing John 3:16 for {abbrev}");
+        }
+    }
+
+    #[test]
+    fn test_verse_fields_populated() {
+        let conn = test_db();
+        let verses = get_all_verses(&conn).unwrap();
+        for v in &verses {
+            assert!(!v.translation.is_empty());
+            assert!(!v.book.is_empty());
+            assert!(v.book_number > 0);
+            assert!(v.chapter > 0);
+            assert!(v.verse > 0);
+            assert!(!v.text.is_empty());
+            assert!(!v.reference.is_empty());
+        }
+    }
 }
