@@ -1,4 +1,5 @@
 use crate::artifacts::ArtifactsDb;
+use crate::cloud_sync::{CloudSyncDb, S3Config};
 use crate::identity::ChurchIdentity;
 use crate::service::{ContentBankEntry, ServiceProject};
 use crate::settings::AudioSettings;
@@ -56,6 +57,10 @@ pub struct AppState {
     pub active_sermon_note: Arc<RwLock<Option<(String, u32)>>>,
     /// Artifact metadata database (Phase 15).
     pub artifacts_db: Arc<Mutex<ArtifactsDb>>,
+    /// Cloud sync state database (Phase 16).
+    pub cloud_sync_db: Arc<Mutex<CloudSyncDb>>,
+    /// S3-compatible cloud config. `None` until the user configures cloud settings.
+    pub cloud_config: Arc<RwLock<Option<S3Config>>>,
     /// Generated service summaries, persisted to `~/.openworship/summaries.json`.
     pub summaries: Arc<RwLock<Vec<ServiceSummary>>>,
     /// Email subscribers per church, persisted to `~/.openworship/subscribers.json`.

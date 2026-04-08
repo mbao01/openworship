@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "../lib/tauri";
-import type { AudioSettings, ChurchIdentity, EmailSettings, EmailSubscriber, SemanticStatus, SttBackend } from "../lib/types";
+import type { AudioSettings, ChurchIdentity, EmailSettings, EmailSubscriber, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
 import "../styles/settings.css";
 
 interface SettingsModalProps {
@@ -8,7 +8,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type Category = "church" | "general" | "audio" | "display" | "detection" | "email" | "about";
+type Category = "church" | "general" | "audio" | "display" | "detection" | "email" | "cloud" | "about";
 
 const CATEGORIES: { id: Category; label: string }[] = [
   { id: "church", label: "Church" },
@@ -17,6 +17,7 @@ const CATEGORIES: { id: Category; label: string }[] = [
   { id: "display", label: "Display" },
   { id: "detection", label: "Detection" },
   { id: "email", label: "Email" },
+  { id: "cloud", label: "Cloud" },
   { id: "about", label: "About" },
 ];
 
@@ -123,6 +124,7 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
             />
           )}
           {activeCategory === "email" && <EmailSection identity={identity} />}
+          {activeCategory === "cloud" && <CloudSection />}
           {activeCategory === "about" && <AboutSection />}
 
           {/* Footer */}
@@ -743,4 +745,140 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
       </div>
     </div>
   );
+}
+
+// ─── Cloud section (Phase 16) ──────────────────────────────────────────────────
+
+const DEFAULT_S3_CONFIG: S3Config = {
+  endpoint_url: "",
+  bucket: "",
+  region: "us-east-1",
+  access_key_id: "",
+  secret_access_key: "",
+};
+
+function CloudSection() {
+  const [config, setConfig] = useState<S3Config>(DEFAULT_S3_CONFIG);
+  const [usage, setUsage] = useState<StorageUsage | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    invoke<S3Config | null>("get_cloud_config")
+      .then((c) => { if (c) setConfig((prev) => ({ ...prev, ...c })); })
+      .catch(() => {});
+    invoke<StorageUsage>("get_storage_usage").then(setUsage).catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setErr(null);
+    setSaved(false);
+    try {
+      await invoke("set_cloud_config", { config });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) { setErr(String(e)); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="settings-section">
+      <h2 className="settings-section__title">Cloud Storage</h2>
+      <p className="settings-section__desc">
+        Connect an S3-compatible storage provider (AWS S3, MinIO, Backblaze B2, etc.) to enable
+        cloud sync and multi-branch sharing for your Artifacts.
+      </p>
+
+      <div className="settings-group">
+        <p className="settings-group__label">ENDPOINT URL</p>
+        <input
+          className="settings-input"
+          type="text"
+          placeholder="https://s3.amazonaws.com"
+          value={config.endpoint_url}
+          onChange={(e) => setConfig((p) => ({ ...p, endpoint_url: e.target.value }))}
+        />
+      </div>
+
+      <div className="settings-group">
+        <p className="settings-group__label">BUCKET</p>
+        <input
+          className="settings-input"
+          type="text"
+          placeholder="openworship-artifacts"
+          value={config.bucket}
+          onChange={(e) => setConfig((p) => ({ ...p, bucket: e.target.value }))}
+        />
+      </div>
+
+      <div className="settings-group">
+        <p className="settings-group__label">REGION</p>
+        <input
+          className="settings-input"
+          type="text"
+          placeholder="us-east-1"
+          value={config.region}
+          onChange={(e) => setConfig((p) => ({ ...p, region: e.target.value }))}
+        />
+      </div>
+
+      <div className="settings-group">
+        <p className="settings-group__label">ACCESS KEY ID</p>
+        <input
+          className="settings-input"
+          type="text"
+          placeholder="AKIA…"
+          value={config.access_key_id}
+          onChange={(e) => setConfig((p) => ({ ...p, access_key_id: e.target.value }))}
+        />
+      </div>
+
+      <div className="settings-group">
+        <p className="settings-group__label">SECRET ACCESS KEY</p>
+        <input
+          className="settings-input"
+          type="password"
+          placeholder="Leave blank to keep existing"
+          value={config.secret_access_key}
+          onChange={(e) => setConfig((p) => ({ ...p, secret_access_key: e.target.value }))}
+        />
+        <p className="settings-hint">Stored securely in the OS keychain.</p>
+      </div>
+
+      {usage && (
+        <div className="settings-group">
+          <p className="settings-group__label">STORAGE USAGE</p>
+          <p className="settings-hint">
+            {formatStorageMB(usage.used_bytes)} used
+            {usage.quota_bytes ? ` / ${formatStorageMB(usage.quota_bytes)}` : ""} —{" "}
+            {usage.synced_count} file{usage.synced_count !== 1 ? "s" : ""} synced
+          </p>
+          {usage.quota_bytes && (
+            <div className="settings-usage-bar">
+              <div
+                className="settings-usage-fill"
+                style={{ width: `${Math.min(100, (usage.used_bytes / usage.quota_bytes) * 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {err && <p className="settings-footer__error">{err}</p>}
+      {saved && <p className="settings-hint" style={{ color: "#c9a84c" }}>✓ Cloud config saved.</p>}
+
+      <button className="settings-btn--primary" onClick={handleSave} disabled={saving || !config.endpoint_url.trim()}>
+        {saving ? "Saving…" : "Save Cloud Config"}
+      </button>
+    </div>
+  );
+}
+
+function formatStorageMB(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
+  return `${(bytes / 1073741824).toFixed(1)} GB`;
 }
