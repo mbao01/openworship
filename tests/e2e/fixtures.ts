@@ -27,6 +27,9 @@ export async function stubTauriIdentity(page: Page): Promise<void> {
         // Commands that return arrays — must not return null or components crash
         if (cmd === "list_translations") return Promise.resolve([]);
         if (cmd === "get_queue") return Promise.resolve([]);
+        if (cmd === "list_service_projects") return Promise.resolve([]);
+        if (cmd === "search_content_bank") return Promise.resolve([]);
+        if (cmd === "search_scriptures") return Promise.resolve([]);
         return Promise.resolve(null);
       },
       listen: () => Promise.resolve(() => {}),

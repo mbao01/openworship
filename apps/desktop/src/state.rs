@@ -1,4 +1,5 @@
 use crate::identity::ChurchIdentity;
+use crate::service::{ContentBankEntry, ServiceProject};
 use crate::settings::AudioSettings;
 use ow_audio::{SttEngine, SttStatus};
 use ow_core::{DetectionMode, QueueItem};
@@ -21,6 +22,12 @@ pub struct AppState {
     pub audio_settings: Arc<RwLock<AudioSettings>>,
     /// Church + branch identity. `None` until onboarding completes.
     pub identity: Arc<RwLock<Option<ChurchIdentity>>>,
+    /// All service projects, persisted to `~/.openworship/projects.json`.
+    pub projects: Arc<RwLock<Vec<ServiceProject>>>,
+    /// Currently open project ID, if any.
+    pub active_project_id: Arc<RwLock<Option<String>>>,
+    /// Global content bank, persisted to `~/.openworship/content_bank.json`.
+    pub content_bank: Arc<RwLock<Vec<ContentBankEntry>>>,
 }
 
 impl AppState {
