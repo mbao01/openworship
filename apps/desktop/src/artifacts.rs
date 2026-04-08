@@ -177,6 +177,7 @@ impl ArtifactsDb {
         Ok(out)
     }
 
+    #[allow(dead_code)]
     pub fn list_all(&self) -> Result<Vec<ArtifactEntry>> {
         let mut stmt = self.conn.prepare(
             "SELECT id,service_id,path,name,is_dir,parent_path,size_bytes,mime_type,
