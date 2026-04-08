@@ -2650,6 +2650,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "ow-audio",
+ "ow-core",
  "ow-db",
  "ow-display",
  "ow-search",
@@ -2694,7 +2695,9 @@ dependencies = [
 name = "ow-core"
 version = "0.0.1"
 dependencies = [
+ "regex",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
