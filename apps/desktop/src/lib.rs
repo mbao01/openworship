@@ -1,3 +1,4 @@
+mod artifacts;
 mod commands;
 mod detection;
 mod identity;
@@ -102,6 +103,18 @@ pub fn run() {
         .unwrap_or_else(|| "KJV".to_string());
     let active_translation = Arc::new(RwLock::new(initial_translation));
 
+    // ── Artifacts DB (Phase 15) ────────────────────────────────────────────────
+    let artifacts_db = match artifacts::ArtifactsDb::open() {
+        Ok(db) => Arc::new(Mutex::new(db)),
+        Err(e) => {
+            eprintln!("[artifacts] failed to open db: {e}; using in-memory fallback");
+            Arc::new(Mutex::new(
+                artifacts::ArtifactsDb::open_in_memory()
+                    .expect("failed to open in-memory artifacts DB"),
+            ))
+        }
+    };
+
     // ── Clone Arcs for detection loop ─────────────────────────────────────────
     let detect_search = Arc::clone(&search);
     let detect_mode = Arc::clone(&detection_mode);
@@ -138,6 +151,7 @@ pub fn run() {
         song_semantic_index,
         song_refs,
         active_translation,
+        artifacts_db,
     };
 
     tauri::Builder::default()
@@ -261,6 +275,20 @@ pub fn run() {
             commands::get_active_translation,
             commands::switch_live_translation,
             commands::reject_live_item,
+            // ── Phase 15: Artifacts ────────────────────────────────────────
+            commands::list_artifacts,
+            commands::list_recent_artifacts,
+            commands::list_starred_artifacts,
+            commands::search_artifacts,
+            commands::create_artifact_dir,
+            commands::import_artifact_file,
+            commands::rename_artifact,
+            commands::delete_artifact,
+            commands::move_artifact,
+            commands::star_artifact,
+            commands::get_artifacts_settings,
+            commands::set_artifacts_base_path,
+            commands::open_artifact,
             identity::get_identity,
             identity::create_church,
             identity::join_church,

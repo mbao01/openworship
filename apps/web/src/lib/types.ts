@@ -131,3 +131,35 @@ export interface SongSemanticStatus {
   ready: boolean;
   song_count: number;
 }
+
+// ─── Phase 15: Artifacts ───────────────────────────────────────────────────────
+
+/** Broad MIME category used for filter pills. */
+export type ArtifactCategory =
+  | "image"
+  | "video"
+  | "audio"
+  | "document"
+  | "slide"
+  | "archive"
+  | "other";
+
+/** Matches Rust `ArtifactEntry` struct. */
+export interface ArtifactEntry {
+  id: string;
+  service_id: string | null;
+  path: string;
+  name: string;
+  is_dir: boolean;
+  parent_path: string;
+  size_bytes: number;
+  mime_type: string | null;
+  starred: boolean;
+  created_at_ms: number;
+  modified_at_ms: number;
+}
+
+/** Matches Rust `ArtifactsSettings` struct. */
+export interface ArtifactsSettings {
+  base_path: string;
+}

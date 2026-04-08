@@ -10,6 +10,7 @@ import "../styles/operator.css";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
+  onOpenArtifacts?: () => void;
 }
 
 // ─── Translation Switcher ────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ function TranslationSwitcher() {
   );
 }
 
-export function OperatorPage({ identity }: OperatorPageProps) {
+export function OperatorPage({ identity, onOpenArtifacts }: OperatorPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
@@ -80,6 +81,21 @@ export function OperatorPage({ identity }: OperatorPageProps) {
         </div>
         <div className="operator-titlebar__right">
           <TranslationSwitcher />
+          {onOpenArtifacts && (
+            <button
+              className="settings-gear-btn"
+              onClick={onOpenArtifacts}
+              title="Artifacts"
+              aria-label="Open artifacts"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
+            </button>
+          )}
           <button
             className="settings-gear-btn"
             onClick={() => setSettingsOpen(true)}

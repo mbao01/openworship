@@ -34,3 +34,4 @@ ow-core = { path = "../../crates/ow-core" }
 ow-embed = { path = "../../crates/ow-embed" }
 keyring = "3"
 rusqlite = { workspace = true }
+mime_guess = "2"

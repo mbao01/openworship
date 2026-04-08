@@ -1,3 +1,4 @@
+use crate::artifacts::ArtifactsDb;
 use crate::identity::ChurchIdentity;
 use crate::service::{ContentBankEntry, ServiceProject};
 use crate::settings::AudioSettings;
@@ -44,6 +45,8 @@ pub struct AppState {
     /// Currently selected Bible translation for live display and detection.
     /// Defaults to "KJV"; updated by `switch_live_translation`.
     pub active_translation: Arc<RwLock<String>>,
+    /// Artifact metadata database (Phase 15).
+    pub artifacts_db: Arc<Mutex<ArtifactsDb>>,
 }
 
 impl AppState {

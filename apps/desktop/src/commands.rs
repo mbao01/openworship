@@ -1269,3 +1269,137 @@ fn refresh_song_refs(state: &State<'_, AppState>) {
         }
     }
 }
+
+// ─── Phase 15: Artifacts ──────────────────────────────────────────────────────
+
+use crate::artifacts::{
+    ArtifactEntry, ArtifactsSettings,
+    create_dir as do_create_dir,
+    import_file as do_import_file,
+    rename_artifact as do_rename,
+    delete_artifact as do_delete,
+    move_artifact as do_move,
+};
+use std::path::Path;
+
+#[tauri::command]
+pub fn list_artifacts(
+    service_id: Option<String>,
+    parent_path: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<ArtifactEntry>, String> {
+    state.artifacts_db.lock().map_err(|e| e.to_string())?
+        .list(service_id.as_deref(), parent_path.as_deref())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn list_recent_artifacts(
+    limit: Option<u32>,
+    state: State<'_, AppState>,
+) -> Result<Vec<ArtifactEntry>, String> {
+    state.artifacts_db.lock().map_err(|e| e.to_string())?
+        .list_recent(limit.unwrap_or(20) as usize)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn list_starred_artifacts(state: State<'_, AppState>) -> Result<Vec<ArtifactEntry>, String> {
+    state.artifacts_db.lock().map_err(|e| e.to_string())?
+        .list_starred()
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn search_artifacts(
+    query: String,
+    service_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<ArtifactEntry>, String> {
+    state.artifacts_db.lock().map_err(|e| e.to_string())?
+        .search(&query, service_id.as_deref())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn create_artifact_dir(
+    service_id: Option<String>,
+    parent_path: Option<String>,
+    name: String,
+    state: State<'_, AppState>,
+) -> Result<ArtifactEntry, String> {
+    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    do_create_dir(&mut db, service_id, parent_path, name).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn import_artifact_file(
+    service_id: Option<String>,
+    parent_path: Option<String>,
+    source_path: String,
+    state: State<'_, AppState>,
+) -> Result<ArtifactEntry, String> {
+    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    do_import_file(&mut db, service_id, parent_path, Path::new(&source_path))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn rename_artifact(
+    id: String,
+    new_name: String,
+    state: State<'_, AppState>,
+) -> Result<ArtifactEntry, String> {
+    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    do_rename(&mut db, &id, new_name).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_artifact(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    do_delete(&mut db, &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn move_artifact(
+    id: String,
+    new_parent_path: String,
+    state: State<'_, AppState>,
+) -> Result<ArtifactEntry, String> {
+    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    do_move(&mut db, &id, new_parent_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn star_artifact(id: String, starred: bool, state: State<'_, AppState>) -> Result<(), String> {
+    state.artifacts_db.lock().map_err(|e| e.to_string())?
+        .toggle_star(&id, starred)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_artifacts_settings(state: State<'_, AppState>) -> Result<ArtifactsSettings, String> {
+    Ok(state.artifacts_db.lock().map_err(|e| e.to_string())?.settings().clone())
+}
+
+#[tauri::command]
+pub fn set_artifacts_base_path(path: String, state: State<'_, AppState>) -> Result<(), String> {
+    state.artifacts_db.lock().map_err(|e| e.to_string())?
+        .set_base_path(path)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn open_artifact(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = db.get_by_id(&id).map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("artifact not found: {id}"))?;
+    let abs = db.abs_path(&entry.path);
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open").arg(&abs).spawn().map_err(|e| e.to_string())?;
+    #[cfg(target_os = "windows")]
+    std::process::Command::new("explorer").arg(&abs).spawn().map_err(|e| e.to_string())?;
+    #[cfg(target_os = "linux")]
+    std::process::Command::new("xdg-open").arg(&abs).spawn().map_err(|e| e.to_string())?;
+    Ok(())
+}
