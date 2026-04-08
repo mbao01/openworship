@@ -4,6 +4,8 @@
 //! the OS keychain via [`crate::keychain`]. On first load after upgrading from
 //! an older build that did store the key in plaintext JSON, the migration path
 //! reads the key, saves it to the keychain, and re-saves the file without it.
+//!
+//! Display settings are persisted separately in `~/.openworship/display_settings.json`.
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -161,6 +163,59 @@ impl AudioSettings {
 fn settings_path() -> Result<PathBuf> {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
     Ok(PathBuf::from(home).join(".openworship").join("settings.json"))
+}
+
+// ── Display settings ──────────────────────────────────────────────────────────
+
+/// Display output settings, persisted to `~/.openworship/display_settings.json`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DisplaySettings {
+    /// Index into the monitor list returned by `available_monitors()`.
+    /// `None` means "use primary monitor".
+    pub selected_monitor_index: Option<usize>,
+    /// When `true`, open the display window on every connected monitor.
+    pub multi_output: bool,
+}
+
+impl DisplaySettings {
+    /// Load from `~/.openworship/display_settings.json`, returning defaults on error.
+    pub fn load() -> Self {
+        match Self::try_load() {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("[display_settings] failed to load: {e}; using defaults");
+                Self::default()
+            }
+        }
+    }
+
+    fn try_load() -> Result<Self> {
+        let path = display_settings_path()?;
+        if !path.exists() {
+            return Ok(Self::default());
+        }
+        let bytes = std::fs::read(&path)?;
+        Ok(serde_json::from_slice(&bytes)?)
+    }
+
+    /// Persist to `~/.openworship/display_settings.json`.
+    pub fn save(&self) -> Result<()> {
+        let path = display_settings_path()?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let json = serde_json::to_vec_pretty(self)?;
+        std::fs::write(&path, json)?;
+        Ok(())
+    }
+}
+
+fn display_settings_path() -> Result<PathBuf> {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    Ok(PathBuf::from(home)
+        .join(".openworship")
+        .join("display_settings.json"))
 }
 
 #[cfg(test)]

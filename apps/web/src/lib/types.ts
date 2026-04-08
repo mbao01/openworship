@@ -272,6 +272,25 @@ export interface EmailSubscriber {
   subscribed_at_ms: number;
 }
 
+// ─── OPE-63: Display device selection ─────────────────────────────────────────
+
+/** Matches Rust `MonitorInfo` struct from `display_window.rs`. */
+export interface MonitorInfo {
+  name: string;
+  width: number;
+  height: number;
+  position_x: number;
+  position_y: number;
+  scale_factor: number;
+  is_primary: boolean;
+}
+
+/** Matches Rust `DisplaySettings` struct from `settings.rs`. */
+export interface DisplaySettings {
+  selected_monitor_index: number | null;
+  multi_output: boolean;
+}
+
 /** Matches Rust `EmailSettings` struct. */
 export interface EmailSettings {
   smtp_host: string;

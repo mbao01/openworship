@@ -247,7 +247,7 @@ fn start_stt_with_settings(
     #[cfg(debug_assertions)]
     {
         eprintln!("[stt] starting mock transcriber (debug build, no model available)");
-        return engine.start(MockTranscriber::new(), config);
+        engine.start(MockTranscriber::new(), config)
     }
 
     #[cfg(not(debug_assertions))]

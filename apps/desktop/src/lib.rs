@@ -3,6 +3,7 @@ mod claude_api;
 mod cloud_sync;
 mod commands;
 mod detection;
+mod display_window;
 mod email;
 mod identity;
 mod keychain;
@@ -16,7 +17,7 @@ mod summaries;
 use ow_audio::SttEngine;
 use ow_core::{DetectionMode, QueueItem, SongRef};
 use ow_embed::{OllamaClient, SemanticIndex};
-use settings::AudioSettings;
+use settings::{AudioSettings, DisplaySettings};
 use songs::SongsDb;
 use state::AppState;
 use std::collections::VecDeque;
@@ -42,6 +43,7 @@ pub fn run() {
     let detection_mode = Arc::new(RwLock::new(DetectionMode::default()));
     let queue = Arc::new(Mutex::new(VecDeque::<QueueItem>::new()));
     let audio_settings = Arc::new(RwLock::new(AudioSettings::load()));
+    let display_settings = Arc::new(RwLock::new(DisplaySettings::load()));
 
     // ── Church identity ───────────────────────────────────────────────────────
     let identity_value = identity::ChurchIdentity::load()
@@ -180,6 +182,7 @@ pub fn run() {
         detection_mode,
         queue,
         audio_settings,
+        display_settings,
         identity,
         projects,
         active_project_id,
@@ -382,6 +385,14 @@ pub fn run() {
             identity::create_church,
             identity::join_church,
             identity::generate_invite_code,
+            // ── Display device selection (OPE-63) ──────────────────────────
+            display_window::list_monitors,
+            display_window::open_display_window,
+            display_window::close_display_window,
+            display_window::get_display_window_open,
+            display_window::get_display_settings,
+            display_window::set_display_settings,
+            display_window::get_obs_display_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
