@@ -15,5 +15,8 @@ tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
 serde = { workspace = true }
 serde_json = { workspace = true }
+tokio = { workspace = true }
 ow-display = { path = "../../crates/ow-display" }
+ow-db = { path = "../../crates/ow-db" }
+ow-search = { path = "../../crates/ow-search" }
 

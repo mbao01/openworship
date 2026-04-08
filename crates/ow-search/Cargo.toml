@@ -4,4 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
+tantivy = { workspace = true }
 serde = { workspace = true }
+anyhow = { workspace = true }
+ow-db = { path = "../ow-db" }
