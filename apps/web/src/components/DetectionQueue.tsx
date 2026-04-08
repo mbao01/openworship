@@ -70,6 +70,7 @@ interface CardProps {
 function DetectionCard({ item, onApprove, onDismiss }: CardProps) {
   const statusClass = statusModifier(item.status);
   const isSong = item.kind === "song";
+  const confidencePct = item.confidence != null ? Math.round(item.confidence * 100) : null;
 
   return (
     <div className={`detection-card detection-card--${statusClass}${isSong ? " detection-card--song" : ""}`} role="article">
@@ -82,22 +83,24 @@ function DetectionCard({ item, onApprove, onDismiss }: CardProps) {
           <span className="detection-card__translation">{item.translation}</span>
         )}
         {item.is_semantic && (
-          <span
-            className="detection-card__semantic-badge"
-            title={
-              item.confidence != null
-                ? `Semantic match — ${Math.round(item.confidence * 100)}% confidence`
-                : "Semantic match"
-            }
-          >
-            ~
-          </span>
+          <span className="detection-card__semantic-badge" title="Semantic match">~</span>
         )}
         {item.status === "live" && (
           <span className="detection-card__live-dot" aria-label="Live" />
         )}
       </div>
       {!isSong && <p className="detection-card__text">{item.text}</p>}
+
+      {/* Confidence bar — visible for all items that carry a score */}
+      {confidencePct != null && (
+        <div className="detection-card__confidence" title={`${confidencePct}% confidence`}>
+          <div
+            className="detection-card__confidence-fill"
+            style={{ width: `${confidencePct}%` }}
+          />
+          <span className="detection-card__confidence-label">{confidencePct}%</span>
+        </div>
+      )}
 
       {item.status === "pending" && (
         <div className="detection-card__actions">

@@ -41,6 +41,9 @@ pub struct AppState {
     pub song_semantic_index: Arc<RwLock<Option<SongSemanticIndex>>>,
     /// Cached song title list for the detection loop (refreshed on add/delete).
     pub song_refs: Arc<RwLock<Vec<SongRef>>>,
+    /// Currently selected Bible translation for live display and detection.
+    /// Defaults to "KJV"; updated by `switch_live_translation`.
+    pub active_translation: Arc<RwLock<String>>,
 }
 
 impl AppState {

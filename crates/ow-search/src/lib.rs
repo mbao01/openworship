@@ -27,6 +27,10 @@ pub struct VerseResult {
     pub verse: u32,
     pub text: String,
     pub reference: String,
+    /// Normalized relevance score [0.0–1.0]. 1.0 for exact reference lookups;
+    /// Tantivy BM25 score scaled to this range for keyword/FTS searches.
+    #[serde(default)]
+    pub score: f32,
 }
 
 // ─────────────────────────────────────────
@@ -159,8 +163,12 @@ impl SearchEngine {
             .search(&final_query, &TopDocs::with_limit(limit))
             .context("search failed")?;
 
-        let mut results = Vec::with_capacity(top_docs.len());
-        for (_score, addr) in top_docs {
+        // Collect raw scores to normalise against the max in this result set.
+        let raw: Vec<(f32, _)> = top_docs.into_iter().map(|(s, a)| (s, a)).collect();
+        let max_score = raw.iter().map(|(s, _)| *s).fold(0.0_f32, f32::max).max(1.0);
+
+        let mut results = Vec::with_capacity(raw.len());
+        for (raw_score, addr) in raw {
             let doc: TantivyDocument = searcher.doc(addr)?;
             let get_str = |f: Field| {
                 doc.get_first(f)
@@ -180,6 +188,7 @@ impl SearchEngine {
                 verse: get_u64(self.fields.verse),
                 text: get_str(self.fields.text),
                 reference: get_str(self.fields.reference),
+                score: (raw_score / max_score).clamp(0.0, 1.0),
             });
         }
         Ok(results)

@@ -42,6 +42,10 @@ pub struct AudioSettings {
     /// Cosine-similarity threshold for semantic matches in Copilot mode.
     /// Default: 0.82 (stricter, because the operator reviews before display).
     pub semantic_threshold_copilot: f32,
+    /// Semantic match threshold for song lyrics in Auto / Offline mode. Default: 0.70.
+    pub lyrics_threshold_auto: f32,
+    /// Semantic match threshold for song lyrics in Copilot mode. Default: 0.78.
+    pub lyrics_threshold_copilot: f32,
 }
 
 impl Default for AudioSettings {
@@ -52,6 +56,8 @@ impl Default for AudioSettings {
             semantic_enabled: true,
             semantic_threshold_auto: 0.75,
             semantic_threshold_copilot: 0.82,
+            lyrics_threshold_auto: 0.70,
+            lyrics_threshold_copilot: 0.78,
         }
     }
 }
@@ -67,6 +73,8 @@ struct AudioSettingsFile {
     semantic_enabled: Option<bool>,
     semantic_threshold_auto: Option<f32>,
     semantic_threshold_copilot: Option<f32>,
+    lyrics_threshold_auto: Option<f32>,
+    lyrics_threshold_copilot: Option<f32>,
 }
 
 impl AudioSettings {
@@ -123,6 +131,12 @@ impl AudioSettings {
             semantic_threshold_copilot: file
                 .semantic_threshold_copilot
                 .unwrap_or(defaults.semantic_threshold_copilot),
+            lyrics_threshold_auto: file
+                .lyrics_threshold_auto
+                .unwrap_or(defaults.lyrics_threshold_auto),
+            lyrics_threshold_copilot: file
+                .lyrics_threshold_copilot
+                .unwrap_or(defaults.lyrics_threshold_copilot),
         })
     }
 

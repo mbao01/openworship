@@ -261,6 +261,7 @@ mod tests {
             verse: 16,
             text: text.into(),
             reference: reference.into(),
+            score: 1.0,
         }
     }
 

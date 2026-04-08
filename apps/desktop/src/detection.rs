@@ -56,6 +56,7 @@ pub async fn run_loop(
     song_refs: Arc<RwLock<Vec<SongRef>>>,
     display_tx: broadcast::Sender<ContentEvent>,
     app: AppHandle,
+    active_translation: Arc<RwLock<String>>,
 ) {
     let scripture_detector = ScriptureDetector::new();
     let mut song_detector = SongDetector::default();
@@ -108,8 +109,14 @@ pub async fn run_loop(
                     if cooldown.contains_key(&reference) {
                         continue;
                     }
+
+                    // Look up the verse in the active translation; fall back to any.
+                    let preferred = active_translation
+                        .read()
+                        .map(|t| t.clone())
+                        .unwrap_or_else(|_| "KJV".into());
                     let result = search
-                        .search(&reference, Some("KJV"), 1)
+                        .search(&reference, Some(&preferred), 1)
                         .ok()
                         .and_then(|mut r| r.pop())
                         .or_else(|| {
@@ -127,13 +134,19 @@ pub async fn run_loop(
                     }
                     cooldown.insert(reference, now);
                     exact_refs_queued.insert(r.reference.clone());
-                    let snapshot = enqueue_scripture(
+
+                    // Exact reference matches get 100% confidence.
+                    let snapshot = enqueue_item_inner(
                         r.reference.clone(),
                         r.text.clone(),
                         r.translation.clone(),
                         current_mode,
                         &queue,
                         &display_tx,
+                        false,
+                        Some(1.0),
+                        content_kind::SCRIPTURE,
+                        None,
                     );
                     let _ = app.emit(QUEUE_UPDATED_EVENT, snapshot);
                 }
@@ -363,18 +376,6 @@ pub async fn run_loop(
 }
 
 // ─── Enqueue helpers ──────────────────────────────────────────────────────────
-
-/// Enqueue a detected scripture verse.
-fn enqueue_scripture(
-    reference: String,
-    text: String,
-    translation: String,
-    mode: DetectionMode,
-    queue: &Mutex<VecDeque<QueueItem>>,
-    display_tx: &broadcast::Sender<ContentEvent>,
-) -> Vec<QueueItem> {
-    enqueue_item_inner(reference, text, translation, mode, queue, display_tx, false, None, content_kind::SCRIPTURE, None)
-}
 
 /// Enqueue a detected song (by title match or semantic match).
 ///
