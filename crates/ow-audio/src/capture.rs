@@ -1,7 +1,32 @@
 use anyhow::{Context, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleFormat, SampleRate, Stream, StreamConfig};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc::{self, Receiver};
+
+/// An enumerated audio input device.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AudioInputDevice {
+    pub name: String,
+    pub is_default: bool,
+}
+
+/// List all available audio input devices on the default host.
+pub fn list_input_devices() -> Result<Vec<AudioInputDevice>> {
+    let host = cpal::default_host();
+    let default_name = host.default_input_device().and_then(|d| d.name().ok());
+    let devices = host
+        .input_devices()
+        .context("Failed to enumerate audio input devices")?;
+    Ok(devices
+        .filter_map(|d| {
+            d.name().ok().map(|name| AudioInputDevice {
+                is_default: Some(name.as_str()) == default_name.as_deref(),
+                name,
+            })
+        })
+        .collect())
+}
 
 /// Audio capture configuration.
 #[derive(Debug, Clone)]
@@ -12,6 +37,9 @@ pub struct AudioConfig {
     pub chunk_ms: u32,
     /// Rolling context window in seconds (retained in the ring buffer).
     pub context_window_secs: u32,
+    /// Preferred audio input device name. `None` uses the system default.
+    /// Falls back to default if the named device is not found.
+    pub device_name: Option<String>,
 }
 
 impl Default for AudioConfig {
@@ -20,6 +48,7 @@ impl Default for AudioConfig {
             sample_rate: 16_000,
             chunk_ms: 500,
             context_window_secs: 10,
+            device_name: None,
         }
     }
 }
@@ -36,6 +65,9 @@ pub struct AudioCapturer {
     pub rx: Receiver<Vec<f32>>,
     /// Kept alive here; also referenced by the capture callback closure.
     _acc: std::sync::Arc<std::sync::Mutex<Vec<f32>>>,
+    /// Most-recent RMS level stored as `f32::to_bits`. Read with `f32::from_bits`.
+    /// Updated by the capture callback on every flushed chunk.
+    pub level_rms: std::sync::Arc<AtomicU32>,
 }
 
 // SAFETY: cpal marks CoreAudio streams as !Send conservatively, but the
@@ -46,9 +78,25 @@ unsafe impl Send for AudioCapturer {}
 impl AudioCapturer {
     pub fn new(config: AudioConfig) -> Result<Self> {
         let host = cpal::default_host();
-        let device = host
-            .default_input_device()
-            .context("No default audio input device")?;
+
+        // Pick device by name if specified; fall back to system default.
+        let device = if let Some(ref name) = config.device_name {
+            let found = host
+                .input_devices()
+                .context("Failed to enumerate audio devices")?
+                .find(|d| d.name().ok().as_deref() == Some(name.as_str()));
+            match found {
+                Some(d) => d,
+                None => {
+                    eprintln!("[ow-audio] device '{name}' not found, falling back to system default");
+                    host.default_input_device()
+                        .context("No default audio input device")?
+                }
+            }
+        } else {
+            host.default_input_device()
+                .context("No default audio input device")?
+        };
 
         let supported = device
             .supported_input_configs()
@@ -58,6 +106,9 @@ impl AudioCapturer {
         let acc: std::sync::Arc<std::sync::Mutex<Vec<f32>>> =
             std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
         let acc_cb = acc.clone();
+
+        let level_rms = std::sync::Arc::new(AtomicU32::new(0));
+        let level_sink = level_rms.clone();
 
         let (tx, rx) = mpsc::sync_channel::<Vec<f32>>(32);
         let target_sr = config.sample_rate;
@@ -78,6 +129,13 @@ impl AudioCapturer {
                     // Flush complete chunks.
                     while buf.len() >= chunk_samples {
                         let chunk: Vec<f32> = buf.drain(..chunk_samples).collect();
+                        // Update RMS level for VU meter.
+                        if !chunk.is_empty() {
+                            let rms = (chunk.iter().map(|&s| s * s).sum::<f32>()
+                                / chunk.len() as f32)
+                                .sqrt();
+                            level_sink.store(rms.to_bits(), Ordering::Release);
+                        }
                         let _ = tx.try_send(chunk);
                     }
                 },
@@ -92,6 +150,7 @@ impl AudioCapturer {
             _stream: stream,
             rx,
             _acc: acc,
+            level_rms,
         })
     }
 }

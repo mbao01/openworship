@@ -15,7 +15,7 @@ mod engine;
 pub mod event;
 pub(crate) mod transcribe;
 
-pub use capture::AudioConfig;
+pub use capture::{AudioConfig, AudioInputDevice, list_input_devices};
 pub use engine::{SttEngine, SttStatus};
 pub use event::TranscriptEvent;
 pub use transcribe::{MockTranscriber, Transcriber};

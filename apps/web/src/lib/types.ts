@@ -59,6 +59,12 @@ export type DetectionMode = "auto" | "copilot" | "airplane" | "offline";
 /** Matches Rust `SttBackend` enum. */
 export type SttBackend = "whisper" | "deepgram" | "off";
 
+/** Matches Rust `AudioInputDevice` struct from `capture.rs`. */
+export interface AudioInputDevice {
+  name: string;
+  is_default: boolean;
+}
+
 /** Matches Rust `AudioSettings` struct. */
 export interface AudioSettings {
   backend: SttBackend;
@@ -68,6 +74,8 @@ export interface AudioSettings {
   semantic_threshold_copilot: number;
   lyrics_threshold_auto: number;
   lyrics_threshold_copilot: number;
+  /** Preferred audio input device name; null means system default. */
+  audio_input_device: string | null;
 }
 
 /** Matches Rust `BranchRole` enum. */

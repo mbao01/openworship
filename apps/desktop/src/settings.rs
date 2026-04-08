@@ -54,6 +54,9 @@ pub struct AudioSettings {
     pub lyrics_threshold_auto: f32,
     /// Semantic match threshold for song lyrics in Copilot mode. Default: 0.78.
     pub lyrics_threshold_copilot: f32,
+    /// Preferred audio input device name. `None` means system default.
+    #[serde(default)]
+    pub audio_input_device: Option<String>,
 }
 
 impl Default for AudioSettings {
@@ -66,6 +69,7 @@ impl Default for AudioSettings {
             semantic_threshold_copilot: 0.82,
             lyrics_threshold_auto: 0.70,
             lyrics_threshold_copilot: 0.78,
+            audio_input_device: None,
         }
     }
 }
@@ -83,6 +87,7 @@ struct AudioSettingsFile {
     semantic_threshold_copilot: Option<f32>,
     lyrics_threshold_auto: Option<f32>,
     lyrics_threshold_copilot: Option<f32>,
+    audio_input_device: Option<String>,
 }
 
 impl AudioSettings {
@@ -145,6 +150,7 @@ impl AudioSettings {
             lyrics_threshold_copilot: file
                 .lyrics_threshold_copilot
                 .unwrap_or(defaults.lyrics_threshold_copilot),
+            audio_input_device: file.audio_input_device,
         })
     }
 
