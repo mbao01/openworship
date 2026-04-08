@@ -9,6 +9,13 @@ import { useCallback, useEffect, useState } from "react";
 import { invoke } from "../lib/tauri";
 import type { AnnouncementItem, SermonNote } from "../lib/types";
 
+// Shared classes
+const inputCls = "w-full bg-void border-none border-b border-b-[rgba(42,42,42,0.8)] text-chalk font-sans text-xs py-2 px-0 outline-none transition-colors focus:border-b-gold";
+const textareaCls = "w-full box-border bg-void border border-[rgba(42,42,42,0.8)] rounded-[3px] text-chalk font-sans text-xs p-2 resize-y outline-none transition-colors focus:border-gold";
+const btnBaseCls = "bg-none border border-[rgba(42,42,42,0.8)] text-ash rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:text-chalk hover:not-disabled:border-ash";
+const btnPrimaryCls = "bg-none border border-gold text-gold rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-gold hover:not-disabled:text-void";
+const sectionTitleCls = "text-[10px] font-semibold tracking-[0.14em] uppercase text-ash";
+
 // ─── Announcement library ─────────────────────────────────────────────────────
 
 function AnnouncementLibrary() {
@@ -69,11 +76,11 @@ function AnnouncementLibrary() {
   };
 
   return (
-    <div className="content-panel__section">
-      <div className="content-panel__section-header">
-        <span className="content-panel__section-title">Announcements</span>
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className={sectionTitleCls}>Announcements</span>
         <button
-          className="content-panel__add-btn"
+          className="bg-none border border-[rgba(42,42,42,0.8)] text-ash rounded-[3px] w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 hover:text-chalk hover:border-ash"
           onClick={() => setCreating((v) => !v)}
           title={creating ? "Cancel" : "New announcement"}
         >
@@ -82,77 +89,41 @@ function AnnouncementLibrary() {
       </div>
 
       {creating && (
-        <div className="content-panel__form">
-          <input
-            className="content-panel__input"
-            placeholder="Title *"
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-          />
-          <textarea
-            className="content-panel__textarea"
-            placeholder="Body text"
-            rows={3}
-            value={form.body}
-            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-          />
-          <input
-            className="content-panel__input"
-            placeholder="Image URL (optional)"
-            value={form.image_url}
-            onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
-          />
-          <input
-            className="content-panel__input"
-            placeholder="Keyword cue (optional)"
-            value={form.keyword_cue}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, keyword_cue: e.target.value }))
-            }
-          />
-          <div className="content-panel__form-actions">
-            <button
-              className="content-panel__btn content-panel__btn--primary"
-              onClick={handleCreate}
-              disabled={!form.title.trim()}
-            >
-              Save
-            </button>
-            <button
-              className="content-panel__btn"
-              onClick={() => setCreating(false)}
-            >
-              Cancel
-            </button>
+        <div className="flex flex-col gap-2 mb-3">
+          <input className={inputCls} placeholder="Title *" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+          <textarea className={textareaCls} placeholder="Body text" rows={3} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
+          <input className={inputCls} placeholder="Image URL (optional)" value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} />
+          <input className={inputCls} placeholder="Keyword cue (optional)" value={form.keyword_cue} onChange={(e) => setForm((f) => ({ ...f, keyword_cue: e.target.value }))} />
+          <div className="flex gap-2">
+            <button className={btnPrimaryCls} onClick={handleCreate} disabled={!form.title.trim()}>Save</button>
+            <button className={btnBaseCls} onClick={() => setCreating(false)}>Cancel</button>
           </div>
         </div>
       )}
 
       {items.length === 0 && !creating && (
-        <p className="content-panel__empty">No announcements yet</p>
+        <p className="text-[11px] text-smoke my-2 mx-0">No announcements yet</p>
       )}
 
-      <ul className="content-panel__list">
+      <ul className="list-none m-0 p-0 flex flex-col gap-1">
         {items.map((item) => (
-          <li key={item.id} className="content-panel__item">
-            <div className="content-panel__item-info">
-              <span className="content-panel__item-title">{item.title}</span>
+          <li key={item.id} className="flex items-center gap-2 py-2 px-2 rounded-[3px] bg-void">
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <span className="text-xs text-chalk whitespace-nowrap overflow-hidden text-ellipsis">{item.title}</span>
               {item.keyword_cue && (
-                <span className="content-panel__item-cue" title="Keyword cue">
-                  ⌨ {item.keyword_cue}
-                </span>
+                <span className="text-[10px] text-smoke" title="Keyword cue">⌨ {item.keyword_cue}</span>
               )}
             </div>
-            <div className="content-panel__item-actions">
+            <div className="flex gap-1 shrink-0">
               <button
-                className="content-panel__btn content-panel__btn--push"
+                className="bg-none border-none border-transparent text-ash px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-gold"
                 onClick={() => void handlePush(item.id)}
                 title="Push to display"
               >
                 ▶
               </button>
               <button
-                className="content-panel__btn content-panel__btn--delete"
+                className="bg-none border-none border-transparent text-smoke px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-ember"
                 onClick={() => void handleDelete(item.id)}
                 title="Delete"
               >
@@ -190,32 +161,16 @@ function CustomSlidePanel() {
   };
 
   return (
-    <div className="content-panel__section">
-      <div className="content-panel__section-header">
-        <span className="content-panel__section-title">Custom Slide</span>
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className={sectionTitleCls}>Custom Slide</span>
       </div>
-      <div className="content-panel__form">
-        <input
-          className="content-panel__input"
-          placeholder="Title"
-          value={form.title}
-          onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-        />
-        <textarea
-          className="content-panel__textarea"
-          placeholder="Body text"
-          rows={2}
-          value={form.body}
-          onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-        />
-        <input
-          className="content-panel__input"
-          placeholder="Image URL (optional)"
-          value={form.image_url}
-          onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
-        />
+      <div className="flex flex-col gap-2 mb-3">
+        <input className={inputCls} placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+        <textarea className={textareaCls} placeholder="Body text" rows={2} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
+        <input className={inputCls} placeholder="Image URL (optional)" value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} />
         <button
-          className="content-panel__btn content-panel__btn--primary"
+          className={btnPrimaryCls}
           onClick={handlePush}
           disabled={busy || (!form.title.trim() && !form.body.trim())}
         >
@@ -248,19 +203,19 @@ function CountdownPanel() {
   };
 
   return (
-    <div className="content-panel__section">
-      <div className="content-panel__section-header">
-        <span className="content-panel__section-title">Countdown Timer</span>
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className={sectionTitleCls}>Countdown Timer</span>
       </div>
-      <div className="content-panel__form content-panel__form--row">
+      <div className="flex flex-row items-center gap-2 mb-3">
         <input
-          className="content-panel__input content-panel__input--flex"
+          className={`${inputCls} flex-1`}
           placeholder="Label"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <input
-          className="content-panel__input content-panel__input--mins"
+          className="w-[44px] bg-void border-none border-b border-b-[rgba(42,42,42,0.8)] text-chalk font-sans text-xs py-2 px-0 outline-none text-center transition-colors focus:border-b-gold"
           type="number"
           min={1}
           max={60}
@@ -271,14 +226,8 @@ function CountdownPanel() {
           }}
           title="Minutes"
         />
-        <span className="content-panel__mins-label">min</span>
-        <button
-          className="content-panel__btn content-panel__btn--primary"
-          onClick={handleStart}
-          disabled={busy}
-        >
-          ▶
-        </button>
+        <span className="text-[11px] text-ash">min</span>
+        <button className={btnPrimaryCls} onClick={handleStart} disabled={busy}>▶</button>
       </div>
     </div>
   );
@@ -375,11 +324,11 @@ function SermonNotesPanel() {
   };
 
   return (
-    <div className="content-panel__section">
-      <div className="content-panel__section-header">
-        <span className="content-panel__section-title">Sermon Notes</span>
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className={sectionTitleCls}>Sermon Notes</span>
         <button
-          className="content-panel__add-btn"
+          className="bg-none border border-[rgba(42,42,42,0.8)] text-ash rounded-[3px] w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 hover:text-chalk hover:border-ash"
           onClick={() => setCreating((v) => !v)}
           title={creating ? "Cancel" : "New sermon note deck"}
         >
@@ -388,12 +337,12 @@ function SermonNotesPanel() {
       </div>
 
       {activeNoteId && (
-        <div className="content-panel__active-note">
-          <span className="content-panel__active-note-label">
+        <div className="flex items-center justify-between py-2 px-3 bg-[rgba(201,168,76,0.08)] border border-[rgba(201,168,76,0.25)] rounded-[3px] mb-3">
+          <span className="font-mono text-[11px] text-gold">
             Slide {activeSlide + 1} / {totalSlides}
           </span>
           <button
-            className="content-panel__btn content-panel__btn--advance"
+            className="bg-none border border-gold text-gold rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-gold hover:not-disabled:text-void"
             onClick={handleAdvance}
             disabled={activeSlide + 1 >= totalSlides}
             title="Advance to next slide"
@@ -404,65 +353,49 @@ function SermonNotesPanel() {
       )}
 
       {creating && (
-        <div className="content-panel__form">
-          <input
-            className="content-panel__input"
-            placeholder="Sermon title *"
-            value={noteTitle}
-            onChange={(e) => setNoteTitle(e.target.value)}
-          />
+        <div className="flex flex-col gap-2 mb-3">
+          <input className={inputCls} placeholder="Sermon title *" value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} />
           <textarea
-            className="content-panel__textarea content-panel__textarea--tall"
+            className={`${textareaCls} min-h-[100px]`}
             placeholder={"Slide 1 text\n---\nSlide 2 text\n---\nSlide 3 text"}
             rows={6}
             value={slidesText}
             onChange={(e) => setSlidesText(e.target.value)}
           />
-          <p className="content-panel__hint">Separate slides with a line containing only ---</p>
-          <div className="content-panel__form-actions">
-            <button
-              className="content-panel__btn content-panel__btn--primary"
-              onClick={handleCreate}
-              disabled={!noteTitle.trim() || !slidesText.trim()}
-            >
-              Save
-            </button>
-            <button
-              className="content-panel__btn"
-              onClick={() => setCreating(false)}
-            >
-              Cancel
-            </button>
+          <p className="text-[10px] text-smoke m-0">Separate slides with a line containing only ---</p>
+          <div className="flex gap-2">
+            <button className={btnPrimaryCls} onClick={handleCreate} disabled={!noteTitle.trim() || !slidesText.trim()}>Save</button>
+            <button className={btnBaseCls} onClick={() => setCreating(false)}>Cancel</button>
           </div>
         </div>
       )}
 
       {notes.length === 0 && !creating && (
-        <p className="content-panel__empty">No sermon notes yet</p>
+        <p className="text-[11px] text-smoke my-2 mx-0">No sermon notes yet</p>
       )}
 
-      <ul className="content-panel__list">
+      <ul className="list-none m-0 p-0 flex flex-col gap-1">
         {notes.map((note) => (
           <li
             key={note.id}
-            className={`content-panel__item ${activeNoteId === note.id ? "content-panel__item--active" : ""}`}
+            className={`flex items-center gap-2 py-2 px-2 rounded-[3px] bg-void${activeNoteId === note.id ? " border-l-2 border-l-gold pl-[calc(0.5rem-2px)]" : ""}`}
           >
-            <div className="content-panel__item-info">
-              <span className="content-panel__item-title">{note.title}</span>
-              <span className="content-panel__item-meta">
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <span className="text-xs text-chalk whitespace-nowrap overflow-hidden text-ellipsis">{note.title}</span>
+              <span className="text-[10px] text-smoke">
                 {note.slides.length} slide{note.slides.length !== 1 ? "s" : ""}
               </span>
             </div>
-            <div className="content-panel__item-actions">
+            <div className="flex gap-1 shrink-0">
               <button
-                className="content-panel__btn content-panel__btn--push"
+                className="bg-none border-none border-transparent text-ash px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-gold"
                 onClick={() => void handlePush(note.id)}
                 title="Push to speaker display"
               >
                 ▶
               </button>
               <button
-                className="content-panel__btn content-panel__btn--delete"
+                className="bg-none border-none border-transparent text-smoke px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-ember"
                 onClick={() => void handleDelete(note.id)}
                 title="Delete"
               >
@@ -482,25 +415,27 @@ export function ContentPanel() {
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <div className="content-panel">
+    <div className="bg-obsidian border border-iron/40 rounded overflow-hidden shrink-0">
+      {/* Header */}
       <div
-        className="content-panel__header"
+        className="flex items-center justify-between px-4 py-3 cursor-pointer select-none border-b border-iron/40 hover:bg-slate"
         onClick={() => setExpanded((v) => !v)}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && setExpanded((v) => !v)}
       >
-        <span className="content-panel__header-title">Content</span>
-        <span className="content-panel__chevron">{expanded ? "▲" : "▼"}</span>
+        <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-ash">Content</span>
+        <span className="text-[9px] text-smoke">{expanded ? "▲" : "▼"}</span>
       </div>
+
       {expanded && (
-        <div className="content-panel__body">
+        <div className="flex flex-col max-h-[480px] overflow-y-auto">
           <AnnouncementLibrary />
-          <div className="content-panel__divider" />
+          <div className="h-px bg-[rgba(42,42,42,0.6)] mx-4" />
           <CustomSlidePanel />
-          <div className="content-panel__divider" />
+          <div className="h-px bg-[rgba(42,42,42,0.6)] mx-4" />
           <CountdownPanel />
-          <div className="content-panel__divider" />
+          <div className="h-px bg-[rgba(42,42,42,0.6)] mx-4" />
           <SermonNotesPanel />
         </div>
       )}

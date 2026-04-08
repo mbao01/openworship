@@ -8,8 +8,6 @@ import { SummaryPanel } from "../components/SummaryPanel";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
 import type { ChurchIdentity, TranslationInfo } from "../lib/types";
-// operator.css still needed for child component styles (TranscriptPanel, ScriptureSearch, etc.)
-import "../styles/operator.css";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;

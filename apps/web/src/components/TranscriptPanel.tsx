@@ -83,14 +83,27 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   }
 
   return (
-    <div className="transcript-panel">
-      <div className="transcript-header">
-        <div className="transcript-label">
-          {micActive && <span className="transcript-pulse" aria-hidden="true" />}
-          <span className="transcript-title">TRANSCRIPT</span>
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-iron shrink-0">
+        <div className="flex items-center gap-2">
+          {micActive && (
+            <span
+              className="inline-block w-2 h-2 rounded-full bg-gold [box-shadow:0_0_0_4px_color-mix(in_srgb,var(--color-gold)_25%,transparent)] animate-[transcript-pulse_1.5s_ease-in-out_infinite] shrink-0"
+              aria-hidden="true"
+            />
+          )}
+          <span className="text-[11px] font-medium tracking-[0.12em] text-ash uppercase">
+            TRANSCRIPT
+          </span>
         </div>
         <button
-          className={`transcript-toggle ${micActive ? "transcript-toggle--active" : ""}`}
+          data-qa="transcript-toggle-btn"
+          className={`font-sans text-[11px] font-medium tracking-[0.08em] bg-transparent rounded px-[10px] py-1 cursor-pointer transition-colors uppercase${
+            micActive
+              ? " border border-gold text-gold"
+              : " border border-iron text-chalk hover:border-ash"
+          }`}
           onClick={handleToggle}
           aria-label={micActive ? "Stop microphone" : "Start microphone"}
         >
@@ -98,11 +111,16 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
         </button>
       </div>
 
+      {/* STT warning banner */}
       {sttWarning && (
-        <div className="transcript-stt-warning" role="alert">
-          <span>{sttWarning}</span>
+        <div
+          className="flex items-center justify-between gap-2 px-6 py-2 bg-[rgba(201,168,76,0.07)] border-b border-[rgba(201,168,76,0.2)] shrink-0"
+          role="alert"
+        >
+          <span className="text-[11px] text-gold-muted tracking-wide leading-[1.4]">{sttWarning}</span>
           <button
-            className="transcript-stt-warning__dismiss"
+            data-qa="transcript-stt-warning-dismiss"
+            className="bg-transparent border-none text-smoke cursor-pointer text-[10px] px-1 py-0.5 shrink-0 transition-colors leading-none hover:text-ash"
             onClick={() => setSttWarning(null)}
             aria-label="Dismiss warning"
           >
@@ -111,15 +129,24 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
         </div>
       )}
 
-      <div className="transcript-body" role="log" aria-live="polite" aria-label="Live transcript">
+      {/* Body */}
+      <div
+        className="flex-1 overflow-y-auto px-6 py-6 min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-iron [&::-webkit-scrollbar-thumb]:rounded-sm"
+        role="log"
+        aria-live="polite"
+        aria-label="Live transcript"
+      >
         {entries.length === 0 && !error && (
-          <p className="transcript-empty">
-            {micActive ? "Listening…" : "Press START MIC to begin transcription."}
+          <p className="text-sm text-smoke m-0">
+            {micActive ? "Listening\u2026" : "Press START MIC to begin transcription."}
           </p>
         )}
-        {error && <p className="transcript-error">{error}</p>}
+        {error && <p className="text-[13px] text-ember m-0 mb-2">{error}</p>}
         {entries.map((entry) => (
-          <p key={entry.id} className="transcript-line">
+          <p
+            key={entry.id}
+            className="text-base font-normal leading-relaxed text-chalk m-0 mb-2 animate-[transcript-line-in_150ms_ease-out]"
+          >
             {entry.text}
           </p>
         ))}

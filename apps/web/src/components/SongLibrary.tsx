@@ -2,6 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "../lib/tauri";
 import type { Song } from "../lib/types";
 
+// Shared input/textarea classes
+const inputCls = "w-full box-border bg-void border border-iron rounded-[3px] text-chalk font-sans text-xs py-2 px-3 outline-none transition-colors placeholder:text-iron focus:border-smoke disabled:opacity-50";
+const textareaCls = `${inputCls} resize-y`;
+
+// Shared button classes
+const btnBaseCls = "font-sans text-[11px] tracking-[0.06em] py-1 px-3 rounded-[3px] border border-iron bg-transparent text-ash cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
+const btnCancelCls = `${btnBaseCls} hover:border-smoke hover:text-chalk`;
+const btnSaveCls = `${btnBaseCls} border-gold-muted text-gold hover:border-gold`;
+
 // ─── Add / Edit Song form ─────────────────────────────────────────────────────
 
 function SongForm({
@@ -57,15 +66,15 @@ function SongForm({
   };
 
   return (
-    <form className="song-form" onSubmit={handleSubmit}>
-      <div className="song-form__field">
-        <label className="song-form__label" htmlFor="song-title">
+    <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-medium tracking-[0.08em] text-ash uppercase" htmlFor="song-title">
           Title
         </label>
         <input
           ref={titleRef}
           id="song-title"
-          className="song-form__input"
+          className={inputCls}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Amazing Grace"
@@ -73,39 +82,39 @@ function SongForm({
           disabled={saving}
         />
       </div>
-      <div className="song-form__field">
-        <label className="song-form__label" htmlFor="song-artist">
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-medium tracking-[0.08em] text-ash uppercase" htmlFor="song-artist">
           Artist / Author
         </label>
         <input
           id="song-artist"
-          className="song-form__input"
+          className={inputCls}
           value={artist}
           onChange={(e) => setArtist(e.target.value)}
           placeholder="John Newton"
           disabled={saving}
         />
       </div>
-      <div className="song-form__field">
-        <label className="song-form__label" htmlFor="song-lyrics">
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-medium tracking-[0.08em] text-ash uppercase" htmlFor="song-lyrics">
           Lyrics
         </label>
         <textarea
           id="song-lyrics"
-          className="song-form__textarea"
+          className={`${textareaCls} text-[11px] leading-[1.5]`}
           value={lyrics}
           onChange={(e) => setLyrics(e.target.value)}
-          placeholder={"[Verse 1]\nAmazing grace how sweet the sound\nThat saved a wretch like me\n\n[Chorus]\nMy chains are gone…"}
+          placeholder={"[Verse 1]\nAmazing grace how sweet the sound\nThat saved a wretch like me\n\n[Chorus]\nMy chains are gone\u2026"}
           rows={10}
           required
           disabled={saving}
         />
       </div>
-      {error && <p className="song-form__error">{error}</p>}
-      <div className="song-form__actions">
+      {error && <p className="text-[11px] text-[#e66] m-0">{error}</p>}
+      <div className="flex justify-end gap-2">
         <button
           type="button"
-          className="song-form__btn song-form__btn--cancel"
+          className={btnCancelCls}
           onClick={onCancel}
           disabled={saving}
         >
@@ -113,10 +122,10 @@ function SongForm({
         </button>
         <button
           type="submit"
-          className="song-form__btn song-form__btn--save"
+          className={btnSaveCls}
           disabled={saving || !title.trim() || !lyrics.trim()}
         >
-          {saving ? "Saving…" : initial ? "Update" : "Add Song"}
+          {saving ? "Saving\u2026" : initial ? "Update" : "Add Song"}
         </button>
       </div>
     </form>
@@ -160,9 +169,9 @@ function ImportForm({
   };
 
   return (
-    <form className="song-import" onSubmit={handleImport}>
-      <div className="song-import__format-row">
-        <label>
+    <form className="flex flex-col gap-3" onSubmit={handleImport}>
+      <div className="flex gap-4 text-[11px] text-ash">
+        <label className="flex items-center gap-1 cursor-pointer">
           <input
             type="radio"
             name="import-format"
@@ -172,7 +181,7 @@ function ImportForm({
           />{" "}
           CCLI SongSelect (text)
         </label>
-        <label>
+        <label className="flex items-center gap-1 cursor-pointer">
           <input
             type="radio"
             name="import-format"
@@ -184,23 +193,23 @@ function ImportForm({
         </label>
       </div>
       <textarea
-        className="song-import__textarea"
+        className="w-full box-border bg-void border border-iron rounded-[3px] text-chalk font-mono text-[10px] py-2 px-3 outline-none resize-y transition-colors placeholder:text-iron focus:border-smoke disabled:opacity-50"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={
           format === "ccli"
-            ? "Paste CCLI SongSelect text export here…"
-            : "Paste OpenLP XML song export here…"
+            ? "Paste CCLI SongSelect text export here\u2026"
+            : "Paste OpenLP XML song export here\u2026"
         }
         rows={12}
         disabled={importing}
         autoFocus
       />
-      {error && <p className="song-import__error">{error}</p>}
-      <div className="song-import__actions">
+      {error && <p className="text-[11px] text-[#e66] m-0">{error}</p>}
+      <div className="flex justify-end gap-2">
         <button
           type="button"
-          className="song-form__btn song-form__btn--cancel"
+          className={btnCancelCls}
           onClick={onCancel}
           disabled={importing}
         >
@@ -208,10 +217,10 @@ function ImportForm({
         </button>
         <button
           type="submit"
-          className="song-form__btn song-form__btn--save"
+          className={btnSaveCls}
           disabled={importing || !text.trim()}
         >
-          {importing ? "Importing…" : "Import"}
+          {importing ? "Importing\u2026" : "Import"}
         </button>
       </div>
     </form>
@@ -235,20 +244,31 @@ function SongRow({
 }) {
   return (
     <li
-      className={`song-row${pushed ? " song-row--live" : ""}`}
+      className={`flex items-center justify-between py-2 px-3 rounded-[3px] border cursor-pointer transition-all gap-2${
+        pushed
+          ? " border-l-2 border-l-gold border-iron bg-slate"
+          : " border-transparent hover:bg-slate hover:border-iron focus-visible:bg-slate focus-visible:border-iron focus-visible:outline-none"
+      }`}
       role="button"
       tabIndex={0}
       onClick={() => onPush(song)}
       onKeyDown={(e) => e.key === "Enter" && onPush(song)}
     >
-      <div className="song-row__meta">
-        <span className="song-row__title">{song.title}</span>
-        {song.artist && <span className="song-row__artist">{song.artist}</span>}
-        {pushed && <span className="song-row__live-dot" aria-label="Live" />}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <span className="text-xs text-chalk whitespace-nowrap overflow-hidden text-ellipsis">{song.title}</span>
+        {song.artist && (
+          <span className="text-[10px] text-ash whitespace-nowrap overflow-hidden text-ellipsis">{song.artist}</span>
+        )}
+        {pushed && (
+          <span
+            className="w-[5px] h-[5px] rounded-full bg-gold [box-shadow:0_0_3px_var(--color-gold)] shrink-0"
+            aria-label="Live"
+          />
+        )}
       </div>
-      <div className="song-row__actions">
+      <div className="flex gap-1 shrink-0">
         <button
-          className="song-row__btn"
+          className="font-sans text-xs leading-none w-[22px] h-[22px] border border-iron rounded-[2px] bg-transparent text-ash cursor-pointer flex items-center justify-center transition-colors hover:border-smoke hover:text-chalk"
           title="Edit"
           aria-label={`Edit ${song.title}`}
           onClick={(e) => {
@@ -259,7 +279,7 @@ function SongRow({
           ✎
         </button>
         <button
-          className="song-row__btn song-row__btn--danger"
+          className="font-sans text-xs leading-none w-[22px] h-[22px] border border-iron rounded-[2px] bg-transparent text-ash cursor-pointer flex items-center justify-center transition-colors hover:border-[#a44] hover:text-[#e66]"
           title="Delete"
           aria-label={`Delete ${song.title}`}
           onClick={(e) => {
@@ -346,19 +366,22 @@ export function SongLibrary() {
   };
 
   return (
-    <div className="song-library">
-      <div className="song-library__header">
-        <span className="song-library__label">SONGS</span>
-        <div className="song-library__header-actions">
+    <div className="flex flex-col gap-3">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-medium tracking-[0.12em] text-ash uppercase">SONGS</span>
+        <div className="flex gap-2">
           <button
-            className="song-library__action"
+            data-qa="song-library-import-btn"
+            className="font-sans text-[10px] tracking-[0.06em] py-0.5 px-2 border border-iron rounded-[3px] bg-transparent text-ash cursor-pointer transition-colors hover:border-smoke hover:text-chalk"
             onClick={() => setMode("import")}
             title="Import CCLI / OpenLP"
           >
             Import
           </button>
           <button
-            className="song-library__action song-library__action--primary"
+            data-qa="song-library-add-btn"
+            className="font-sans text-[10px] tracking-[0.06em] py-0.5 px-2 border border-gold-muted rounded-[3px] bg-transparent text-gold cursor-pointer transition-colors hover:border-gold"
             onClick={() => {
               setEditTarget(null);
               setMode("add");
@@ -395,11 +418,12 @@ export function SongLibrary() {
 
       {mode === "list" && (
         <>
-          <div className="song-library__search">
+          <div className="relative">
             <input
-              className="song-library__input"
+              data-qa="song-library-search"
+              className="w-full box-border bg-void border border-iron rounded-[3px] text-chalk font-sans text-xs py-2 px-3 outline-none transition-colors placeholder:text-iron focus:border-smoke"
               type="text"
-              placeholder="Search songs…"
+              placeholder="Search songs\u2026"
               value={query}
               onChange={handleQueryChange}
               autoComplete="off"
@@ -407,11 +431,11 @@ export function SongLibrary() {
             />
           </div>
           {songs.length === 0 ? (
-            <p className="song-library__empty">
+            <p className="text-[11px] text-smoke m-0">
               {query ? `No songs matching "${query}"` : "No songs yet. Add or import some!"}
             </p>
           ) : (
-            <ul className="song-library__list" role="list">
+            <ul className="list-none m-0 p-0 flex flex-col gap-0.5" role="list">
               {songs.map((s) => (
                 <SongRow
                   key={s.id}

@@ -67,11 +67,13 @@ export function ScriptureSearch() {
   };
 
   return (
-    <div className="scripture-search">
-      <div className="scripture-search__controls">
-        <div className="scripture-search__input-wrap">
+    <div className="flex flex-col gap-2">
+      {/* Controls row */}
+      <div className="flex gap-3 items-center">
+        <div className="flex-1 relative">
           <input
-            className="scripture-search__input"
+            data-qa="scripture-search-input"
+            className="w-full bg-transparent border-none border-b border-b-iron/60 outline-none py-2 text-chalk font-sans text-sm tracking-wide transition-colors placeholder:text-smoke focus:border-b-gold focus:[box-shadow:0_2px_0_-1px_rgba(201,168,76,0.15)]"
             type="text"
             placeholder={'Search \u2014 e.g. John 3:16 or \u201cshepherd\u201d'}
             value={query}
@@ -79,10 +81,16 @@ export function ScriptureSearch() {
             autoComplete="off"
             spellCheck={false}
           />
-          {isSearching && <span className="scripture-search__spinner" />}
+          {isSearching && (
+            <span
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border border-smoke border-t-gold animate-spin"
+              aria-hidden="true"
+            />
+          )}
         </div>
         <select
-          className="scripture-search__select"
+          data-qa="scripture-search-translation"
+          className="bg-obsidian border-none border-b border-b-iron/60 text-ash font-mono text-[11px] tracking-[0.06em] py-2 px-1 outline-none cursor-pointer min-w-[52px] transition-colors focus:border-b-gold focus:text-chalk"
           value={translation}
           onChange={handleTranslationChange}
         >
@@ -94,33 +102,40 @@ export function ScriptureSearch() {
         </select>
       </div>
 
+      {/* Results list */}
       {results.length > 0 && (
-        <ul className="scripture-search__results" role="list">
+        <ul className="list-none mt-2 p-0 flex flex-col gap-px" role="list">
           {results.map((v, i) => {
             const isLive = pushed?.reference === v.reference && pushed?.translation === v.translation;
             return (
               <li
                 key={`${v.translation}-${v.reference}-${i}`}
-                className={`scripture-search__result${isLive ? " scripture-search__result--live" : ""}`}
+                className={`bg-obsidian border rounded-sm px-4 py-3 cursor-pointer outline-none transition-all hover:bg-slate hover:border-smoke focus:bg-slate focus:border-smoke${isLive ? " border-gold-muted bg-slate" : " border-iron/40"}`}
                 onClick={() => handlePush(v)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === "Enter" && handlePush(v)}
               >
-                <div className="scripture-search__result-meta">
-                  <span className="scripture-search__reference">{v.reference}</span>
-                  <span className="scripture-search__translation">{v.translation}</span>
-                  {isLive && <span className="scripture-search__live-dot" aria-label="Live" />}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-chalk tracking-[0.04em]">{v.reference}</span>
+                  <span className="font-mono text-[10px] text-ash tracking-[0.08em]">{v.translation}</span>
+                  {isLive && (
+                    <span
+                      className="w-2 h-2 rounded-full bg-gold [box-shadow:0_0_4px_var(--color-gold)] ml-auto"
+                      aria-label="Live"
+                    />
+                  )}
                 </div>
-                <p className="scripture-search__verse-text">{v.text}</p>
+                <p className="m-0 text-[13px] leading-[1.55] text-ash">{v.text}</p>
               </li>
             );
           })}
         </ul>
       )}
 
+      {/* Empty state */}
       {query.trim() && !isSearching && results.length === 0 && (
-        <p className="scripture-search__empty">No results for "{query}"</p>
+        <p className="text-xs text-smoke py-4 m-0">No results for "{query}"</p>
       )}
     </div>
   );

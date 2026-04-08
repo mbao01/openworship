@@ -73,3 +73,14 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+/* ── Shared keyframe animations ───────────────────────────────────────────── */
+@keyframes transcript-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes transcript-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
