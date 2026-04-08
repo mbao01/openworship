@@ -178,6 +178,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   const [crumbs, setCrumbs] = useState<Array<{ label: string; parent: string | null }>>([]);
   const [filter, setFilter] = useState<ArtifactCategory | "all">("all");
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [settings, setSettings] = useState<ArtifactsSettings | null>(null);
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
@@ -185,9 +186,15 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   const [newFolder, setNewFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Debounce search input — avoid hammering SQLite on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
   useEffect(() => {
     invoke<ServiceProject[]>("list_service_projects")
-      .then((list) => setProjects(list.filter((p) => p.closed_at_ms !== null)))
+      .then((list) => setProjects(list.filter((p) => p.closed_at_ms === null)))
       .catch(() => {});
     invoke<ArtifactsSettings>("get_artifacts_settings").then(setSettings).catch(() => {});
   }, []);
@@ -195,9 +202,9 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   const loadEntries = useCallback(async () => {
     setError(null);
     try {
-      if (query.trim()) {
+      if (debouncedQuery.trim()) {
         const svcId = nav.kind === "service" ? nav.id : null;
-        setEntries(await invoke<ArtifactEntry[]>("search_artifacts", { query: query.trim(), serviceId: svcId }));
+        setEntries(await invoke<ArtifactEntry[]>("search_artifacts", { query: debouncedQuery.trim(), serviceId: svcId }));
         return;
       }
       let list: ArtifactEntry[] = [];
@@ -211,12 +218,12 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
       }
       setEntries(list);
     } catch (e) { setError(String(e)); }
-  }, [nav, parentPath, query]);
+  }, [nav, parentPath, debouncedQuery]);
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
 
   const handleNav = (n: Nav) => {
-    setNav(n); setParentPath(null); setCrumbs([]); setQuery(""); setFilter("all");
+    setNav(n); setParentPath(null); setCrumbs([]); setQuery(""); setDebouncedQuery(""); setFilter("all");
   };
 
   const handleNavigate = (e: ArtifactEntry) => {
@@ -248,6 +255,10 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   };
 
   const handleDelete = async (e: ArtifactEntry) => {
+    const msg = e.is_dir
+      ? `Delete folder "${e.name}" and all its contents? This cannot be undone.`
+      : `Delete "${e.name}"? This cannot be undone.`;
+    if (!window.confirm(msg)) return;
     try { await invoke("delete_artifact", { id: e.id }); await loadEntries(); }
     catch (err) { setError(String(err)); }
   };

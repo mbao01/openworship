@@ -30,14 +30,38 @@ fn now_ms() -> i64 {
         .as_millis() as i64
 }
 
-/// Reject names that contain path separators or traverse upward.
-/// Returns an error if the name is empty or unsafe.
+/// Reject names that contain path separators, traverse upward, or are otherwise unsafe.
 fn safe_name(name: &str) -> Result<()> {
-    if name.is_empty() {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
         anyhow::bail!("artifact name must not be empty");
+    }
+    if name.contains('\0') {
+        anyhow::bail!("artifact name contains null byte");
     }
     if name.contains('/') || name.contains('\\') || name.contains("..") {
         anyhow::bail!("artifact name contains unsafe path characters: {name}");
+    }
+    if name.len() > 255 {
+        anyhow::bail!("artifact name too long (max 255 bytes)");
+    }
+    Ok(())
+}
+
+/// Assert that `path` is inside `base`, guarding against path traversal.
+fn assert_within_base(base: &Path, path: &Path) -> Result<()> {
+    let canonical_base = base
+        .canonicalize()
+        .unwrap_or_else(|_| base.to_path_buf());
+    let canonical_path = path
+        .canonicalize()
+        .unwrap_or_else(|_| path.to_path_buf());
+    if !canonical_path.starts_with(&canonical_base) {
+        anyhow::bail!(
+            "path traversal detected: {} is outside artifacts root {}",
+            path.display(),
+            base.display()
+        );
     }
     Ok(())
 }
@@ -293,7 +317,9 @@ pub fn create_dir(
         Some(p) => format!("{p}/{name}"),
         None => format!("{}/{name}", service_id.as_deref().unwrap_or("_local")),
     };
-    std::fs::create_dir_all(db.abs_path(&rel))?;
+    let abs = db.abs_path(&rel);
+    assert_within_base(PathBuf::from(&db.settings.base_path).as_path(), &abs)?;
+    std::fs::create_dir_all(&abs)?;
     let entry = ArtifactEntry {
         id: new_id(),
         service_id,
@@ -366,11 +392,22 @@ pub fn rename_artifact(db: &mut ArtifactsDb, id: &str, new_name: String) -> Resu
         .with_context(|| format!("rename {}", old_abs.display()))?;
     if e.is_dir {
         db.conn.execute(
+            // Replace the leading prefix exactly, not all occurrences.
+            // ?1 = old prefix, ?2 = new prefix, ?3 = old prefix length, ?4 = LIKE pattern
             "UPDATE artifacts SET
-               path = replace(path, ?1, ?2),
-               parent_path = replace(parent_path, ?1, ?2)
-             WHERE path LIKE ?3",
-            params![e.path, new_rel, format!("{}%", e.path)],
+               path = ?2 || substr(path, ?3),
+               parent_path = CASE
+                 WHEN parent_path = ?1 THEN ?2
+                 WHEN parent_path LIKE ?4 THEN ?2 || substr(parent_path, ?3)
+                 ELSE parent_path
+               END
+             WHERE path LIKE ?4",
+            params![
+                e.path,
+                new_rel,
+                (e.path.len() + 1) as i64,
+                format!("{}/%", e.path)
+            ],
         )?;
     }
     db.delete(id)?;
@@ -386,16 +423,17 @@ pub fn delete_artifact(db: &mut ArtifactsDb, id: &str) -> Result<()> {
         .get_by_id(id)?
         .ok_or_else(|| anyhow::anyhow!("artifact not found: {id}"))?;
     let abs = db.abs_path(&e.path);
+    // Delete from DB first so a crash mid-operation doesn't leave ghost rows.
     if e.is_dir {
+        db.delete_by_path_prefix(&e.path)?;
         if abs.exists() {
             std::fs::remove_dir_all(&abs)?;
         }
-        db.delete_by_path_prefix(&e.path)?;
     } else {
+        db.delete(id)?;
         if abs.exists() {
             std::fs::remove_file(&abs)?;
         }
-        db.delete(id)?;
     }
     Ok(())
 }
@@ -410,6 +448,7 @@ pub fn move_artifact(
         .ok_or_else(|| anyhow::anyhow!("artifact not found: {id}"))?;
     let new_rel = format!("{new_parent}/{}", e.name);
     let new_abs = db.abs_path(&new_rel);
+    assert_within_base(PathBuf::from(&db.settings.base_path).as_path(), &new_abs)?;
     if let Some(p) = new_abs.parent() {
         std::fs::create_dir_all(p)?;
     }
