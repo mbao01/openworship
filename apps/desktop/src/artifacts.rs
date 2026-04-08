@@ -30,6 +30,18 @@ fn now_ms() -> i64 {
         .as_millis() as i64
 }
 
+/// Reject names that contain path separators or traverse upward.
+/// Returns an error if the name is empty or unsafe.
+fn safe_name(name: &str) -> Result<()> {
+    if name.is_empty() {
+        anyhow::bail!("artifact name must not be empty");
+    }
+    if name.contains('/') || name.contains('\\') || name.contains("..") {
+        anyhow::bail!("artifact name contains unsafe path characters: {name}");
+    }
+    Ok(())
+}
+
 // ─── Domain types ─────────────────────────────────────────────────────────────
 
 /// A single artifact (file or directory) in the metadata index.
@@ -275,6 +287,7 @@ pub fn create_dir(
     parent_path: Option<String>,
     name: String,
 ) -> Result<ArtifactEntry> {
+    safe_name(&name)?;
     db.ensure_base_dir()?;
     let rel = match &parent_path {
         Some(p) => format!("{p}/{name}"),
@@ -340,6 +353,7 @@ pub fn import_file(
 }
 
 pub fn rename_artifact(db: &mut ArtifactsDb, id: &str, new_name: String) -> Result<ArtifactEntry> {
+    safe_name(&new_name)?;
     let mut e = db
         .get_by_id(id)?
         .ok_or_else(|| anyhow::anyhow!("artifact not found: {id}"))?;
