@@ -18,6 +18,7 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   const [entries, setEntries] = useState<TranscriptEntry[]>([]);
   const [micActive, setMicActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sttWarning, setSttWarning] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const idRef = useRef(0);
 
@@ -52,12 +53,29 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
     };
   }, [contextWindowSeconds]);
 
+  // Listen for backend fallback errors (e.g. Deepgram → offline).
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+
+    listen<string>("stt://error", (event) => {
+      setSttWarning(event.payload);
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => {
+      unlisten?.();
+    };
+  }, []);
+
   function handleToggle() {
     if (micActive) {
       invoke("stop_stt").catch(console.error);
       setMicActive(false);
+      setSttWarning(null);
     } else {
       setError(null);
+      setSttWarning(null);
       invoke("start_stt").catch((err: unknown) => {
         setError(String(err));
       });
@@ -79,6 +97,19 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
           {micActive ? "STOP MIC" : "START MIC"}
         </button>
       </div>
+
+      {sttWarning && (
+        <div className="transcript-stt-warning" role="alert">
+          <span>{sttWarning}</span>
+          <button
+            className="transcript-stt-warning__dismiss"
+            onClick={() => setSttWarning(null)}
+            aria-label="Dismiss warning"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="transcript-body" role="log" aria-live="polite" aria-label="Live transcript">
         {entries.length === 0 && !error && (
