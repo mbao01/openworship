@@ -148,7 +148,8 @@ describe("ScriptureSearch", () => {
 
     await waitFor(() => {
       expect(mockInvoke.mock.calls.length).toBeGreaterThan(before);
-      const lastCall = mockInvoke.mock.calls.at(-1);
+      const calls = mockInvoke.mock.calls;
+      const lastCall = calls[calls.length - 1];
       expect(lastCall?.[0]).toBe("search_scriptures");
       expect(lastCall?.[1]).toMatchObject({ translation: "WEB" });
     });
