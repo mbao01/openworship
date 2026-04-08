@@ -1,0 +1,138 @@
+use anyhow::{Context, Result};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{SampleFormat, SampleRate, Stream, StreamConfig};
+use std::sync::mpsc::{self, Receiver};
+
+/// Audio capture configuration.
+#[derive(Debug, Clone)]
+pub struct AudioConfig {
+    /// Target sample rate fed into Whisper (16 kHz required).
+    pub sample_rate: u32,
+    /// Audio chunk size in milliseconds (how often we flush to the channel).
+    pub chunk_ms: u32,
+    /// Rolling context window in seconds (retained in the ring buffer).
+    pub context_window_secs: u32,
+}
+
+impl Default for AudioConfig {
+    fn default() -> Self {
+        Self {
+            sample_rate: 16_000,
+            chunk_ms: 500,
+            context_window_secs: 10,
+        }
+    }
+}
+
+/// Captures mono 16 kHz f32 audio and sends chunks over an internal channel.
+///
+/// The `Stream` is kept alive inside this struct; the `Receiver<Vec<f32>>`
+/// can be moved to a worker thread to process audio chunks without requiring
+/// the stream itself to be `Send`.
+pub struct AudioCapturer {
+    /// Keeps the audio stream alive.
+    _stream: Stream,
+    /// Receives captured audio chunks (each chunk is ~`config.chunk_ms` ms of audio).
+    pub rx: Receiver<Vec<f32>>,
+    /// Kept alive here; also referenced by the capture callback closure.
+    _acc: std::sync::Arc<std::sync::Mutex<Vec<f32>>>,
+}
+
+// SAFETY: cpal marks CoreAudio streams as !Send conservatively, but the
+// underlying CoreAudio API is thread-safe. We own this struct exclusively and
+// never share it across threads — we only move it into a single keeper thread.
+unsafe impl Send for AudioCapturer {}
+
+impl AudioCapturer {
+    pub fn new(config: AudioConfig) -> Result<Self> {
+        let host = cpal::default_host();
+        let device = host
+            .default_input_device()
+            .context("No default audio input device")?;
+
+        let supported = device
+            .supported_input_configs()
+            .context("Failed to enumerate input configs")?;
+
+        let stream_config = find_best_config(supported, config.sample_rate)?;
+        let acc: std::sync::Arc<std::sync::Mutex<Vec<f32>>> =
+            std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let acc_cb = acc.clone();
+
+        let (tx, rx) = mpsc::sync_channel::<Vec<f32>>(32);
+        let target_sr = config.sample_rate;
+        let device_sr = stream_config.sample_rate.0;
+        let chunk_samples = (target_sr * config.chunk_ms / 1000) as usize;
+
+        let stream = device
+            .build_input_stream(
+                &stream_config,
+                move |data: &[f32], _info| {
+                    let resampled = if device_sr != target_sr {
+                        resample(data, device_sr, target_sr)
+                    } else {
+                        data.to_vec()
+                    };
+                    let mut buf = acc_cb.lock().unwrap();
+                    buf.extend_from_slice(&resampled);
+                    // Flush complete chunks.
+                    while buf.len() >= chunk_samples {
+                        let chunk: Vec<f32> = buf.drain(..chunk_samples).collect();
+                        let _ = tx.try_send(chunk);
+                    }
+                },
+                |err| eprintln!("[ow-audio] capture error: {err}"),
+                None,
+            )
+            .context("Failed to build input stream")?;
+
+        stream.play().context("Failed to start audio stream")?;
+
+        Ok(Self {
+            _stream: stream,
+            rx,
+            _acc: acc,
+        })
+    }
+}
+
+/// Pick the best `StreamConfig` from supported configs.
+fn find_best_config(
+    supported: impl Iterator<Item = cpal::SupportedStreamConfigRange>,
+    target_sr: u32,
+) -> Result<StreamConfig> {
+    let mut best: Option<cpal::SupportedStreamConfigRange> = None;
+    for cfg in supported {
+        if cfg.sample_format() == SampleFormat::F32 {
+            match best {
+                None => best = Some(cfg),
+                Some(ref b) => {
+                    if cfg.channels() < b.channels() {
+                        best = Some(cfg);
+                    }
+                }
+            }
+        }
+    }
+    let chosen = best.context("No f32 input config available")?;
+    let sr = target_sr.clamp(chosen.min_sample_rate().0, chosen.max_sample_rate().0);
+    Ok(chosen.with_sample_rate(SampleRate(sr)).into())
+}
+
+/// Linear-interpolation resample from `from_sr` to `to_sr` (mono).
+fn resample(input: &[f32], from_sr: u32, to_sr: u32) -> Vec<f32> {
+    if from_sr == to_sr {
+        return input.to_vec();
+    }
+    let ratio = from_sr as f64 / to_sr as f64;
+    let out_len = (input.len() as f64 / ratio).ceil() as usize;
+    (0..out_len)
+        .map(|i| {
+            let src = i as f64 * ratio;
+            let lo = src.floor() as usize;
+            let hi = (lo + 1).min(input.len() - 1);
+            let t = src - lo as f64;
+            input[lo] * (1.0 - t) as f32 + input[hi] * t as f32
+        })
+        .collect()
+}

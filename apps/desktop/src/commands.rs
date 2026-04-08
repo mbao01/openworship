@@ -1,7 +1,8 @@
 use crate::state::AppState;
+use ow_audio::{AudioConfig, MockTranscriber, SttStatus};
 use ow_display::ContentEvent;
 use ow_search::VerseResult;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 
 /// Search scripture by reference ("John 3:16") or free-text keywords.
 /// Pass `translation` to filter results (e.g. "KJV", "WEB", "BSB").
@@ -60,8 +61,66 @@ pub struct TranslationInfo {
     pub abbreviation: String,
 }
 
-/// Legacy greeting command kept for compatibility.
 #[tauri::command]
 pub fn greet(name: &str) -> String {
     format!("Hello, {}! Welcome to OpenWorship.", name)
+}
+
+/// Start the STT engine using the best available transcriber.
+///
+/// On a machine where the Whisper model is present the real transcriber is
+/// used; otherwise a mock transcriber is used so the UI pipeline still works.
+#[tauri::command]
+pub fn start_stt(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let config = AudioConfig::default();
+    let mut engine = state.stt.lock().unwrap();
+
+    // Try to start with real whisper; fall back to mock.
+    #[cfg(feature = "whisper")]
+    {
+        use ow_audio::WhisperTranscriber;
+        match WhisperTranscriber::from_env() {
+            Ok(t) => engine.start(t, config).map_err(|e| e.to_string())?,
+            Err(_) => engine
+                .start(MockTranscriber::new(), config)
+                .map_err(|e| e.to_string())?,
+        }
+    }
+    #[cfg(not(feature = "whisper"))]
+    engine
+        .start(MockTranscriber::new(), config)
+        .map_err(|e| e.to_string())?;
+
+    // Forward transcript events as Tauri events.
+    let tx = engine.sender();
+    let mut rx = tx.subscribe();
+    let app2 = app.clone();
+    tauri::async_runtime::spawn(async move {
+        loop {
+            match rx.recv().await {
+                Ok(evt) => {
+                    let _ = app2.emit("stt://transcript", &evt);
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+            }
+        }
+    });
+
+    Ok(())
+}
+
+/// Stop the STT engine.
+#[tauri::command]
+pub fn stop_stt(state: State<'_, AppState>) {
+    state.stt.lock().unwrap().stop();
+}
+
+/// Return the current STT engine status.
+#[tauri::command]
+pub fn get_stt_status(state: State<'_, AppState>) -> SttStatus {
+    state.stt_status()
 }

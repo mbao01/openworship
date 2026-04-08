@@ -1,7 +1,9 @@
 mod commands;
 mod state;
 
+use ow_audio::SttEngine;
 use state::AppState;
+use std::sync::Mutex;
 use tokio::sync::broadcast;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -14,7 +16,12 @@ pub fn run() {
     let (display_tx, _) = broadcast::channel::<ow_display::ContentEvent>(32);
     let tx_for_server = display_tx.clone();
 
-    let app_state = AppState { search, display_tx };
+    let (stt_engine, _) = SttEngine::new();
+    let app_state = AppState {
+        search,
+        display_tx,
+        stt: Mutex::new(stt_engine),
+    };
 
     tauri::Builder::default()
         .manage(app_state)
@@ -28,6 +35,9 @@ pub fn run() {
             commands::search_scriptures,
             commands::push_to_display,
             commands::list_translations,
+            commands::start_stt,
+            commands::stop_stt,
+            commands::get_stt_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
