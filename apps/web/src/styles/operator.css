@@ -391,6 +391,41 @@
   margin: 0 0 var(--space-2) 0;
 }
 
+/* Fallback warning banner — shown when Deepgram falls back to offline STT */
+.transcript-stt-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-6);
+  background: rgba(201, 168, 76, 0.07);
+  border-bottom: 1px solid rgba(201, 168, 76, 0.2);
+  flex-shrink: 0;
+}
+
+.transcript-stt-warning span {
+  font-size: 11px;
+  color: var(--color-gold-muted);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.transcript-stt-warning__dismiss {
+  background: transparent;
+  border: none;
+  color: var(--color-smoke);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  transition: color 120ms ease-out;
+  line-height: 1;
+}
+
+.transcript-stt-warning__dismiss:hover {
+  color: var(--color-ash);
+}
+
 /* ============================================================
    Mode Toolbar strip
    Per DESIGN.md: Obsidian background, 36px height, segmented control

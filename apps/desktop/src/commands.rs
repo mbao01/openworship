@@ -96,7 +96,7 @@ pub fn start_stt(app: AppHandle, state: State<'_, AppState>) -> Result<(), Strin
         .clone();
     let mut engine = state.stt.lock().map_err(|e| e.to_string())?;
 
-    start_stt_with_settings(&mut engine, config, &settings).map_err(|e| e.to_string())?;
+    start_stt_with_settings(&mut engine, config, &settings, &app).map_err(|e| e.to_string())?;
 
     // Subscribe to the broadcast channel and forward events to the UI only.
     // Detection is handled by the background `detection::run_loop` task.
@@ -123,18 +123,32 @@ fn start_stt_with_settings(
     config: AudioConfig,
     #[cfg_attr(not(feature = "deepgram"), allow(unused_variables))]
     settings: &AudioSettings,
+    #[cfg_attr(not(feature = "deepgram"), allow(unused_variables))]
+    app: &AppHandle,
 ) -> anyhow::Result<()> {
     // Try online (Deepgram) backend first.
     #[cfg(feature = "deepgram")]
-    if settings.backend == SttBackend::Online && !settings.deepgram_api_key.is_empty() {
-        use ow_audio::DeepgramTranscriber;
-        match DeepgramTranscriber::new(&settings.deepgram_api_key) {
-            Ok(t) => {
-                eprintln!("[stt] starting Deepgram online transcriber");
-                return engine.start(t, config);
-            }
-            Err(e) => {
-                eprintln!("[stt] Deepgram init failed ({e}), falling back to offline");
+    if settings.backend == SttBackend::Online {
+        if settings.deepgram_api_key.is_empty() {
+            eprintln!("[stt] Deepgram selected but API key not configured, falling back to offline");
+            let _ = app.emit(
+                "stt://error",
+                "Deepgram unavailable: API key not configured — fell back to offline",
+            );
+        } else {
+            use ow_audio::DeepgramTranscriber;
+            match DeepgramTranscriber::new(&settings.deepgram_api_key) {
+                Ok(t) => {
+                    eprintln!("[stt] starting Deepgram online transcriber");
+                    return engine.start(t, config);
+                }
+                Err(e) => {
+                    eprintln!("[stt] Deepgram init failed ({e}), falling back to offline");
+                    let _ = app.emit(
+                        "stt://error",
+                        format!("Deepgram unavailable: {e} — fell back to offline"),
+                    );
+                }
             }
         }
     }
