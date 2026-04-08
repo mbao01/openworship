@@ -179,9 +179,9 @@ export function DisplayPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-void overflow-hidden font-sans">
+    <div data-qa="display-root" className="fixed inset-0 bg-void overflow-hidden font-sans">
       {content ? (
-        <div className="absolute top-1/2 left-[10%] -translate-y-1/2 max-w-[55vw]">
+        <div data-qa="display-content" className="absolute top-1/2 left-[10%] -translate-y-1/2 max-w-[55vw]">
           {isSong ? (
             <>
               <span className="block font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-gold mb-4">
@@ -279,9 +279,9 @@ export function DisplayPage() {
           )}
         </div>
       ) : (
-        <div className="hidden" aria-hidden={connected} />
+        <div data-qa="display-idle" className="hidden" aria-hidden={connected} />
       )}
-      <span className="absolute bottom-6 left-[10%] font-sans text-xs tracking-[0.2em] text-smoke lowercase select-none">
+      <span data-qa="display-watermark" className="absolute bottom-6 left-[10%] font-sans text-xs tracking-[0.2em] text-smoke lowercase select-none">
         openworship
       </span>
     </div>

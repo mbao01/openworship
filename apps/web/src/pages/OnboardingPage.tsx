@@ -12,7 +12,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const [flow, setFlow] = useState<Flow>("pick");
 
   return (
-    <div className="fixed inset-0 bg-void flex items-center justify-center font-sans">
+    <div data-qa="onboarding-root" className="fixed inset-0 bg-void flex items-center justify-center font-sans">
       <div className="w-[480px] bg-slate border border-iron rounded-none px-8 py-10 flex flex-col gap-6">
         <div className="text-center mb-2 flex flex-col items-center gap-2">
           <img src="/logo.svg" alt="OpenWorship" className="w-12 h-12" />

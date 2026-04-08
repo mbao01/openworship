@@ -75,13 +75,13 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-    <div className="operator-root">
+    <div data-qa="operator-root" className="operator-root">
       {/* Custom title bar */}
-      <header className="operator-titlebar">
+      <header data-qa="operator-titlebar" className="operator-titlebar">
         <div className="operator-titlebar__left">
-          <span className="operator-appname">openworship</span>
+          <span data-qa="operator-appname" className="operator-appname">openworship</span>
           <span className="operator-titlebar__sep" aria-hidden="true">/</span>
-          <span className="operator-branch">{identity.branch_name}</span>
+          <span data-qa="operator-branch" className="operator-branch">{identity.branch_name}</span>
         </div>
         <div className="operator-titlebar__right">
           <TranslationSwitcher />
@@ -155,7 +155,7 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
       {/* Main layout — three columns */}
       <div className="operator-body">
         {/* Left: Schedule + Song Library + Summaries */}
-        <aside className="operator-col operator-col--left">
+        <aside data-qa="operator-col-left" className="operator-col operator-col--left">
           <SchedulePanel />
           <div className="operator-divider" aria-hidden="true" />
           <SongLibrary />
@@ -166,12 +166,12 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
         </aside>
 
         {/* Center: Live transcript */}
-        <main className="operator-col operator-col--center">
+        <main data-qa="operator-col-center" className="operator-col operator-col--center">
           <TranscriptPanel />
         </main>
 
         {/* Right: Detection queue */}
-        <aside className="operator-col operator-col--right">
+        <aside data-qa="operator-col-right" className="operator-col operator-col--right">
           <DetectionQueue />
         </aside>
       </div>

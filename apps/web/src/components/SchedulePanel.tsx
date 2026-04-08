@@ -220,7 +220,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
-        <span className="content-bank__toggle-label">CONTENT BANK</span>
+        <span data-qa="content-bank-toggle-label" className="content-bank__toggle-label">CONTENT BANK</span>
         <span className="content-bank__toggle-chevron" aria-hidden="true">
           {open ? "▲" : "▼"}
         </span>

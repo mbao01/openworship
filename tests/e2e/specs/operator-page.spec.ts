@@ -2,15 +2,15 @@ import { test, expect } from "../fixtures";
 
 test.describe("Operator Page", () => {
   test("title bar is visible with app name", async ({ operatorPage: page }) => {
-    const titlebar = page.locator(".operator-titlebar");
+    const titlebar = page.locator('[data-qa="operator-titlebar"]');
     await expect(titlebar).toBeVisible();
-    await expect(titlebar.locator(".operator-appname")).toHaveText(
+    await expect(titlebar.locator('[data-qa="operator-appname"]')).toHaveText(
       "openworship"
     );
   });
 
   test("title bar shows branch name", async ({ operatorPage: page }) => {
-    await expect(page.locator(".operator-branch")).toHaveText("Main");
+    await expect(page.locator('[data-qa="operator-branch"]')).toHaveText("Main");
   });
 
   test("settings gear button is present and accessible", async ({
@@ -30,27 +30,27 @@ test.describe("Operator Page", () => {
   });
 
   test("mode toolbar is visible", async ({ operatorPage: page }) => {
-    await expect(page.locator(".operator-root")).toBeVisible();
+    await expect(page.locator('[data-qa="operator-root"]')).toBeVisible();
   });
 
   test("scripture search component renders in content bank", async ({
     operatorPage: page,
   }) => {
-    const leftCol = page.locator(".operator-col--left");
+    const leftCol = page.locator('[data-qa="operator-col-left"]');
     await expect(leftCol).toBeVisible();
   });
 
   test("transcript panel renders in center column", async ({
     operatorPage: page,
   }) => {
-    const centerCol = page.locator(".operator-col--center");
+    const centerCol = page.locator('[data-qa="operator-col-center"]');
     await expect(centerCol).toBeVisible();
   });
 
   test("detection queue renders in right column", async ({
     operatorPage: page,
   }) => {
-    const rightCol = page.locator(".operator-col--right");
+    const rightCol = page.locator('[data-qa="operator-col-right"]');
     await expect(rightCol).toBeVisible();
   });
 });
