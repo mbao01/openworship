@@ -469,12 +469,20 @@ export function SchedulePanel() {
     }
   };
 
-  const handleCloseProject = async () => {
+  const handleCloseProject = async (withSummary = false) => {
     try {
+      // Grab the project ID before closing.
+      const projectId = activeProject?.id ?? null;
       await invoke("close_active_project");
       setActiveProject(null);
       setLiveReference(null);
       loadProjects();
+      // Generate summary in the background if requested.
+      if (withSummary && projectId) {
+        invoke("generate_service_summary", { projectId }).catch((e) => {
+          console.error("[summary] generation failed:", e);
+        });
+      }
     } catch {
       // ignore
     }
@@ -500,13 +508,22 @@ export function SchedulePanel() {
       <div className="schedule-header">
         <span className="schedule-header__label">SCHEDULE</span>
         {activeProject ? (
-          <button
-            className="schedule-header__action schedule-header__action--end"
-            onClick={handleCloseProject}
-            title="End this service"
-          >
-            End Service
-          </button>
+          <>
+            <button
+              className="schedule-header__action schedule-header__action--summarize"
+              onClick={() => handleCloseProject(true)}
+              title="End service and generate AI summary"
+            >
+              End + Summary
+            </button>
+            <button
+              className="schedule-header__action schedule-header__action--end"
+              onClick={() => handleCloseProject(false)}
+              title="End this service without summary"
+            >
+              End
+            </button>
+          </>
         ) : (
           <button
             className="schedule-header__action schedule-header__action--new"

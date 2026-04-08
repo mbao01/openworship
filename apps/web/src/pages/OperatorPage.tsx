@@ -4,6 +4,7 @@ import { DetectionQueue } from "../components/DetectionQueue";
 import { SchedulePanel } from "../components/SchedulePanel";
 import { SettingsModal } from "../components/SettingsModal";
 import { SongLibrary } from "../components/SongLibrary";
+import { SummaryPanel } from "../components/SummaryPanel";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
 import type { ChurchIdentity, TranslationInfo } from "../lib/types";
@@ -107,13 +108,15 @@ export function OperatorPage({ identity }: OperatorPageProps) {
 
       {/* Main layout — three columns */}
       <div className="operator-body">
-        {/* Left: Schedule + Content Bank + Song Library */}
+        {/* Left: Schedule + Song Library + Summaries */}
         <aside className="operator-col operator-col--left">
           <SchedulePanel />
           <div className="operator-divider" aria-hidden="true" />
           <SongLibrary />
           <div className="operator-divider" aria-hidden="true" />
           <ContentPanel />
+          <div className="operator-divider" aria-hidden="true" />
+          <SummaryPanel />
         </aside>
 
         {/* Center: Live transcript */}

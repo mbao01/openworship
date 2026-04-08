@@ -22,6 +22,7 @@ tantivy = "0.22"
 anyhow = "1"
 regex = "1"
 reqwest = { version = "0.12", features = ["json"] }
+lettre = { version = "0.11", features = ["smtp-transport", "tokio1", "tokio1-native-tls", "builder"] }
 
 [profile.release]
 codegen-units = 1
