@@ -1,0 +1,24 @@
+[package]
+name = "ow-integration-tests"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+# Integration tests live here as a separate crate that depends on
+# the library crates. This tests cross-crate workflows without
+# requiring Tauri or audio hardware.
+
+[[test]]
+name = "scripture_pipeline"
+path = "src/scripture_pipeline.rs"
+
+[[test]]
+name = "detection_search"
+path = "src/detection_search.rs"
+
+[dependencies]
+ow-core   = { path = "../../crates/ow-core" }
+ow-db     = { path = "../../crates/ow-db" }
+ow-search = { path = "../../crates/ow-search" }
+anyhow    = { workspace = true }
+serde_json = { workspace = true }

@@ -6,6 +6,7 @@ members = [
     "crates/ow-audio",
     "crates/ow-display",
     "crates/ow-db",
+    "tests/integration",
 ]
 resolver = "2"
 

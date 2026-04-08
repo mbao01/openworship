@@ -132,6 +132,38 @@ tasks:
     cmds:
       - "{{.CARGO}} clean"
 
+  # ── E2E Tests ───────────────────────────────────────────────────────────────
+  e2e:install:
+    desc: Install E2E test dependencies and Playwright browsers
+    dir: tests/e2e
+    cmds:
+      - "{{.PNPM}} install"
+      - "{{.PNPM}} exec playwright install --with-deps chromium"
+
+  e2e:test:
+    desc: Run E2E tests (headless)
+    dir: tests/e2e
+    cmds:
+      - "{{.PNPM}} test"
+
+  e2e:test:headed:
+    desc: Run E2E tests in headed browser mode
+    dir: tests/e2e
+    cmds:
+      - "{{.PNPM}} test:headed"
+
+  e2e:test:report:
+    desc: Show E2E test HTML report
+    dir: tests/e2e
+    cmds:
+      - "{{.PNPM}} test:report"
+
+  # ── Integration Tests ──────────────────────────────────────────────────────
+  integration:test:
+    desc: Run Rust integration tests (cross-crate workflows)
+    cmds:
+      - "{{.CARGO}} test --package ow-integration-tests"
+
   # ── CI (mirrors GitHub Actions jobs) ─────────────────────────────────────────
   ci:frontend:
     desc: Run all frontend CI checks (lint → type-check → test, sequential like CI)
