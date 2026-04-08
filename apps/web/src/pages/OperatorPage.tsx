@@ -1,16 +1,39 @@
+import { useState } from "react";
 import { DetectionQueue } from "../components/DetectionQueue";
 import { ModeToolbar } from "../components/ModeToolbar";
 import { ScriptureSearch } from "../components/ScriptureSearch";
+import { SettingsModal } from "../components/SettingsModal";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import "../styles/operator.css";
 
 export function OperatorPage() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   return (
     <div className="operator-root">
       {/* Custom title bar */}
       <header className="operator-titlebar">
         <span className="operator-appname">openworship</span>
+        <button
+          className="settings-gear-btn"
+          onClick={() => setSettingsOpen(true)}
+          title="Settings"
+          aria-label="Open settings"
+        >
+          {/* Gear icon — 16×16 SVG */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path
+              d="M6.5 1h3l.5 1.5a5.5 5.5 0 0 1 1.2.7l1.5-.5 1.5 2.6-1.2 1a5.6 5.6 0 0 1 0 1.4l1.2 1-1.5 2.6-1.5-.5a5.5 5.5 0 0 1-1.2.7L9.5 15h-3l-.5-1.5a5.5 5.5 0 0 1-1.2-.7l-1.5.5L1.8 10.8l1.2-1a5.6 5.6 0 0 1 0-1.4l-1.2-1 1.5-2.6 1.5.5A5.5 5.5 0 0 1 6 2.5L6.5 1Z"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinejoin="round"
+            />
+            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+        </button>
       </header>
+
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
 
       {/* Toolbar strip — mode switcher */}
       <ModeToolbar />

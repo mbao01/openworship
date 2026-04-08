@@ -1,3 +1,4 @@
+use crate::settings::AudioSettings;
 use ow_audio::{SttEngine, SttStatus};
 use ow_core::{DetectionMode, QueueItem};
 use ow_display::ContentEvent;
@@ -15,6 +16,8 @@ pub struct AppState {
     pub detection_mode: Arc<RwLock<DetectionMode>>,
     /// FIFO content queue of detected verses.
     pub queue: Arc<Mutex<VecDeque<QueueItem>>>,
+    /// Operator audio/STT settings, persisted to disk.
+    pub audio_settings: Arc<RwLock<AudioSettings>>,
 }
 
 impl AppState {

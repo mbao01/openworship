@@ -16,6 +16,8 @@ default = []
 whisper = ["ow-audio/whisper"]
 # Enable CoreML acceleration on Apple Silicon.
 coreml = ["ow-audio/coreml"]
+# Enable Deepgram online streaming STT.
+deepgram = ["ow-audio/deepgram"]
 
 [dependencies]
 tauri = { version = "2", features = [] }

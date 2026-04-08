@@ -1,3 +1,6 @@
+use crate::settings::AudioSettings;
+#[cfg(feature = "deepgram")]
+use crate::settings::SttBackend;
 use crate::state::AppState;
 use ow_audio::{AudioConfig, MockTranscriber, SttStatus};
 use ow_core::{DetectionMode, QueueItem, QueueStatus, ScriptureDetector};
@@ -72,7 +75,13 @@ pub fn greet(name: &str) -> String {
 
 // ─── STT commands ─────────────────────────────────────────────────────────────
 
-/// Start the STT engine using the best available transcriber.
+/// Start the STT engine using the backend selected in `AudioSettings`.
+///
+/// Backend selection (in priority order):
+/// 1. Online (Deepgram) — when operator chose Online AND a valid API key is stored.
+///    Falls back to offline if the Deepgram connection fails.
+/// 2. Offline (Whisper.cpp) — when `whisper` feature is compiled in and model exists.
+/// 3. Mock — always available; used in CI and when no model/key is present.
 ///
 /// Scripture detection is handled by the background loop spawned at startup
 /// (see `lib.rs`). This command's subscriber only forwards raw transcript
@@ -80,22 +89,14 @@ pub fn greet(name: &str) -> String {
 #[tauri::command]
 pub fn start_stt(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     let config = AudioConfig::default();
+    let settings = state
+        .audio_settings
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
     let mut engine = state.stt.lock().map_err(|e| e.to_string())?;
 
-    #[cfg(feature = "whisper")]
-    {
-        use ow_audio::WhisperTranscriber;
-        match WhisperTranscriber::from_env() {
-            Ok(t) => engine.start(t, config).map_err(|e| e.to_string())?,
-            Err(_) => engine
-                .start(MockTranscriber::new(), config)
-                .map_err(|e| e.to_string())?,
-        }
-    }
-    #[cfg(not(feature = "whisper"))]
-    engine
-        .start(MockTranscriber::new(), config)
-        .map_err(|e| e.to_string())?;
+    start_stt_with_settings(&mut engine, config, &settings).map_err(|e| e.to_string())?;
 
     // Subscribe to the broadcast channel and forward events to the UI only.
     // Detection is handled by the background `detection::run_loop` task.
@@ -116,6 +117,48 @@ pub fn start_stt(app: AppHandle, state: State<'_, AppState>) -> Result<(), Strin
     Ok(())
 }
 
+/// Internal: choose and start the right transcriber based on settings.
+fn start_stt_with_settings(
+    engine: &mut ow_audio::SttEngine,
+    config: AudioConfig,
+    #[cfg_attr(not(feature = "deepgram"), allow(unused_variables))]
+    settings: &AudioSettings,
+) -> anyhow::Result<()> {
+    // Try online (Deepgram) backend first.
+    #[cfg(feature = "deepgram")]
+    if settings.backend == SttBackend::Online && !settings.deepgram_api_key.is_empty() {
+        use ow_audio::DeepgramTranscriber;
+        match DeepgramTranscriber::new(&settings.deepgram_api_key) {
+            Ok(t) => {
+                eprintln!("[stt] starting Deepgram online transcriber");
+                return engine.start(t, config);
+            }
+            Err(e) => {
+                eprintln!("[stt] Deepgram init failed ({e}), falling back to offline");
+            }
+        }
+    }
+
+    // Offline Whisper.cpp (requires `whisper` feature + model file).
+    #[cfg(feature = "whisper")]
+    {
+        use ow_audio::WhisperTranscriber;
+        match WhisperTranscriber::from_env() {
+            Ok(t) => {
+                eprintln!("[stt] starting Whisper.cpp offline transcriber");
+                return engine.start(t, config);
+            }
+            Err(e) => {
+                eprintln!("[stt] Whisper model unavailable ({e}), falling back to mock");
+            }
+        }
+    }
+
+    // Always-available mock fallback.
+    eprintln!("[stt] starting mock transcriber (no model/key available)");
+    engine.start(MockTranscriber::new(), config)
+}
+
 /// Stop the STT engine.
 #[tauri::command]
 pub fn stop_stt(state: State<'_, AppState>) {
@@ -126,6 +169,33 @@ pub fn stop_stt(state: State<'_, AppState>) {
 #[tauri::command]
 pub fn get_stt_status(state: State<'_, AppState>) -> SttStatus {
     state.stt_status()
+}
+
+// ─── Audio settings commands ──────────────────────────────────────────────────
+
+/// Return the current audio settings.
+#[tauri::command]
+pub fn get_audio_settings(state: State<'_, AppState>) -> Result<AudioSettings, String> {
+    state
+        .audio_settings
+        .read()
+        .map(|s| s.clone())
+        .map_err(|e| e.to_string())
+}
+
+/// Persist updated audio settings to disk.
+#[tauri::command]
+pub fn set_audio_settings(
+    settings: AudioSettings,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let mut s = state
+        .audio_settings
+        .write()
+        .map_err(|e| e.to_string())?;
+    *s = settings.clone();
+    drop(s);
+    settings.save().map_err(|e| e.to_string())
 }
 
 // ─── Detection commands ───────────────────────────────────────────────────────
