@@ -9,18 +9,23 @@ const MODES: { value: DetectionMode; label: string }[] = [
   { value: "offline",  label: "OFFLINE" },
 ];
 
-export function ModeToolbar() {
+interface Props {
+  onModeChange?: (mode: DetectionMode) => void;
+}
+
+export function ModeToolbar({ onModeChange }: Props) {
   const [mode, setMode] = useState<DetectionMode>("copilot");
 
   useEffect(() => {
     invoke<DetectionMode>("get_detection_mode")
-      .then(setMode)
+      .then((m) => { setMode(m); onModeChange?.(m); })
       .catch(console.error);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleModeChange(next: DetectionMode) {
     invoke("set_detection_mode", { mode: next })
-      .then(() => setMode(next))
+      .then(() => { setMode(next); onModeChange?.(next); })
       .catch(console.error);
   }
 

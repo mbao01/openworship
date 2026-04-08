@@ -171,6 +171,27 @@ export function DisplayPage() {
   const currentChunk =
     isSong && lyricChunks.length > 0 ? lyricChunks[chunkIndex] ?? "" : null;
 
+  // Lyric context lines for opacity hierarchy (Stitch design: past=30%, adjacent=50%, active=100%)
+  function lyricContentLines(chunk: string): string[] {
+    return chunk.split("\n").filter((l) => {
+      const t = l.trim();
+      return (
+        t !== "" &&
+        !/^\[.*\]$/.test(t) &&
+        !/^(verse|chorus|bridge|pre-chorus|prechorus|intro|outro|tag)\b/i.test(t)
+      );
+    });
+  }
+  const prevContextLine = (() => {
+    if (!isSong || chunkIndex <= 0) return null;
+    const lines = lyricContentLines(lyricChunks[chunkIndex - 1] ?? "");
+    return lines.length > 0 ? lines[lines.length - 1]! : null;
+  })();
+  const nextContextLine =
+    isSong && chunkIndex < lyricChunks.length - 1
+      ? lyricContentLines(lyricChunks[chunkIndex + 1] ?? "")[0] ?? null
+      : null;
+
   // Format mm:ss for countdown
   const fmtCountdown = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -181,22 +202,34 @@ export function DisplayPage() {
   return (
     <div data-qa="display-root" className="fixed inset-0 bg-void overflow-hidden font-sans">
       {content ? (
-        <div data-qa="display-content" className="absolute top-1/2 left-[10%] -translate-y-1/2 max-w-[55vw]">
+        <>
           {isSong ? (
             <>
-              <span className="block font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-gold mb-4">
-                {content.reference}
-              </span>
+              {/* Song title header — fixed at top-left per Stitch design */}
+              <div className="absolute top-[8vh] left-[10%]">
+                <span className="block font-sans text-xl font-medium tracking-[0.15em] [font-variant:small-caps] text-gold">
+                  {content.reference}
+                </span>
+              </div>
+
+              {/* Lyric stack with opacity hierarchy */}
               <div
-                className="cursor-pointer outline-none"
+                data-qa="display-content"
+                className="absolute top-[25%] left-[10%] w-[60vw] flex flex-col gap-4 cursor-pointer outline-none"
                 onClick={() => advanceLyric(lyricChunks, chunkIndex)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) =>
-                  e.key === " " && advanceLyric(lyricChunks, chunkIndex)
-                }
+                onKeyDown={(e) => e.key === " " && advanceLyric(lyricChunks, chunkIndex)}
                 aria-label="Next lyric"
               >
+                {/* Previous context line — 30% opacity */}
+                {prevContextLine && (
+                  <p className="m-0 font-serif text-[2.4rem] leading-[1.2] text-chalk text-left opacity-30 select-none">
+                    {prevContextLine}
+                  </p>
+                )}
+
+                {/* Active chunk lines — full opacity, large */}
                 {(currentChunk ?? "").split("\n").map((line, i) => {
                   const isHeader =
                     /^\[.*\]$/.test(line.trim()) ||
@@ -204,27 +237,25 @@ export function DisplayPage() {
                       line.trim()
                     );
                   return isHeader ? (
-                    <p
-                      key={i}
-                      className="m-0 mb-2 font-sans text-[0.85rem] font-medium tracking-[0.18em] uppercase text-smoke"
-                    >
+                    <p key={i} className="m-0 font-sans text-[0.85rem] font-medium tracking-[0.18em] uppercase text-smoke">
                       {line || "\u00A0"}
                     </p>
                   ) : (
-                    <p
-                      key={i}
-                      className="m-0 mb-3 font-serif text-[clamp(2.8rem,5.5vw,5.5rem)] font-semibold leading-[1.2] text-chalk text-left"
-                    >
+                    <p key={i} className="m-0 font-serif text-[clamp(2.8rem,5vw,5rem)] font-semibold leading-[1.2] text-chalk text-left">
                       {line || "\u00A0"}
                     </p>
                   );
                 })}
+
+                {/* Next context line — 50% opacity */}
+                {nextContextLine && (
+                  <p className="m-0 font-serif text-[2.4rem] leading-[1.2] text-chalk text-left opacity-50 select-none">
+                    {nextContextLine}
+                  </p>
+                )}
               </div>
-              {content.translation && (
-                <span className="absolute bottom-[calc(24px+1.5rem)] right-[10%] font-sans text-xs tracking-[0.16em] text-smoke lowercase">
-                  {content.translation}
-                </span>
-              )}
+
+              {/* Progress indicator */}
               {lyricChunks.length > 1 && (
                 <span
                   className="absolute bottom-6 right-[10%] font-sans text-[0.7rem] tracking-[0.12em] text-smoke opacity-60"
@@ -234,7 +265,9 @@ export function DisplayPage() {
                 </span>
               )}
             </>
-          ) : isCountdown ? (
+          ) : (
+        <div data-qa="display-content" className="absolute top-1/2 left-[10%] -translate-y-1/2 max-w-[55vw]">
+          {isCountdown ? (
             <div className="flex flex-col items-start gap-4">
               {content.reference && (
                 <span className="font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-gold">
@@ -269,15 +302,24 @@ export function DisplayPage() {
             </div>
           ) : (
             <>
-              <span className="block font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-gold mb-6">
-                {content.reference}
-              </span>
-              <p className="m-0 font-serif text-[clamp(3rem,6vw,6rem)] font-semibold leading-[1.15] text-chalk text-left">
+              <div className="mb-6">
+                <span className="block font-sans text-xl font-medium tracking-[0.15em] [font-variant:small-caps] text-gold">
+                  {content.reference}
+                </span>
+                {content.translation && (
+                  <span className="block font-sans text-sm tracking-widest text-ash font-normal mt-1">
+                    {content.translation}
+                  </span>
+                )}
+              </div>
+              <p className="m-0 font-serif text-[clamp(3rem,6vw,6rem)] font-semibold italic leading-[1.15] text-chalk text-left">
                 {content.text}
               </p>
             </>
           )}
         </div>
+          )}
+        </>
       ) : (
         <div data-qa="display-idle" className="hidden" aria-hidden={connected} />
       )}

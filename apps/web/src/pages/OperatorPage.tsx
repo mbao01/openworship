@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { ContentPanel } from "../components/ContentPanel";
 import { DetectionQueue } from "../components/DetectionQueue";
+import { ModeToolbar } from "../components/ModeToolbar";
 import { SchedulePanel } from "../components/SchedulePanel";
 import { SettingsModal } from "../components/SettingsModal";
 import { SongLibrary } from "../components/SongLibrary";
 import { SummaryPanel } from "../components/SummaryPanel";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
-import type { ChurchIdentity, TranslationInfo } from "../lib/types";
+import type { ChurchIdentity, DetectionMode, QueueItem, TranslationInfo } from "../lib/types";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
@@ -74,8 +76,68 @@ function TranslationSwitcher() {
   );
 }
 
+// ─── Copilot Mode: Featured Detection Card ───────────────────────────────────
+
+function CopilotFeaturedDetection() {
+  const [items, setItems] = useState<QueueItem[]>([]);
+
+  useEffect(() => {
+    invoke<QueueItem[]>("get_queue").then(setItems).catch(console.error);
+    let unlisten: UnlistenFn | null = null;
+    listen<QueueItem[]>("detection://queue-updated", (e) => setItems(e.payload)).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
+  }, []);
+
+  const top = items.find((i) => i.status === "pending");
+  if (!top) return null;
+
+  function handleApprove() { invoke("approve_item", { id: top!.id }).catch(console.error); }
+  function handleDismiss() { invoke("dismiss_item", { id: top!.id }).catch(console.error); }
+
+  return (
+    <div
+      data-qa="copilot-featured-detection"
+      className="mx-6 mt-4 mb-0 border border-gold-muted/40 border-l-2 border-l-gold rounded-sm p-4 bg-slate shrink-0"
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-[10px] font-medium tracking-[0.16em] text-gold uppercase">AI Suggestion</span>
+        {top.kind === "song" && <span className="text-[11px] text-gold">♪</span>}
+        <span className="text-xs font-medium text-chalk ml-auto">{top.reference}</span>
+        {top.translation && top.kind !== "song" && (
+          <span className="font-mono text-[10px] text-ash">{top.translation}</span>
+        )}
+      </div>
+      {top.kind !== "song" && (
+        <p className="text-sm leading-[1.5] text-ash m-0 mb-3 line-clamp-2">{top.text}</p>
+      )}
+      {top.confidence != null && (
+        <div className="h-[2px] bg-iron rounded-sm mb-3">
+          <div className="h-full bg-gold rounded-sm" style={{ width: `${Math.round(top.confidence * 100)}%` }} />
+        </div>
+      )}
+      <div className="flex gap-2">
+        <button
+          data-qa="copilot-approve-btn"
+          className="font-sans text-[11px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm px-3 py-1.5 cursor-pointer uppercase hover:brightness-110 transition-all"
+          onClick={handleApprove}
+        >
+          APPROVE
+        </button>
+        <button
+          data-qa="copilot-dismiss-btn"
+          className="font-sans text-[11px] font-medium tracking-[0.08em] text-chalk bg-transparent border border-iron rounded-sm px-3 py-1.5 cursor-pointer uppercase hover:border-ash transition-colors"
+          onClick={handleDismiss}
+        >
+          DISMISS
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggleTheme }: OperatorPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mode, setMode] = useState<DetectionMode>("copilot");
 
   return (
     <div data-qa="operator-root" className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden">
@@ -158,6 +220,9 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
         <SettingsModal identity={identity} onClose={() => setSettingsOpen(false)} />
       )}
 
+      {/* Mode selector toolbar */}
+      <ModeToolbar onModeChange={setMode} />
+
       {/* Main layout — three columns */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Left: Schedule + Song Library + Summaries */}
@@ -171,8 +236,9 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
           <SummaryPanel />
         </aside>
 
-        {/* Center: Live transcript */}
+        {/* Center: Live transcript (+ Copilot featured detection when in copilot mode) */}
         <main data-qa="operator-col-center" className="flex flex-col overflow-hidden min-h-0 w-1/2 bg-void">
+          {mode === "copilot" && <CopilotFeaturedDetection />}
           <TranscriptPanel />
         </main>
 
