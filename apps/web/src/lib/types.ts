@@ -160,3 +160,40 @@ export interface SongSemanticStatus {
   ready: boolean;
   song_count: number;
 }
+
+// ─── Phase 14: Service summaries + email subscriptions ────────────────────────
+
+/** Matches Rust `ServiceSummary` struct. */
+export interface ServiceSummary {
+  id: string;
+  project_id: string;
+  service_name: string;
+  church_id: string;
+  /** Markdown-formatted AI-generated summary text. */
+  summary_text: string;
+  generated_at_ms: number;
+  email_sent: boolean;
+  email_sent_at_ms: number | null;
+}
+
+/** Matches Rust `EmailSubscriber` struct. */
+export interface EmailSubscriber {
+  id: string;
+  church_id: string;
+  email: string;
+  name: string | null;
+  subscribed_at_ms: number;
+}
+
+/** Matches Rust `EmailSettings` struct. */
+export interface EmailSettings {
+  smtp_host: string;
+  smtp_port: number;
+  smtp_username: string;
+  /** Password stored in local JSON — treat as sensitive. */
+  smtp_password: string;
+  from_name: string;
+  /** Hours to wait after service end before sending. 0 = immediate. */
+  send_delay_hours: number;
+  auto_send: boolean;
+}

@@ -1,5 +1,7 @@
+mod claude_api;
 mod commands;
 mod detection;
+mod email;
 mod identity;
 mod keychain;
 mod service;
@@ -7,6 +9,7 @@ mod settings;
 mod slides;
 mod songs;
 mod state;
+mod summaries;
 
 use ow_audio::SttEngine;
 use ow_core::{DetectionMode, QueueItem, SongRef};
@@ -108,6 +111,15 @@ pub fn run() {
     let sermon_notes = Arc::new(RwLock::new(slides::load_sermon_notes()));
     let active_sermon_note: Arc<RwLock<Option<(String, u32)>>> = Arc::new(RwLock::new(None));
 
+    // ── Phase 14: Summaries + email subscriptions ─────────────────────────────
+    let summaries = Arc::new(RwLock::new(summaries::load_summaries()));
+    let subscribers = Arc::new(RwLock::new(summaries::load_subscribers()));
+    let email_settings = Arc::new(RwLock::new(summaries::load_email_settings()));
+    // Load Anthropic API key from keychain (silently empty if not set yet).
+    let anthropic_api_key = Arc::new(RwLock::new(
+        keychain::get_anthropic_api_key().unwrap_or_default(),
+    ));
+
     // ── Clone Arcs for detection loop ─────────────────────────────────────────
     let detect_search = Arc::clone(&search);
     let detect_mode = Arc::clone(&detection_mode);
@@ -147,6 +159,10 @@ pub fn run() {
         announcements,
         sermon_notes,
         active_sermon_note,
+        summaries,
+        subscribers,
+        email_settings,
+        anthropic_api_key,
     };
 
     tauri::Builder::default()
@@ -286,6 +302,19 @@ pub fn run() {
             commands::push_sermon_note,
             commands::advance_sermon_note,
             commands::get_active_sermon_note,
+            // ── Phase 14: Summaries + email ────────────────────────────────
+            commands::generate_service_summary,
+            commands::list_service_summaries,
+            commands::delete_service_summary,
+            commands::send_summary_email,
+            commands::list_email_subscribers,
+            commands::add_email_subscriber,
+            commands::remove_email_subscriber,
+            commands::get_email_settings,
+            commands::set_email_settings,
+            commands::get_anthropic_api_key_status,
+            commands::set_anthropic_api_key,
+            commands::send_test_email,
             identity::get_identity,
             identity::create_church,
             identity::join_church,

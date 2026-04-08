@@ -50,3 +50,44 @@ pub fn set_deepgram_api_key(key: &str) -> Result<(), keyring::Error> {
 pub fn delete_deepgram_api_key() -> Result<(), keyring::Error> {
     set_deepgram_api_key("")
 }
+
+const ANTHROPIC_ACCOUNT: &str = "anthropic_api_key";
+
+/// Retrieve any named secret from the OS keychain (returns empty string if not set).
+pub fn get_secret(account: &str) -> Option<String> {
+    let entry = Entry::new(SERVICE, account)
+        .map_err(|e| eprintln!("[keychain] entry creation failed: {e}"))
+        .ok()?;
+    match entry.get_password() {
+        Ok(key) if !key.is_empty() => Some(key),
+        Ok(_) => None,
+        Err(keyring::Error::NoEntry) => None,
+        Err(e) => {
+            eprintln!("[keychain] get_secret({account}) failed: {e}");
+            None
+        }
+    }
+}
+
+/// Store any named secret in the OS keychain. Empty string deletes the entry.
+pub fn set_secret(account: &str, value: &str) -> Result<(), keyring::Error> {
+    let entry = Entry::new(SERVICE, account)?;
+    if value.is_empty() {
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(e) => Err(e),
+        }
+    } else {
+        entry.set_password(value)
+    }
+}
+
+/// Retrieve the Anthropic API key from the OS keychain.
+pub fn get_anthropic_api_key() -> Option<String> {
+    get_secret(ANTHROPIC_ACCOUNT)
+}
+
+/// Store the Anthropic API key in the OS keychain.
+pub fn set_anthropic_api_key(key: &str) -> Result<(), keyring::Error> {
+    set_secret(ANTHROPIC_ACCOUNT, key)
+}

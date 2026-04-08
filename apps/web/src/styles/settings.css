@@ -418,3 +418,100 @@
 .settings-semantic-dot--ready {
   background: var(--color-gold);
 }
+
+/* ============================================================
+   Email section (Phase 14)
+   ============================================================ */
+
+.settings-actions-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.settings-test-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-input--test-email {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-input--key {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-save-msg {
+  font-size: 11px;
+  color: #64c878;
+  margin: var(--space-2) 0 0;
+}
+
+.settings-group--subscribers {
+  margin-top: var(--space-4);
+}
+
+.settings-subscriber-list {
+  list-style: none;
+  margin: var(--space-2) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-subscriber-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px var(--space-2);
+  background: var(--color-obsidian, #111);
+  border-radius: var(--radius-sm);
+}
+
+.settings-subscriber-row__email {
+  font-size: 11px;
+  color: var(--color-chalk);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-subscriber-row__remove {
+  background: transparent;
+  border: none;
+  color: var(--color-smoke);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.settings-add-subscriber-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.settings-input--sub-name {
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.settings-input--sub-email {
+  flex: 1;
+  min-width: 0;
+}

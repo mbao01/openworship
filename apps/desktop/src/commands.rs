@@ -1525,6 +1525,255 @@ pub fn get_active_sermon_note(
     Some((note, *slide_idx))
 }
 
+// ─── Phase 14: Service summaries + email subscriptions ────────────────────────
+
+use crate::summaries::{
+    EmailSettings, EmailSubscriber, ServiceSummary,
+    save_summaries, save_subscribers, save_email_settings,
+};
+
+/// Generate an AI summary for a completed service project and persist it.
+///
+/// Returns the created `ServiceSummary`. Does NOT send email — call
+/// `send_summary_email` separately (or let `auto_send` handle it on close).
+#[tauri::command]
+pub async fn generate_service_summary(
+    project_id: String,
+    state: State<'_, AppState>,
+) -> Result<ServiceSummary, String> {
+    // Find the project.
+    let project = {
+        let projects = state.projects.read().map_err(|e| e.to_string())?;
+        projects
+            .iter()
+            .find(|p| p.id == project_id)
+            .cloned()
+            .ok_or_else(|| format!("Project not found: {project_id}"))?
+    };
+
+    // Get church ID from identity.
+    let church_id = {
+        state
+            .identity
+            .read()
+            .map_err(|e| e.to_string())?
+            .as_ref()
+            .map(|i| i.church_id.clone())
+            .unwrap_or_else(|| "unknown".into())
+    };
+
+    let api_key = state
+        .anthropic_api_key
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
+
+    let summary_text = crate::claude_api::generate_summary(&api_key, &project)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let summary = ServiceSummary::new(
+        project.id.clone(),
+        project.name.clone(),
+        church_id,
+        summary_text,
+    );
+
+    // Persist.
+    {
+        let mut summaries = state.summaries.write().map_err(|e| e.to_string())?;
+        summaries.push(summary.clone());
+        save_summaries(&summaries).map_err(|e| e.to_string())?;
+    }
+
+    Ok(summary)
+}
+
+/// List all persisted service summaries (newest first).
+#[tauri::command]
+pub fn list_service_summaries(state: State<'_, AppState>) -> Result<Vec<ServiceSummary>, String> {
+    let mut summaries = state
+        .summaries
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
+    summaries.sort_by(|a, b| b.generated_at_ms.cmp(&a.generated_at_ms));
+    Ok(summaries)
+}
+
+/// Delete a service summary by ID.
+#[tauri::command]
+pub fn delete_service_summary(
+    summary_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let mut summaries = state.summaries.write().map_err(|e| e.to_string())?;
+    summaries.retain(|s| s.id != summary_id);
+    save_summaries(&summaries).map_err(|e| e.to_string())
+}
+
+/// Send the summary email for a given summary ID to all church subscribers.
+/// Marks the summary as sent on success.
+#[tauri::command]
+pub async fn send_summary_email(
+    summary_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, String> {
+    let summary = {
+        state
+            .summaries
+            .read()
+            .map_err(|e| e.to_string())?
+            .iter()
+            .find(|s| s.id == summary_id)
+            .cloned()
+            .ok_or_else(|| format!("Summary not found: {summary_id}"))?
+    };
+
+    let subscribers = state
+        .subscribers
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
+    let settings = state
+        .email_settings
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
+
+    let sent = crate::email::send_summary_to_subscribers(&summary, &subscribers, &settings)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Mark as sent.
+    {
+        let mut summaries = state.summaries.write().map_err(|e| e.to_string())?;
+        if let Some(s) = summaries.iter_mut().find(|s| s.id == summary_id) {
+            s.email_sent = true;
+            s.email_sent_at_ms = Some(crate::service::now_ms());
+        }
+        save_summaries(&summaries).map_err(|e| e.to_string())?;
+    }
+
+    Ok(sent)
+}
+
+/// List email subscribers for a specific church ID.
+#[tauri::command]
+pub fn list_email_subscribers(
+    church_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<EmailSubscriber>, String> {
+    Ok(state
+        .subscribers
+        .read()
+        .map_err(|e| e.to_string())?
+        .iter()
+        .filter(|s| s.church_id == church_id)
+        .cloned()
+        .collect())
+}
+
+/// Add an email subscriber for a church.
+#[tauri::command]
+pub fn add_email_subscriber(
+    church_id: String,
+    email: String,
+    name: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<EmailSubscriber, String> {
+    // Deduplicate by email + church.
+    {
+        let subscribers = state.subscribers.read().map_err(|e| e.to_string())?;
+        if subscribers
+            .iter()
+            .any(|s| s.church_id == church_id && s.email == email)
+        {
+            return Err(format!("{email} is already subscribed"));
+        }
+    }
+
+    let subscriber = EmailSubscriber::new(church_id, email, name);
+
+    {
+        let mut subscribers = state.subscribers.write().map_err(|e| e.to_string())?;
+        subscribers.push(subscriber.clone());
+        save_subscribers(&subscribers).map_err(|e| e.to_string())?;
+    }
+
+    Ok(subscriber)
+}
+
+/// Remove an email subscriber by ID.
+#[tauri::command]
+pub fn remove_email_subscriber(
+    subscriber_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let mut subscribers = state.subscribers.write().map_err(|e| e.to_string())?;
+    subscribers.retain(|s| s.id != subscriber_id);
+    save_subscribers(&subscribers).map_err(|e| e.to_string())
+}
+
+/// Get the current email / SMTP settings.
+#[tauri::command]
+pub fn get_email_settings(state: State<'_, AppState>) -> Result<EmailSettings, String> {
+    state
+        .email_settings
+        .read()
+        .map(|s| s.clone())
+        .map_err(|e| e.to_string())
+}
+
+/// Persist updated email / SMTP settings.
+#[tauri::command]
+pub fn set_email_settings(
+    settings: EmailSettings,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let mut guard = state.email_settings.write().map_err(|e| e.to_string())?;
+    *guard = settings.clone();
+    save_email_settings(&settings).map_err(|e| e.to_string())
+}
+
+/// Retrieve the stored Anthropic API key (masked — returns "*****" if set, "" if not).
+#[tauri::command]
+pub fn get_anthropic_api_key_status(state: State<'_, AppState>) -> bool {
+    state
+        .anthropic_api_key
+        .read()
+        .map(|k| !k.is_empty())
+        .unwrap_or(false)
+}
+
+/// Store the Anthropic API key in both the keychain and in-memory state.
+#[tauri::command]
+pub fn set_anthropic_api_key(
+    key: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    crate::keychain::set_anthropic_api_key(&key).map_err(|e| e.to_string())?;
+    let mut guard = state.anthropic_api_key.write().map_err(|e| e.to_string())?;
+    *guard = key;
+    Ok(())
+}
+
+/// Send a test email to verify SMTP configuration.
+#[tauri::command]
+pub async fn send_test_email(
+    to_email: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let settings = state
+        .email_settings
+        .read()
+        .map_err(|e| e.to_string())?
+        .clone();
+    crate::email::send_test_email(&settings, &to_email)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 /// Refresh the in-memory song title cache used by the detection loop.
