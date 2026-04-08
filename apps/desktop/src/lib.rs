@@ -1,4 +1,5 @@
 mod artifacts;
+mod branch_sync;
 mod claude_api;
 mod cloud_sync;
 mod commands;
@@ -385,6 +386,10 @@ pub fn run() {
             identity::create_church,
             identity::join_church,
             identity::generate_invite_code,
+            // ── Branch sync (OPE-64) ───────────────────────────────────────
+            branch_sync::push_to_branches,
+            branch_sync::pull_from_hq,
+            branch_sync::get_branch_sync_status,
             // ── Display device selection (OPE-63) ──────────────────────────
             display_window::list_monitors,
             display_window::open_display_window,

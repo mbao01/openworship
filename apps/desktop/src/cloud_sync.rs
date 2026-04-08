@@ -652,6 +652,49 @@ pub async fn s3_head_object(
     Ok(Some(etag))
 }
 
+/// Download an S3 object, returning its bytes and ETag.
+pub async fn s3_get_object(
+    client: &Client,
+    config: &S3Config,
+    key: &str,
+) -> Result<(Vec<u8>, String)> {
+    let url = s3_url(config, key)?;
+    let datetime = s3_datetime_now();
+    let host = url.host_str().unwrap_or_default().to_string();
+    let host_with_port = match url.port() {
+        Some(p) => format!("{host}:{p}"),
+        None => host.clone(),
+    };
+    let headers = [("host", host_with_port.as_str())];
+    let auth = sign_request("GET", &url, &headers, &[], config, &datetime);
+    let resp = client
+        .get(url)
+        .header("Authorization", auth)
+        .header("x-amz-date", &datetime)
+        .header("x-amz-content-sha256", sha256_hex(&[]))
+        .send()
+        .await
+        .context("S3 GET request failed")?;
+
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        anyhow::bail!("S3 GET {key}: not found");
+    }
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        anyhow::bail!("S3 GET {key} failed: {status}: {body}");
+    }
+    let etag = resp
+        .headers()
+        .get("etag")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .trim_matches('"')
+        .to_string();
+    let bytes = resp.bytes().await.context("S3 GET: read body")?.to_vec();
+    Ok((bytes, etag))
+}
+
 /// Delete an S3 object.
 #[allow(dead_code)]
 pub async fn s3_delete_object(
