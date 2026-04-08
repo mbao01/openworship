@@ -1,0 +1,7 @@
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+
+# Dependencies
+node_modules/
