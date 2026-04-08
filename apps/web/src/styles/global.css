@@ -42,6 +42,19 @@
 
 /* ── Base reset ───────────────────────────────────────────────────────────── */
 @layer base {
+  /* Spacing tokens: @theme does not emit --space-* as CSS custom properties
+     in Tailwind v4, so we define them explicitly for var() usage in component CSS. */
+  :root {
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-16: 64px;
+  }
+
   *,
   *::before,
   *::after {
