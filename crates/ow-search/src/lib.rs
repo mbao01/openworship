@@ -164,7 +164,7 @@ impl SearchEngine {
             .context("search failed")?;
 
         // Collect raw scores to normalise against the max in this result set.
-        let raw: Vec<(f32, _)> = top_docs.into_iter().map(|(s, a)| (s, a)).collect();
+        let raw: Vec<(f32, _)> = top_docs.into_iter().collect();
         let max_score = raw.iter().map(|(s, _)| *s).fold(0.0_f32, f32::max).max(1.0);
 
         let mut results = Vec::with_capacity(raw.len());
