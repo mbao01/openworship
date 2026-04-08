@@ -68,6 +68,7 @@ jobs:
             crates/ow-search
             crates/ow-audio
             crates/ow-display
+            crates/ow-embed
             crates/ow-db
             tests/integration
 
