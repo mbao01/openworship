@@ -41,6 +41,10 @@ pub enum QueueStatus {
 pub mod content_kind {
     pub const SCRIPTURE: &str = "scripture";
     pub const SONG: &str = "song";
+    pub const ANNOUNCEMENT: &str = "announcement";
+    pub const CUSTOM_SLIDE: &str = "custom_slide";
+    pub const SERMON_NOTE: &str = "sermon_note";
+    pub const COUNTDOWN: &str = "countdown";
 }
 
 fn default_kind() -> String {
@@ -80,19 +84,31 @@ pub struct QueueItem {
     /// Song library ID — only set when `kind == "song"`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub song_id: Option<i64>,
+    /// Duration in seconds — only set when `kind == "countdown"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_secs: Option<u32>,
+    /// Image URL — only set for `kind == "announcement"` or `"custom_slide"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image_url: Option<String>,
+    /// Sermon note ID — only set when `kind == "sermon_note"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note_id: Option<String>,
 }
 
 static ITEM_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 impl QueueItem {
-    pub fn new(reference: String, text: String, translation: String) -> Self {
+    fn make_id() -> (String, u64) {
         let ts = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_micros() as u64;
         let count = ITEM_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let id = format!("{:016x}{:08x}", ts, count);
-        let detected_at_ms = ts / 1000;
+        (format!("{:016x}{:08x}", ts, count), ts / 1000)
+    }
+
+    pub fn new(reference: String, text: String, translation: String) -> Self {
+        let (id, detected_at_ms) = Self::make_id();
         Self {
             id,
             reference,
@@ -104,18 +120,15 @@ impl QueueItem {
             confidence: None,
             kind: default_kind(),
             song_id: None,
+            duration_secs: None,
+            image_url: None,
+            note_id: None,
         }
     }
 
     /// Create a song lyric queue item.
     pub fn new_song(title: String, lyrics: String, artist: String, song_id: i64) -> Self {
-        let ts = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_micros() as u64;
-        let count = ITEM_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let id = format!("{:016x}{:08x}", ts, count);
-        let detected_at_ms = ts / 1000;
+        let (id, detected_at_ms) = Self::make_id();
         Self {
             id,
             reference: title,
@@ -127,6 +140,89 @@ impl QueueItem {
             confidence: None,
             kind: content_kind::SONG.to_owned(),
             song_id: Some(song_id),
+            duration_secs: None,
+            image_url: None,
+            note_id: None,
+        }
+    }
+
+    /// Create an announcement queue item.
+    pub fn new_announcement(title: String, body: String, image_url: Option<String>) -> Self {
+        let (id, detected_at_ms) = Self::make_id();
+        Self {
+            id,
+            reference: title,
+            text: body,
+            translation: String::new(),
+            status: QueueStatus::Pending,
+            detected_at_ms,
+            is_semantic: false,
+            confidence: None,
+            kind: content_kind::ANNOUNCEMENT.to_owned(),
+            song_id: None,
+            duration_secs: None,
+            image_url,
+            note_id: None,
+        }
+    }
+
+    /// Create a custom slide queue item.
+    pub fn new_custom_slide(title: String, body: String, image_url: Option<String>) -> Self {
+        let (id, detected_at_ms) = Self::make_id();
+        Self {
+            id,
+            reference: title,
+            text: body,
+            translation: String::new(),
+            status: QueueStatus::Pending,
+            detected_at_ms,
+            is_semantic: false,
+            confidence: None,
+            kind: content_kind::CUSTOM_SLIDE.to_owned(),
+            song_id: None,
+            duration_secs: None,
+            image_url,
+            note_id: None,
+        }
+    }
+
+    /// Create a countdown timer queue item.
+    pub fn new_countdown(title: String, duration_secs: u32) -> Self {
+        let (id, detected_at_ms) = Self::make_id();
+        Self {
+            id,
+            reference: title,
+            text: String::new(),
+            translation: String::new(),
+            status: QueueStatus::Pending,
+            detected_at_ms,
+            is_semantic: false,
+            confidence: None,
+            kind: content_kind::COUNTDOWN.to_owned(),
+            song_id: None,
+            duration_secs: Some(duration_secs),
+            image_url: None,
+            note_id: None,
+        }
+    }
+
+    /// Create a sermon note reference queue item.
+    pub fn new_sermon_note_ref(title: String, note_id: String) -> Self {
+        let (id, detected_at_ms) = Self::make_id();
+        Self {
+            id,
+            reference: title,
+            text: String::new(),
+            translation: String::new(),
+            status: QueueStatus::Pending,
+            detected_at_ms,
+            is_semantic: false,
+            confidence: None,
+            kind: content_kind::SERMON_NOTE.to_owned(),
+            song_id: None,
+            duration_secs: None,
+            image_url: None,
+            note_id: Some(note_id),
         }
     }
 }

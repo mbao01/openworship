@@ -1,0 +1,111 @@
+/* Speaker display — sermon notes for the preacher's monitor */
+/* Uses the same Sacred Monochrome design system as the main operator UI. */
+
+.speaker-page {
+  position: fixed;
+  inset: 0;
+  background: var(--color-void);
+  font-family: var(--font-sans);
+  display: flex;
+  flex-direction: column;
+  color: var(--color-chalk);
+}
+
+/* ── Header bar ──────────────────────────────────────────────────────────── */
+
+.speaker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-obsidian);
+  border-bottom: 1px solid var(--color-iron);
+  flex-shrink: 0;
+}
+
+.speaker-header__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--color-ash);
+  text-transform: uppercase;
+}
+
+.speaker-header__status {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--color-smoke);
+  text-transform: uppercase;
+}
+
+.speaker-header__status--connected {
+  color: var(--color-gold);
+}
+
+/* ── Slide content ───────────────────────────────────────────────────────── */
+
+.speaker-slide {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  gap: var(--space-4);
+  overflow: hidden;
+}
+
+.speaker-slide__meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+.speaker-slide__title {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--color-gold);
+  text-transform: small-caps;
+}
+
+.speaker-slide__counter {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-ash);
+}
+
+.speaker-slide__text {
+  flex: 1;
+  font-size: clamp(2rem, 4vw, 4.5rem);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--color-chalk);
+  white-space: pre-wrap;
+  overflow: auto;
+}
+
+.speaker-slide__next-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  color: var(--color-smoke);
+  text-align: right;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+
+.speaker-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--color-ash);
+  font-size: 1.1rem;
+}
+
+.speaker-empty__sub {
+  font-size: 0.85rem;
+  color: var(--color-smoke);
+}

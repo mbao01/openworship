@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "../styles/display.css";
 
 interface ContentEvent {
-  kind: string;        // "scripture" | "song" | "song_advance"
-  reference: string;   // verse ref or song title
-  text: string;        // verse text or full lyrics (newline-separated)
-  translation: string; // translation abbrev or artist name
-  line_index?: number; // chunk index for song/song_advance events
+  kind: string;
+  reference: string;
+  text: string;
+  translation: string;
+  line_index?: number;
+  image_url?: string;
+  duration_secs?: number;
+  slide_index?: number;
+  total_slides?: number;
 }
 
 const WS_URL = "ws://127.0.0.1:9000";
@@ -56,7 +60,9 @@ export function DisplayPage() {
   const [connected, setConnected] = useState(false);
   const [lyricChunks, setLyricChunks] = useState<string[]>([]);
   const [chunkIndex, setChunkIndex] = useState(0);
+  const [countdownSecs, setCountdownSecs] = useState<number | null>(null);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Advance lyric chunk by one step.
   const advanceLyric = (chunks: string[], idx: number) => {
@@ -64,6 +70,21 @@ export function DisplayPage() {
       setChunkIndex(idx + 1);
     }
   };
+
+  // Start a countdown from `secs` to 0, then clear.
+  const startCountdown = useCallback((secs: number) => {
+    if (countdownInterval.current) clearInterval(countdownInterval.current);
+    setCountdownSecs(secs);
+    countdownInterval.current = setInterval(() => {
+      setCountdownSecs((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(countdownInterval.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
 
   // Reset auto-advance timer when chunk changes.
   useEffect(() => {
@@ -99,15 +120,29 @@ export function DisplayPage() {
             const chunks = splitLyrics(event.text);
             setLyricChunks(chunks);
             setChunkIndex(event.line_index ?? 0);
+            setCountdownSecs(null);
+            if (countdownInterval.current) clearInterval(countdownInterval.current);
             setContent(event);
           } else if (event.kind === "song_advance") {
             // Speech-pacing advance from backend.
             setChunkIndex(event.line_index ?? 0);
-          } else {
-            // Scripture or other content — clear song state.
+          } else if (event.kind === "countdown") {
+            // Start a visual countdown timer.
             setLyricChunks([]);
             setChunkIndex(0);
             if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+            setContent(event);
+            startCountdown(event.duration_secs ?? 60);
+          } else if (event.kind === "sermon_note") {
+            // Sermon notes go to the speaker page, not the main display.
+            // Ignore on the projection display.
+          } else {
+            // Scripture, announcement, custom_slide — clear song/countdown state.
+            setLyricChunks([]);
+            setChunkIndex(0);
+            setCountdownSecs(null);
+            if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+            if (countdownInterval.current) clearInterval(countdownInterval.current);
             setContent(event);
           }
         } catch {
@@ -128,11 +163,21 @@ export function DisplayPage() {
       destroyed = true;
       ws?.close();
     };
-  }, []);
+  }, [startCountdown]);
 
   const isSong = content?.kind === "song";
+  const isCountdown = content?.kind === "countdown";
+  const isAnnouncement =
+    content?.kind === "announcement" || content?.kind === "custom_slide";
   const currentChunk =
     isSong && lyricChunks.length > 0 ? lyricChunks[chunkIndex] ?? "" : null;
+
+  // Format mm:ss for countdown
+  const fmtCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  };
 
   return (
     <div className="display-root">
@@ -180,6 +225,35 @@ export function DisplayPage() {
                 </span>
               )}
             </>
+          ) : isCountdown ? (
+            <div className="display-countdown">
+              {content.reference && (
+                <span className="display-countdown__label">{content.reference}</span>
+              )}
+              <span
+                className={`display-countdown__time ${
+                  (countdownSecs ?? 0) <= 10 ? "display-countdown__time--urgent" : ""
+                }`}
+              >
+                {fmtCountdown(countdownSecs ?? 0)}
+              </span>
+            </div>
+          ) : isAnnouncement ? (
+            <div className="display-announcement">
+              {content.image_url && (
+                <img
+                  className="display-announcement__image"
+                  src={content.image_url}
+                  alt=""
+                />
+              )}
+              <span className="display-reference display-announcement__title">
+                {content.reference}
+              </span>
+              {content.text && (
+                <p className="display-announcement__body">{content.text}</p>
+              )}
+            </div>
           ) : (
             <>
               <span className="display-reference">{content.reference}</span>
