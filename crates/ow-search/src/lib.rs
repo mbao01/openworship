@@ -514,4 +514,47 @@ mod tests {
         assert_eq!(v.reference, "John 3:16");
         assert!(!v.text.is_empty());
     }
+
+    #[test]
+    fn test_score_normalized_between_zero_and_one() {
+        let engine = test_engine();
+        let results = engine.search("love", None, 20).unwrap();
+        assert!(!results.is_empty(), "should find results for 'love'");
+        for r in &results {
+            assert!(
+                r.score >= 0.0 && r.score <= 1.0,
+                "score {} out of [0,1] range for '{}'",
+                r.score,
+                r.reference
+            );
+        }
+    }
+
+    #[test]
+    fn test_top_result_has_highest_score() {
+        let engine = test_engine();
+        let results = engine.search("love", None, 10).unwrap();
+        if results.len() > 1 {
+            // First result should have score >= all others (descending by relevance).
+            let top = results[0].score;
+            for r in &results[1..] {
+                assert!(
+                    top >= r.score,
+                    "top score {} < subsequent score {} for '{}'",
+                    top,
+                    r.score,
+                    r.reference
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_exact_reference_score_field_present() {
+        let engine = test_engine();
+        let results = engine.search("John 3:16", Some("KJV"), 1).unwrap();
+        assert_eq!(results.len(), 1);
+        // Exact reference lookup: score field must be populated (non-negative).
+        assert!(results[0].score >= 0.0);
+    }
 }
