@@ -32,3 +32,19 @@ export interface TranslationInfo {
   name: string;
   abbreviation: string;
 }
+
+/** Matches Rust `DetectionMode` enum. */
+export type DetectionMode = "auto" | "copilot" | "airplane" | "offline";
+
+/** Matches Rust `QueueStatus` enum. */
+export type QueueStatus = "pending" | "live" | "dismissed";
+
+/** Matches Rust `QueueItem` struct. */
+export interface QueueItem {
+  id: string;
+  reference: string;
+  text: string;
+  translation: string;
+  status: QueueStatus;
+  detected_at_ms: number;
+}
