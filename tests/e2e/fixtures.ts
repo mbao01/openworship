@@ -31,6 +31,7 @@ export async function stubTauriIdentity(page: Page): Promise<void> {
         if (cmd === "search_content_bank") return Promise.resolve([]);
         if (cmd === "search_scriptures") return Promise.resolve([]);
         if (cmd === "search_semantic") return Promise.resolve([]);
+        if (cmd === "search_songs") return Promise.resolve([]);
         if (cmd === "get_semantic_status")
           return Promise.resolve({ ready: false, verse_count: 0, enabled: false });
         return Promise.resolve(null);
