@@ -6,6 +6,7 @@ import { OnboardingPage } from "./pages/OnboardingPage";
 import { OperatorPage } from "./pages/OperatorPage";
 import { DisplayPage } from "./pages/DisplayPage";
 import { ArtifactsPage } from "./pages/ArtifactsPage";
+import { SpeakerPage } from "./pages/SpeakerPage";
 import "./styles/tokens.css";
 import "./styles/global.css";
 
@@ -31,6 +32,7 @@ function AppInner() {
   return (
     <Routes>
       <Route path="/display" element={<DisplayPage />} />
+      <Route path="/speaker" element={<SpeakerPage />} />
       <Route
         path="/artifacts"
         element={<ArtifactsPage onBack={() => navigate("/")} />}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { ContentPanel } from "../components/ContentPanel";
 import { DetectionQueue } from "../components/DetectionQueue";
 import { SchedulePanel } from "../components/SchedulePanel";
 import { SettingsModal } from "../components/SettingsModal";
@@ -127,6 +128,8 @@ export function OperatorPage({ identity, onOpenArtifacts }: OperatorPageProps) {
           <SchedulePanel />
           <div className="operator-divider" aria-hidden="true" />
           <SongLibrary />
+          <div className="operator-divider" aria-hidden="true" />
+          <ContentPanel />
         </aside>
 
         {/* Center: Live transcript */}

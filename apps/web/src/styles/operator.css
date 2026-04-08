@@ -2043,3 +2043,318 @@
   margin-left: auto;
   opacity: 0.7;
 }
+
+/* ============================================================
+   Phase 12: ContentPanel — announcements, slides, timers,
+   sermon notes
+   ============================================================ */
+
+.content-panel {
+  background: var(--color-obsidian);
+  border: 1px solid rgba(42, 42, 42, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.content-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid rgba(42, 42, 42, 0.4);
+}
+
+.content-panel__header:hover {
+  background: var(--color-slate);
+}
+
+.content-panel__header-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ash);
+}
+
+.content-panel__chevron {
+  font-size: 9px;
+  color: var(--color-smoke);
+}
+
+.content-panel__body {
+  display: flex;
+  flex-direction: column;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.content-panel__section {
+  padding: var(--space-3) var(--space-4);
+}
+
+.content-panel__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.content-panel__section-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ash);
+}
+
+.content-panel__add-btn {
+  background: none;
+  border: 1px solid rgba(42, 42, 42, 0.8);
+  color: var(--color-ash);
+  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.content-panel__add-btn:hover {
+  color: var(--color-chalk);
+  border-color: var(--color-ash);
+}
+
+.content-panel__divider {
+  height: 1px;
+  background: rgba(42, 42, 42, 0.6);
+  margin: 0 var(--space-4);
+}
+
+/* ── Form ── */
+
+.content-panel__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.content-panel__form--row {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.content-panel__input {
+  background: var(--color-void);
+  border: none;
+  border-bottom: 1px solid rgba(42, 42, 42, 0.8);
+  color: var(--color-chalk);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  padding: var(--space-2) 0;
+  outline: none;
+  width: 100%;
+}
+
+.content-panel__input:focus {
+  border-bottom-color: var(--color-gold);
+}
+
+.content-panel__input--flex {
+  flex: 1;
+}
+
+.content-panel__input--mins {
+  width: 44px;
+  text-align: center;
+}
+
+.content-panel__mins-label {
+  font-size: 11px;
+  color: var(--color-ash);
+}
+
+.content-panel__textarea {
+  background: var(--color-void);
+  border: 1px solid rgba(42, 42, 42, 0.8);
+  border-radius: 3px;
+  color: var(--color-chalk);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  padding: var(--space-2);
+  resize: vertical;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.content-panel__textarea:focus {
+  border-color: var(--color-gold);
+}
+
+.content-panel__textarea--tall {
+  min-height: 100px;
+}
+
+.content-panel__hint {
+  font-size: 10px;
+  color: var(--color-smoke);
+  margin: 0;
+}
+
+.content-panel__form-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ── Buttons ── */
+
+.content-panel__btn {
+  background: none;
+  border: 1px solid rgba(42, 42, 42, 0.8);
+  color: var(--color-ash);
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: var(--font-sans);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.content-panel__btn:hover:not(:disabled) {
+  color: var(--color-chalk);
+  border-color: var(--color-ash);
+}
+
+.content-panel__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.content-panel__btn--primary {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+}
+
+.content-panel__btn--primary:hover:not(:disabled) {
+  background: var(--color-gold);
+  color: var(--color-void);
+}
+
+.content-panel__btn--push {
+  border-color: transparent;
+  color: var(--color-ash);
+  padding: 0 var(--space-2);
+}
+
+.content-panel__btn--push:hover:not(:disabled) {
+  color: var(--color-gold);
+  border-color: transparent;
+}
+
+.content-panel__btn--delete {
+  border-color: transparent;
+  color: var(--color-smoke);
+  padding: 0 var(--space-2);
+  font-size: 10px;
+}
+
+.content-panel__btn--delete:hover:not(:disabled) {
+  color: var(--color-ember);
+}
+
+.content-panel__btn--advance {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+  font-size: 11px;
+}
+
+/* ── List items ── */
+
+.content-panel__empty {
+  font-size: 11px;
+  color: var(--color-smoke);
+  margin: var(--space-2) 0;
+}
+
+.content-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.content-panel__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  border-radius: 3px;
+  background: var(--color-void);
+}
+
+.content-panel__item--active {
+  border-left: 2px solid var(--color-gold);
+  padding-left: calc(var(--space-2) - 2px);
+}
+
+.content-panel__item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.content-panel__item-title {
+  font-size: 12px;
+  color: var(--color-chalk);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.content-panel__item-cue {
+  font-size: 10px;
+  color: var(--color-smoke);
+}
+
+.content-panel__item-meta {
+  font-size: 10px;
+  color: var(--color-smoke);
+}
+
+.content-panel__item-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+/* ── Active note advance bar ── */
+
+.content-panel__active-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: rgba(201, 168, 76, 0.08);
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  border-radius: 3px;
+  margin-bottom: var(--space-3);
+}
+
+.content-panel__active-note-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-gold);
+}

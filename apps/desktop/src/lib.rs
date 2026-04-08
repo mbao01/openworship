@@ -5,6 +5,7 @@ mod identity;
 mod keychain;
 mod service;
 mod settings;
+mod slides;
 mod songs;
 mod state;
 
@@ -103,6 +104,11 @@ pub fn run() {
         .unwrap_or_else(|| "KJV".to_string());
     let active_translation = Arc::new(RwLock::new(initial_translation));
 
+    // ── Announcements + sermon notes ──────────────────────────────────────────
+    let announcements = Arc::new(RwLock::new(slides::load_announcements()));
+    let sermon_notes = Arc::new(RwLock::new(slides::load_sermon_notes()));
+    let active_sermon_note: Arc<RwLock<Option<(String, u32)>>> = Arc::new(RwLock::new(None));
+
     // ── Artifacts DB (Phase 15) ────────────────────────────────────────────────
     let artifacts_db = match artifacts::ArtifactsDb::open() {
         Ok(db) => Arc::new(Mutex::new(db)),
@@ -151,6 +157,9 @@ pub fn run() {
         song_semantic_index,
         song_refs,
         active_translation,
+        announcements,
+        sermon_notes,
+        active_sermon_note,
         artifacts_db,
     };
 
@@ -275,6 +284,22 @@ pub fn run() {
             commands::get_active_translation,
             commands::switch_live_translation,
             commands::reject_live_item,
+            // ── Announcements + custom slides ──────────────────────────────
+            commands::list_announcements,
+            commands::create_announcement,
+            commands::delete_announcement,
+            commands::push_announcement_to_display,
+            commands::push_custom_slide,
+            // ── Countdown timers ───────────────────────────────────────────
+            commands::start_countdown,
+            // ── Sermon notes ───────────────────────────────────────────────
+            commands::list_sermon_notes,
+            commands::create_sermon_note,
+            commands::update_sermon_note,
+            commands::delete_sermon_note,
+            commands::push_sermon_note,
+            commands::advance_sermon_note,
+            commands::get_active_sermon_note,
             // ── Phase 15: Artifacts ────────────────────────────────────────
             commands::list_artifacts,
             commands::list_recent_artifacts,

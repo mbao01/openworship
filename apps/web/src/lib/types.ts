@@ -99,10 +99,39 @@ export interface QueueItem {
   is_semantic?: boolean;
   /** Cosine similarity score [0–1] for semantic matches. */
   confidence?: number;
-  /** Content kind: "scripture" (default) or "song" (Phase 10). */
+  /** Content kind: "scripture" | "song" | "announcement" | "custom_slide" | "sermon_note" | "countdown". */
   kind?: string;
   /** Song library ID — only set when kind === "song". */
   song_id?: number | null;
+  /** Countdown duration in seconds — only set when kind === "countdown". */
+  duration_secs?: number | null;
+  /** Image URL — only set for announcement or custom_slide. */
+  image_url?: string | null;
+  /** Sermon note deck ID — only set when kind === "sermon_note". */
+  note_id?: string | null;
+}
+
+// ─── Phase 12: Announcements, custom slides, sermon notes, countdowns ──────────
+
+/** A stored announcement (persists across services). Matches Rust `AnnouncementItem`. */
+export interface AnnouncementItem {
+  id: string;
+  /** "announcement" or "custom_slide" */
+  kind: string;
+  title: string;
+  body: string;
+  image_url?: string | null;
+  keyword_cue?: string | null;
+  created_at_ms: number;
+}
+
+/** A sermon note deck. Matches Rust `SermonNote`. */
+export interface SermonNote {
+  id: string;
+  title: string;
+  /** Ordered text slides. */
+  slides: string[];
+  created_at_ms: number;
 }
 
 /** Status of the semantic scripture index (Phase 9). */

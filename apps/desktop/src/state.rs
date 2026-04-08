@@ -2,6 +2,7 @@ use crate::artifacts::ArtifactsDb;
 use crate::identity::ChurchIdentity;
 use crate::service::{ContentBankEntry, ServiceProject};
 use crate::settings::AudioSettings;
+use crate::slides::{AnnouncementItem, SermonNote};
 use crate::songs::{SongSemanticIndex, SongsDb};
 use ow_audio::{SttEngine, SttStatus};
 use ow_core::{DetectionMode, QueueItem, SongRef};
@@ -45,6 +46,13 @@ pub struct AppState {
     /// Currently selected Bible translation for live display and detection.
     /// Defaults to "KJV"; updated by `switch_live_translation`.
     pub active_translation: Arc<RwLock<String>>,
+    /// Stored announcements and custom slides, persisted to disk.
+    pub announcements: Arc<RwLock<Vec<AnnouncementItem>>>,
+    /// Sermon note decks, persisted to disk.
+    pub sermon_notes: Arc<RwLock<Vec<SermonNote>>>,
+    /// Active sermon note state: `(note_id, current_slide_index)`.
+    /// `None` when no sermon note is currently in use.
+    pub active_sermon_note: Arc<RwLock<Option<(String, u32)>>>,
     /// Artifact metadata database (Phase 15).
     pub artifacts_db: Arc<Mutex<ArtifactsDb>>,
 }
