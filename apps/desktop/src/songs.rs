@@ -418,7 +418,7 @@ pub fn parse_ccli_text(input: &str) -> Result<Vec<SongImport>> {
                 continue;
             }
             // Copyright / other metadata lines — skip
-            if let Some(_) = strip_prefix_ci(line, "copyright:") {
+            if strip_prefix_ci(line, "copyright:").is_some() {
                 continue;
             }
             // Blank line after header signals start of lyrics
