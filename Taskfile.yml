@@ -15,9 +15,14 @@ tasks:
 
   # ── Setup ────────────────────────────────────────────────────────────────────
   install:
-    desc: Install all frontend dependencies
+    desc: Install all frontend dependencies (use ci:install for frozen lockfile)
     cmds:
       - "{{.PNPM}} install"
+
+  ci:install:
+    desc: Install frontend dependencies with frozen lockfile (matches CI)
+    cmds:
+      - "{{.PNPM}} install --frozen-lockfile"
 
   # ── Frontend (web) ───────────────────────────────────────────────────────────
   web:dev:
@@ -65,19 +70,19 @@ tasks:
   # ── Desktop (Tauri) ──────────────────────────────────────────────────────────
   desktop:dev:
     desc: Start Tauri desktop dev mode
-    dir: apps/desktop
+    dir: apps/web
     cmds:
       - "{{.PNPM}} tauri dev"
 
   desktop:build:
     desc: Build the Tauri desktop app (release)
-    dir: apps/desktop
+    dir: apps/web
     cmds:
       - "{{.PNPM}} tauri build"
 
   desktop:icon:
     desc: Generate Tauri app icons from source image
-    dir: apps/desktop
+    dir: apps/web
     cmds:
       - "{{.PNPM}} tauri icon"
 
@@ -129,11 +134,11 @@ tasks:
 
   # ── CI (mirrors GitHub Actions jobs) ─────────────────────────────────────────
   ci:frontend:
-    desc: Run all frontend CI checks (lint + type-check + test)
-    deps:
-      - web:lint
-      - web:type-check
-      - web:test
+    desc: Run all frontend CI checks (lint → type-check → test, sequential like CI)
+    cmds:
+      - task: web:lint
+      - task: web:type-check
+      - task: web:test
 
   ci:rust:
     desc: Run all Rust CI checks (check + clippy + test)
