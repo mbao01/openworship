@@ -86,7 +86,9 @@ pub struct EmailSettings {
     pub smtp_port: u16,
     /// SMTP username / sender address.
     pub smtp_username: String,
-    /// SMTP password (stored in plain JSON; user-responsibility to secure).
+    /// SMTP password — held in memory only; never written to disk.
+    /// Stored in the OS keychain; loaded into this field at runtime.
+    #[serde(skip_serializing, default)]
     pub smtp_password: String,
     /// Display name used in the From header.
     pub from_name: String,
@@ -109,6 +111,21 @@ impl Default for EmailSettings {
             auto_send: false,
         }
     }
+}
+
+/// Deserialisation target that can read the legacy plaintext `smtp_password` field.
+/// Used only for one-time migration to the OS keychain.
+#[derive(Deserialize, Default)]
+#[serde(default)]
+struct EmailSettingsFile {
+    smtp_host: String,
+    smtp_port: u16,
+    smtp_username: String,
+    /// Present in pre-keychain builds; absent (default empty) afterwards.
+    smtp_password: String,
+    from_name: String,
+    send_delay_hours: u32,
+    auto_send: bool,
 }
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
@@ -197,9 +214,45 @@ pub fn load_email_settings() -> EmailSettings {
 fn try_load_email_settings() -> Result<EmailSettings> {
     let path = email_settings_path();
     if !path.exists() {
-        return Ok(EmailSettings::default());
+        let smtp_password = crate::keychain::get_smtp_password().unwrap_or_default();
+        return Ok(EmailSettings { smtp_password, ..EmailSettings::default() });
     }
-    Ok(serde_json::from_slice(&std::fs::read(&path)?)?)
+    let file: EmailSettingsFile = serde_json::from_slice(&std::fs::read(&path)?)?;
+
+    // ── Migration: plaintext password → keychain ──────────────────────────
+    if !file.smtp_password.is_empty() {
+        eprintln!("[summaries] migrating plaintext SMTP password to OS keychain");
+        if let Err(e) = crate::keychain::set_smtp_password(&file.smtp_password) {
+            eprintln!("[summaries] keychain migration failed: {e}");
+        }
+        // Re-save without the plaintext password so it is removed from disk.
+        let clean = EmailSettings {
+            smtp_host: file.smtp_host.clone(),
+            smtp_port: if file.smtp_port == 0 { 587 } else { file.smtp_port },
+            smtp_username: file.smtp_username.clone(),
+            smtp_password: String::new(),
+            from_name: file.from_name.clone(),
+            send_delay_hours: file.send_delay_hours,
+            auto_send: file.auto_send,
+        };
+        if let Err(e) = save_email_settings(&clean) {
+            eprintln!("[summaries] failed to re-save after migration: {e}");
+        }
+    }
+
+    // Load the password from keychain for in-memory use.
+    let smtp_password = crate::keychain::get_smtp_password().unwrap_or_default();
+    let defaults = EmailSettings::default();
+
+    Ok(EmailSettings {
+        smtp_host: file.smtp_host,
+        smtp_port: if file.smtp_port == 0 { defaults.smtp_port } else { file.smtp_port },
+        smtp_username: file.smtp_username,
+        smtp_password,
+        from_name: if file.from_name.is_empty() { defaults.from_name } else { file.from_name },
+        send_delay_hours: file.send_delay_hours,
+        auto_send: file.auto_send,
+    })
 }
 
 pub fn save_email_settings(settings: &EmailSettings) -> Result<()> {
