@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "../lib/tauri";
 import type { AudioSettings, ChurchIdentity, EmailSettings, EmailSubscriber, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
-import "../styles/settings.css";
 
 interface SettingsModalProps {
   identity: ChurchIdentity;
@@ -79,21 +78,30 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
 
   return (
     <div
-      className="settings-overlay"
+      data-qa="settings-modal"
+      className="fixed inset-0 z-[100] bg-void/75 flex items-center justify-center"
       ref={overlayRef}
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-label="Settings"
     >
-      <div className="settings-modal">
+      <div className="flex w-[740px] h-[580px] bg-obsidian border border-iron overflow-hidden">
         {/* Left nav */}
-        <nav className="settings-nav">
-          <p className="settings-nav__heading">SETTINGS</p>
+        <nav className="w-[170px] shrink-0 bg-void border-r border-iron flex flex-col py-6">
+          <p className="text-[10px] font-medium tracking-[0.14em] text-smoke uppercase px-4 pb-4 m-0">SETTINGS</p>
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
-              className={`settings-nav__item${activeCategory === cat.id ? " settings-nav__item--active" : ""}`}
+              data-qa={`settings-nav-${cat.id}`}
+              className={[
+                "block w-full bg-transparent border-none border-l-2 py-[10px] px-4",
+                "text-left font-sans text-[13px] font-normal cursor-pointer transition-colors",
+                "hover:text-chalk hover:bg-white/[0.03]",
+                activeCategory === cat.id
+                  ? "text-chalk border-l-gold"
+                  : "text-ash border-l-transparent",
+              ].join(" ")}
               onClick={() => setActiveCategory(cat.id)}
             >
               {cat.label}
@@ -102,7 +110,7 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
         </nav>
 
         {/* Right content area */}
-        <div className="settings-content">
+        <div className="flex-1 flex flex-col overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent] relative">
           {activeCategory === "church" && <ChurchSection identity={identity} />}
           {activeCategory === "audio" && (
             <AudioSection
@@ -128,14 +136,19 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
           {activeCategory === "about" && <AboutSection />}
 
           {/* Footer */}
-          <div className="settings-footer">
-            {saveError && <span className="settings-footer__error">{saveError}</span>}
-            <button className="settings-btn--secondary" onClick={onClose}>
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-iron shrink-0">
+            {saveError && <span className="flex-1 text-xs text-ember">{saveError}</span>}
+            <button
+              data-qa="settings-close-btn"
+              className="font-sans text-[11px] font-medium tracking-[0.08em] text-chalk bg-transparent border border-iron rounded-sm py-[6px] px-4 cursor-pointer transition-colors hover:border-ash uppercase"
+              onClick={onClose}
+            >
               {activeCategory === "church" ? "Close" : "Cancel"}
             </button>
             {activeCategory !== "church" && (
               <button
-                className="settings-btn--primary"
+                data-qa="settings-save-btn"
+                className="font-sans text-[11px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm py-[6px] px-4 cursor-pointer transition-[filter] hover:brightness-[1.15] disabled:opacity-50 disabled:cursor-not-allowed uppercase"
                 onClick={handleSave}
                 disabled={saving}
               >
@@ -169,37 +182,46 @@ function AudioSection({
   const isOnline = settings.backend === "online";
 
   return (
-    <div className="settings-section">
-      <h2 className="settings-section__title">Audio</h2>
+    <div className="flex-1 p-6">
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">Audio</h2>
 
       {/* STT Backend toggle */}
-      <div className="settings-group">
-        <p className="settings-group__label">SPEECH-TO-TEXT BACKEND</p>
-        <div className="settings-toggle-row">
+      <div className="mb-6">
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">SPEECH-TO-TEXT BACKEND</p>
+        <div className="flex gap-2">
           <button
-            className={`settings-backend-btn${!isOnline ? " settings-backend-btn--active" : ""}`}
+            data-qa="stt-backend-offline"
+            className={[
+              "flex-1 flex flex-col gap-1 rounded-sm px-4 py-3 text-left cursor-pointer transition-colors",
+              !isOnline ? "bg-gold/[0.07] border border-gold" : "bg-slate border border-iron hover:border-ash",
+            ].join(" ")}
             onClick={() => onBackendChange("offline")}
           >
-            <span className="settings-backend-btn__title">Offline</span>
-            <span className="settings-backend-btn__desc">Whisper.cpp — no internet required</span>
+            <span className={`font-sans text-xs font-medium tracking-[0.04em] ${!isOnline ? "text-gold" : "text-chalk"}`}>Offline</span>
+            <span className="text-[11px] text-ash leading-[1.4]">Whisper.cpp — no internet required</span>
           </button>
           <button
-            className={`settings-backend-btn${isOnline ? " settings-backend-btn--active" : ""}`}
+            data-qa="stt-backend-online"
+            className={[
+              "flex-1 flex flex-col gap-1 rounded-sm px-4 py-3 text-left cursor-pointer transition-colors",
+              isOnline ? "bg-gold/[0.07] border border-gold" : "bg-slate border border-iron hover:border-ash",
+            ].join(" ")}
             onClick={() => onBackendChange("online")}
           >
-            <span className="settings-backend-btn__title">Online</span>
-            <span className="settings-backend-btn__desc">Deepgram — lower latency streaming</span>
+            <span className={`font-sans text-xs font-medium tracking-[0.04em] ${isOnline ? "text-gold" : "text-chalk"}`}>Online</span>
+            <span className="text-[11px] text-ash leading-[1.4]">Deepgram — lower latency streaming</span>
           </button>
         </div>
       </div>
 
       {/* Deepgram API key — only shown when Online is selected */}
       {isOnline && (
-        <div className="settings-group">
-          <p className="settings-group__label">DEEPGRAM API KEY</p>
-          <div className="settings-input-row">
+        <div className="mb-6">
+          <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">DEEPGRAM API KEY</p>
+          <div className="flex items-center gap-2">
             <input
-              className="settings-input"
+              data-qa="deepgram-api-key-input"
+              className="flex-1 bg-transparent border-0 border-b border-iron/60 outline-none py-2 font-mono text-[13px] text-chalk tracking-[0.04em] transition-colors focus:border-gold placeholder:text-smoke placeholder:tracking-[0.02em]"
               type={keyVisible ? "text" : "password"}
               placeholder="dg_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
               value={settings.deepgram_api_key}
@@ -207,12 +229,15 @@ function AudioSection({
               autoComplete="off"
               spellCheck={false}
             />
-            <button className="settings-show-btn" onClick={onToggleKeyVisible}>
+            <button
+              className="bg-transparent border-none font-sans text-[11px] font-medium text-ash cursor-pointer px-1 transition-colors hover:text-chalk"
+              onClick={onToggleKeyVisible}
+            >
               {keyVisible ? "Hide" : "Show"}
             </button>
           </div>
           {!settings.deepgram_api_key && (
-            <p className="settings-group__hint">
+            <p className="text-xs text-smoke mt-2 leading-[1.5]">
               Key required. Without it, falls back to offline mode.
             </p>
           )}
@@ -220,8 +245,8 @@ function AudioSection({
       )}
 
       {/* Fallback note */}
-      <div className="settings-group">
-        <p className="settings-group__hint">
+      <div className="mb-6">
+        <p className="text-xs text-smoke mt-2 leading-[1.5]">
           {isOnline
             ? "If the Deepgram connection fails or the API key is missing, the engine falls back to Whisper.cpp automatically."
             : "Requires the Whisper ggml-tiny.en model at ~/.openworship/models/ggml-tiny.en.bin."}
@@ -250,23 +275,24 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
   const formatThreshold = (v: number) => `${Math.round(v * 100)}%`;
 
   return (
-    <div className="settings-section">
-      <h2 className="settings-section__title">Detection</h2>
+    <div className="flex-1 p-6">
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">Detection</h2>
 
       {/* Semantic matching toggle */}
-      <div className="settings-group">
-        <p className="settings-group__label">SEMANTIC SCRIPTURE MATCHING</p>
-        <div className="settings-toggle-row">
-          <label className="settings-checkbox-row">
+      <div className="mb-6">
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">SEMANTIC SCRIPTURE MATCHING</p>
+        <div className="flex gap-2">
+          <label className="flex items-center gap-2 cursor-pointer text-ash text-[13px]">
             <input
               type="checkbox"
+              className="w-[14px] h-[14px] accent-gold cursor-pointer"
               checked={settings.semantic_enabled}
               onChange={(e) => onSettingsChange({ semantic_enabled: e.target.checked })}
             />
             <span>Enable paraphrase &amp; story-based detection</span>
           </label>
         </div>
-        <p className="settings-group__hint">
+        <p className="text-xs text-smoke mt-2 leading-[1.5]">
           Uses Ollama + nomic-embed-text (running locally) to detect scripture references
           even when the exact book/chapter/verse is not spoken. Requires Ollama to be
           installed and running.
@@ -275,11 +301,11 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
 
       {/* Semantic index status */}
       {settings.semantic_enabled && semanticStatus && (
-        <div className="settings-group">
-          <p className="settings-group__label">INDEX STATUS</p>
-          <div className="settings-semantic-status">
+        <div className="mb-6">
+          <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">INDEX STATUS</p>
+          <div className="flex items-center gap-2 text-xs text-ash">
             <span
-              className={`settings-semantic-dot${semanticStatus.ready ? " settings-semantic-dot--ready" : ""}`}
+              className={`w-2 h-2 rounded-full shrink-0 ${semanticStatus.ready ? "bg-gold" : "bg-iron"}`}
               aria-hidden="true"
             />
             <span>
@@ -294,12 +320,12 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
       {/* Confidence threshold sliders — only shown when semantic is enabled */}
       {settings.semantic_enabled && (
         <>
-          <div className="settings-group">
-            <p className="settings-group__label">
+          <div className="mb-6">
+            <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">
               AUTO MODE THRESHOLD — {formatThreshold(settings.semantic_threshold_auto)}
             </p>
             <input
-              className="settings-slider"
+              className="w-full accent-gold cursor-pointer mt-1"
               type="range"
               min="0.5"
               max="0.99"
@@ -310,17 +336,17 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
                 if (!isNaN(v)) onSettingsChange({ semantic_threshold_auto: v });
               }}
             />
-            <p className="settings-group__hint">
+            <p className="text-xs text-smoke mt-2 leading-[1.5]">
               Lower = more matches (may include false positives). Higher = stricter.
             </p>
           </div>
 
-          <div className="settings-group">
-            <p className="settings-group__label">
+          <div className="mb-6">
+            <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">
               COPILOT MODE THRESHOLD — {formatThreshold(settings.semantic_threshold_copilot)}
             </p>
             <input
-              className="settings-slider"
+              className="w-full accent-gold cursor-pointer mt-1"
               type="range"
               min="0.5"
               max="0.99"
@@ -331,27 +357,27 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
                 if (!isNaN(v)) onSettingsChange({ semantic_threshold_copilot: v });
               }}
             />
-            <p className="settings-group__hint">
+            <p className="text-xs text-smoke mt-2 leading-[1.5]">
               Copilot mode requires your approval before display — a stricter threshold
               reduces noise in the suggestion queue.
             </p>
           </div>
 
           {/* Lyrics-specific thresholds */}
-          <div className="settings-group">
-            <p className="settings-group__label">LYRICS CONTENT TYPE</p>
-            <p className="settings-group__hint">
+          <div className="mb-6">
+            <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">LYRICS CONTENT TYPE</p>
+            <p className="text-xs text-smoke mt-2 leading-[1.5]">
               Separate thresholds for song lyric detection — typically set lower than
               scripture since lyric phrases are more colloquial.
             </p>
           </div>
 
-          <div className="settings-group">
-            <p className="settings-group__label">
+          <div className="mb-6">
+            <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">
               LYRICS AUTO MODE THRESHOLD — {formatThreshold(settings.lyrics_threshold_auto)}
             </p>
             <input
-              className="settings-slider"
+              className="w-full accent-gold cursor-pointer mt-1"
               type="range"
               min="0.5"
               max="0.99"
@@ -364,12 +390,12 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
             />
           </div>
 
-          <div className="settings-group">
-            <p className="settings-group__label">
+          <div className="mb-6">
+            <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">
               LYRICS COPILOT MODE THRESHOLD — {formatThreshold(settings.lyrics_threshold_copilot)}
             </p>
             <input
-              className="settings-slider"
+              className="w-full accent-gold cursor-pointer mt-1"
               type="range"
               min="0.5"
               max="0.99"
@@ -389,18 +415,18 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
 
 function PlaceholderSection({ title }: { title: string }) {
   return (
-    <div className="settings-section">
-      <h2 className="settings-section__title">{title}</h2>
-      <p className="settings-group__hint">Coming soon.</p>
+    <div className="flex-1 p-6">
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">{title}</h2>
+      <p className="text-xs text-smoke mt-2 leading-[1.5]">Coming soon.</p>
     </div>
   );
 }
 
 function AboutSection() {
   return (
-    <div className="settings-section">
-      <h2 className="settings-section__title">About</h2>
-      <p className="settings-group__hint">
+    <div className="flex-1 p-6">
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">About</h2>
+      <p className="text-xs text-smoke mt-2 leading-[1.5]">
         openworship — AI-powered worship presentation.
       </p>
     </div>
@@ -422,47 +448,56 @@ function ChurchSection({ identity }: { identity: ChurchIdentity }) {
   };
 
   return (
-    <div className="settings-section">
-      <h2 className="settings-section__title">Church</h2>
+    <div className="flex-1 p-6">
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">Church</h2>
 
-      <div className="settings-group">
-        <p className="settings-group__label">CHURCH NAME</p>
-        <p className="settings-church-value">
-          {identity.church_name || <span className="settings-group__hint">Not set</span>}
+      <div className="mb-6">
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">CHURCH NAME</p>
+        <p className="text-[13px] text-chalk m-0 leading-[1.5]">
+          {identity.church_name || <span className="text-xs text-smoke mt-2 leading-[1.5]">Not set</span>}
         </p>
       </div>
 
-      <div className="settings-group">
-        <p className="settings-group__label">BRANCH NAME</p>
-        <p className="settings-church-value">{identity.branch_name}</p>
+      <div className="mb-6">
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">BRANCH NAME</p>
+        <p className="text-[13px] text-chalk m-0 leading-[1.5]">{identity.branch_name}</p>
       </div>
 
-      <div className="settings-group">
-        <p className="settings-group__label">ROLE</p>
-        <span className={`settings-role-badge settings-role-badge--${identity.role}`}>
+      <div className="mb-6">
+        <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">ROLE</p>
+        <span className={[
+          "inline-block font-mono text-[10px] font-medium tracking-[0.12em] py-[3px] px-2 rounded-sm",
+          isHq
+            ? "bg-gold/15 text-gold border border-gold/30"
+            : "bg-iron/60 text-ash border border-iron",
+        ].join(" ")}>
           {isHq ? "HQ" : "MEMBER"}
         </span>
       </div>
 
       {isHq && identity.invite_code && (
-        <div className="settings-group">
-          <p className="settings-group__label">INVITE CODE</p>
-          <div className="settings-invite-row">
-            <span className="settings-invite-code">{identity.invite_code}</span>
-            <button className="settings-btn--ghost" onClick={handleCopy}>
+        <div className="mb-6">
+          <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">INVITE CODE</p>
+          <div className="flex items-center gap-3 mt-1">
+            <span className="font-mono text-lg font-medium tracking-[0.25em] text-gold">{identity.invite_code}</span>
+            <button
+              data-qa="copy-invite-code-btn"
+              className="font-sans text-[11px] font-medium tracking-[0.08em] text-ash bg-transparent border-none py-1 px-2 cursor-pointer transition-colors hover:text-chalk uppercase"
+              onClick={handleCopy}
+            >
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
-          <p className="settings-group__hint">
+          <p className="text-xs text-smoke mt-2 leading-[1.5]">
             Share this code with other branches to join your church.
           </p>
         </div>
       )}
 
       {isHq && (
-        <div className="settings-group">
-          <p className="settings-group__label">MEMBER BRANCHES</p>
-          <p className="settings-group__hint">Branch sync coming soon.</p>
+        <div className="mb-6">
+          <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">MEMBER BRANCHES</p>
+          <p className="text-xs text-smoke mt-2 leading-[1.5]">Branch sync coming soon.</p>
         </div>
       )}
     </div>
@@ -564,16 +599,19 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
     }
   };
 
+  const inputCls = "flex-1 bg-transparent border-0 border-b border-iron/60 outline-none py-2 font-mono text-[13px] text-chalk tracking-[0.04em] transition-colors focus:border-gold placeholder:text-smoke placeholder:tracking-[0.02em]";
+  const labelCls = "block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2";
+
   const field = (
     label: string,
     value: string | number,
     onChange: (v: string) => void,
     opts?: { type?: string; placeholder?: string; hint?: string }
   ) => (
-    <div className="settings-group">
-      <label className="settings-group__label">{label}</label>
+    <div className="mb-6">
+      <label className={labelCls}>{label}</label>
       <input
-        className="settings-input"
+        className={inputCls}
         type={opts?.type ?? "text"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -581,20 +619,20 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
         autoComplete="off"
         spellCheck={false}
       />
-      {opts?.hint && <p className="settings-group__hint">{opts.hint}</p>}
+      {opts?.hint && <p className="text-xs text-smoke mt-2 leading-[1.5]">{opts.hint}</p>}
     </div>
   );
 
   return (
-    <div className="settings-section">
-      <h2 className="settings-section__title">Email</h2>
+    <div className="flex-1 p-6">
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">Email</h2>
 
       {/* Anthropic API Key */}
-      <div className="settings-group">
-        <label className="settings-group__label">ANTHROPIC API KEY</label>
-        <div className="settings-key-row">
+      <div className="mb-6">
+        <label className={labelCls}>ANTHROPIC API KEY</label>
+        <div className="flex items-center gap-2">
           <input
-            className="settings-input settings-input--key"
+            className={`${inputCls} min-w-0`}
             type="password"
             value={anthropicKey}
             onChange={(e) => setAnthropicKey(e.target.value)}
@@ -602,7 +640,7 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
             autoComplete="off"
           />
         </div>
-        <p className="settings-group__hint">
+        <p className="text-xs text-smoke mt-2 leading-[1.5]">
           Used to generate AI service summaries with claude-sonnet-4-6.
         </p>
       </div>
@@ -619,18 +657,18 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
         placeholder: "you@example.com",
       })}
 
-      <div className="settings-group">
-        <label className="settings-group__label">SMTP PASSWORD</label>
-        <div className="settings-key-row">
+      <div className="mb-6">
+        <label className={labelCls}>SMTP PASSWORD</label>
+        <div className="flex items-center gap-2">
           <input
-            className="settings-input settings-input--key"
+            className={`${inputCls} min-w-0`}
             type={showSmtpPassword ? "text" : "password"}
             value={settings.smtp_password}
             onChange={(e) => setSettings((s) => ({ ...s, smtp_password: e.target.value }))}
             autoComplete="off"
           />
           <button
-            className="settings-btn--ghost"
+            className="font-sans text-[11px] font-medium tracking-[0.08em] text-ash bg-transparent border-none py-1 px-2 cursor-pointer transition-colors hover:text-chalk uppercase"
             onClick={() => setShowSmtpPassword((v) => !v)}
             type="button"
           >
@@ -650,37 +688,42 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
         { type: "number", hint: "Hours after service ends before sending. 0 = immediate." }
       )}
 
-      <div className="settings-group">
-        <label className="settings-group__label">AUTO SEND</label>
-        <label className="settings-toggle">
+      <div className="mb-6">
+        <label className={labelCls}>AUTO SEND</label>
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
+            className="accent-gold cursor-pointer"
             checked={settings.auto_send}
             onChange={(e) => setSettings((s) => ({ ...s, auto_send: e.target.checked }))}
           />
-          <span className="settings-toggle__track" />
-          <span className="settings-toggle__label">
+          <span className="text-[13px] text-ash">
             Automatically email subscribers when a summary is generated
           </span>
         </label>
       </div>
 
-      <div className="settings-actions-row">
-        <button className="settings-btn--primary" onClick={handleSaveSmtp} disabled={saving}>
+      <div className="flex items-center gap-3 flex-wrap mt-3">
+        <button
+          data-qa="email-save-btn"
+          className="font-sans text-[11px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm py-[6px] px-4 cursor-pointer transition-[filter] hover:brightness-[1.15] disabled:opacity-50 disabled:cursor-not-allowed uppercase"
+          onClick={handleSaveSmtp}
+          disabled={saving}
+        >
           {saving ? "Saving…" : "Save"}
         </button>
 
         {/* Test email */}
-        <div className="settings-test-row">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <input
-            className="settings-input settings-input--test-email"
+            className={`${inputCls} flex-1 min-w-0`}
             type="email"
             placeholder="test@example.com"
             value={testEmail}
             onChange={(e) => setTestEmail(e.target.value)}
           />
           <button
-            className="settings-btn--ghost"
+            className="font-sans text-[11px] font-medium tracking-[0.08em] text-ash bg-transparent border-none py-1 px-2 cursor-pointer transition-colors hover:text-chalk uppercase"
             onClick={handleTestEmail}
             disabled={sendingTest || !testEmail.trim()}
           >
@@ -689,24 +732,24 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
         </div>
       </div>
 
-      {smtpMsg && <p className="settings-save-msg">{smtpMsg}</p>}
-      {smtpErr && <p className="settings-footer__error">{smtpErr}</p>}
+      {smtpMsg && <p className="text-[11px] text-[#64c878] mt-2">{smtpMsg}</p>}
+      {smtpErr && <p className="flex-1 text-xs text-ember">{smtpErr}</p>}
 
       {/* Subscribers */}
-      <div className="settings-group settings-group--subscribers">
-        <p className="settings-group__label">SUBSCRIBERS</p>
+      <div className="mt-4 mb-6">
+        <p className={labelCls}>SUBSCRIBERS</p>
 
         {subscribers.length === 0 ? (
-          <p className="settings-group__hint">No subscribers yet.</p>
+          <p className="text-xs text-smoke mt-2 leading-[1.5]">No subscribers yet.</p>
         ) : (
-          <ul className="settings-subscriber-list">
+          <ul className="list-none my-2 mx-0 p-0 flex flex-col gap-[4px]">
             {subscribers.map((sub) => (
-              <li key={sub.id} className="settings-subscriber-row">
-                <span className="settings-subscriber-row__email">
+              <li key={sub.id} className="flex items-center justify-between py-1 px-2 bg-obsidian rounded-sm">
+                <span className="text-[11px] text-chalk flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
                   {sub.name ? `${sub.name} <${sub.email}>` : sub.email}
                 </span>
                 <button
-                  className="settings-subscriber-row__remove"
+                  className="bg-transparent border-none text-smoke cursor-pointer text-sm px-1 leading-none shrink-0"
                   onClick={() => handleRemoveSubscriber(sub.id)}
                   title="Remove subscriber"
                 >
@@ -717,16 +760,16 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
           </ul>
         )}
 
-        <div className="settings-add-subscriber-row">
+        <div className="flex gap-2 items-center mt-2 flex-wrap">
           <input
-            className="settings-input settings-input--sub-name"
+            className={`${inputCls} w-[100px] shrink-0`}
             type="text"
             placeholder="Name (optional)"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
           />
           <input
-            className="settings-input settings-input--sub-email"
+            className={`${inputCls} flex-1 min-w-0`}
             type="email"
             placeholder="email@example.com"
             value={newEmail}
@@ -734,14 +777,14 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
             onKeyDown={(e) => { if (e.key === "Enter") handleAddSubscriber(); }}
           />
           <button
-            className="settings-btn--ghost"
+            className="font-sans text-[11px] font-medium tracking-[0.08em] text-ash bg-transparent border-none py-1 px-2 cursor-pointer transition-colors hover:text-chalk uppercase"
             onClick={handleAddSubscriber}
             disabled={!newEmail.trim()}
           >
             Add
           </button>
         </div>
-        {subErr && <p className="settings-footer__error">{subErr}</p>}
+        {subErr && <p className="flex-1 text-xs text-ember">{subErr}</p>}
       </div>
     </div>
   );
@@ -783,18 +826,21 @@ function CloudSection() {
     finally { setSaving(false); }
   };
 
+  const inputCls = "flex-1 bg-transparent border-0 border-b border-iron/60 outline-none py-2 font-mono text-[13px] text-chalk tracking-[0.04em] transition-colors focus:border-gold placeholder:text-smoke";
+  const labelCls = "block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2";
+
   return (
-    <div className="settings-section">
-      <h2 className="settings-section__title">Cloud Storage</h2>
-      <p className="settings-section__desc">
+    <div className="flex-1 p-6">
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">Cloud Storage</h2>
+      <p className="text-xs text-smoke mb-6">
         Connect an S3-compatible storage provider (AWS S3, MinIO, Backblaze B2, etc.) to enable
         cloud sync and multi-branch sharing for your Artifacts.
       </p>
 
-      <div className="settings-group">
-        <p className="settings-group__label">ENDPOINT URL</p>
+      <div className="mb-6">
+        <p className={labelCls}>ENDPOINT URL</p>
         <input
-          className="settings-input"
+          className={inputCls}
           type="text"
           placeholder="https://s3.amazonaws.com"
           value={config.endpoint_url}
@@ -802,10 +848,10 @@ function CloudSection() {
         />
       </div>
 
-      <div className="settings-group">
-        <p className="settings-group__label">BUCKET</p>
+      <div className="mb-6">
+        <p className={labelCls}>BUCKET</p>
         <input
-          className="settings-input"
+          className={inputCls}
           type="text"
           placeholder="openworship-artifacts"
           value={config.bucket}
@@ -813,10 +859,10 @@ function CloudSection() {
         />
       </div>
 
-      <div className="settings-group">
-        <p className="settings-group__label">REGION</p>
+      <div className="mb-6">
+        <p className={labelCls}>REGION</p>
         <input
-          className="settings-input"
+          className={inputCls}
           type="text"
           placeholder="us-east-1"
           value={config.region}
@@ -824,10 +870,10 @@ function CloudSection() {
         />
       </div>
 
-      <div className="settings-group">
-        <p className="settings-group__label">ACCESS KEY ID</p>
+      <div className="mb-6">
+        <p className={labelCls}>ACCESS KEY ID</p>
         <input
-          className="settings-input"
+          className={inputCls}
           type="text"
           placeholder="AKIA…"
           value={config.access_key_id}
@@ -835,30 +881,30 @@ function CloudSection() {
         />
       </div>
 
-      <div className="settings-group">
-        <p className="settings-group__label">SECRET ACCESS KEY</p>
+      <div className="mb-6">
+        <p className={labelCls}>SECRET ACCESS KEY</p>
         <input
-          className="settings-input"
+          className={inputCls}
           type="password"
           placeholder="Leave blank to keep existing"
           value={config.secret_access_key}
           onChange={(e) => setConfig((p) => ({ ...p, secret_access_key: e.target.value }))}
         />
-        <p className="settings-hint">Stored securely in the OS keychain.</p>
+        <p className="text-xs text-smoke mt-2 leading-[1.5]">Stored securely in the OS keychain.</p>
       </div>
 
       {usage && (
-        <div className="settings-group">
-          <p className="settings-group__label">STORAGE USAGE</p>
-          <p className="settings-hint">
+        <div className="mb-6">
+          <p className={labelCls}>STORAGE USAGE</p>
+          <p className="text-xs text-smoke mt-2 leading-[1.5]">
             {formatStorageMB(usage.used_bytes)} used
             {usage.quota_bytes ? ` / ${formatStorageMB(usage.quota_bytes)}` : ""} —{" "}
             {usage.synced_count} file{usage.synced_count !== 1 ? "s" : ""} synced
           </p>
           {usage.quota_bytes && (
-            <div className="settings-usage-bar">
+            <div className="h-[2px] bg-iron rounded-[1px] overflow-hidden mt-[6px]">
               <div
-                className="settings-usage-fill"
+                className="h-full bg-gold transition-[width] duration-300 min-w-[2px]"
                 style={{ width: `${Math.min(100, (usage.used_bytes / usage.quota_bytes) * 100)}%` }}
               />
             </div>
@@ -866,10 +912,15 @@ function CloudSection() {
         </div>
       )}
 
-      {err && <p className="settings-footer__error">{err}</p>}
-      {saved && <p className="settings-hint" style={{ color: "#c9a84c" }}>✓ Cloud config saved.</p>}
+      {err && <p className="flex-1 text-xs text-ember">{err}</p>}
+      {saved && <p className="text-xs text-smoke mt-2 leading-[1.5]" style={{ color: "#c9a84c" }}>✓ Cloud config saved.</p>}
 
-      <button className="settings-btn--primary" onClick={handleSave} disabled={saving || !config.endpoint_url.trim()}>
+      <button
+        data-qa="cloud-save-btn"
+        className="font-sans text-[11px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm py-[6px] px-4 cursor-pointer transition-[filter] hover:brightness-[1.15] disabled:opacity-50 disabled:cursor-not-allowed uppercase"
+        onClick={handleSave}
+        disabled={saving || !config.endpoint_url.trim()}
+      >
         {saving ? "Saving…" : "Save Cloud Config"}
       </button>
     </div>
