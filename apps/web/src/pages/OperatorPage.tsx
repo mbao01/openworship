@@ -19,12 +19,16 @@ function TranslationSwitcher() {
   const [active, setActive] = useState("KJV");
 
   const load = useCallback(async () => {
-    const [list, current] = await Promise.all([
-      invoke<TranslationInfo[]>("list_translations"),
-      invoke<string>("get_active_translation"),
-    ]);
-    setTranslations(list);
-    setActive(current);
+    try {
+      const [list, current] = await Promise.all([
+        invoke<TranslationInfo[]>("list_translations"),
+        invoke<string>("get_active_translation"),
+      ]);
+      setTranslations(list);
+      setActive(current);
+    } catch {
+      // Backend not ready yet — switcher stays hidden until next render
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);

@@ -164,8 +164,10 @@ impl SearchEngine {
             .context("search failed")?;
 
         // Collect raw scores to normalise against the max in this result set.
+        // Use EPSILON floor so the top result always scores 1.0, even when BM25
+        // returns weak scores (e.g. short corpus or single-result sets).
         let raw: Vec<(f32, _)> = top_docs.into_iter().collect();
-        let max_score = raw.iter().map(|(s, _)| *s).fold(0.0_f32, f32::max).max(1.0);
+        let max_score = raw.iter().map(|(s, _)| *s).fold(0.0_f32, f32::max).max(f32::EPSILON);
 
         let mut results = Vec::with_capacity(raw.len());
         for (raw_score, addr) in raw {
