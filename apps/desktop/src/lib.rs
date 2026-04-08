@@ -1,6 +1,7 @@
 mod commands;
 mod detection;
 mod identity;
+mod keychain;
 mod settings;
 mod state;
 

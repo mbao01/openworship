@@ -173,22 +173,33 @@ pub fn get_stt_status(state: State<'_, AppState>) -> SttStatus {
 
 // ─── Audio settings commands ──────────────────────────────────────────────────
 
-/// Return the current audio settings.
+/// Return the current audio settings, with the Deepgram API key populated from
+/// the OS keychain (never from disk).
 #[tauri::command]
 pub fn get_audio_settings(state: State<'_, AppState>) -> Result<AudioSettings, String> {
-    state
+    let mut settings = state
         .audio_settings
         .read()
         .map(|s| s.clone())
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    // Always refresh from keychain so the UI sees the current stored value.
+    settings.deepgram_api_key = crate::keychain::get_deepgram_api_key().unwrap_or_default();
+    Ok(settings)
 }
 
-/// Persist updated audio settings to disk.
+/// Persist updated audio settings.
+///
+/// The Deepgram API key is saved to the OS keychain; all other fields go to
+/// `~/.openworship/settings.json` (the key is excluded from that file).
 #[tauri::command]
 pub fn set_audio_settings(
     settings: AudioSettings,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    // Save the key to the keychain before updating shared state.
+    crate::keychain::set_deepgram_api_key(&settings.deepgram_api_key)
+        .map_err(|e| format!("keychain error: {e}"))?;
+
     let mut s = state
         .audio_settings
         .write()
