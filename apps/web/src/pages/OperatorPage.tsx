@@ -9,13 +9,13 @@ import { SongLibrary } from "../components/SongLibrary";
 import { SummaryPanel } from "../components/SummaryPanel";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
-import type { ChurchIdentity, DetectionMode, QueueItem, TranslationInfo } from "../lib/types";
+import type { ChurchIdentity, DetectionMode, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
   onOpenArtifacts?: () => void;
-  isDark?: boolean;
-  onToggleTheme?: () => void;
+  theme?: ThemeMode;
+  onSetTheme?: (mode: ThemeMode) => void;
 }
 
 // ─── Translation Switcher ────────────────────────────────────────────────────
@@ -135,7 +135,10 @@ function CopilotFeaturedDetection() {
   );
 }
 
-export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggleTheme }: OperatorPageProps) {
+// Cycle: system → dark → light → system
+const THEME_CYCLE: ThemeMode[] = ["system", "dark", "light"];
+
+export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSetTheme }: OperatorPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mode, setMode] = useState<DetectionMode>("copilot");
 
@@ -166,16 +169,19 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
               </svg>
             </button>
           )}
-          {onToggleTheme && (
+          {onSetTheme && (
             <button
               data-qa="toggle-theme-btn"
               className="bg-transparent border-none text-ash cursor-pointer p-1 flex items-center justify-center transition-colors hover:text-chalk hover:bg-white/[0.06]"
-              onClick={onToggleTheme}
-              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              aria-label="Toggle theme"
+              onClick={() => {
+                const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length];
+                onSetTheme(next);
+              }}
+              title={`Theme: ${theme} — click to cycle`}
+              aria-label="Cycle theme"
             >
-              {isDark ? (
-                /* Sun icon */
+              {theme === "light" ? (
+                /* Sun icon — light mode active */
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.2" />
                   <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -187,10 +193,17 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
                   <line x1="11.7" y1="4.3" x2="13.1" y2="2.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                   <line x1="2.9" y1="13.1" x2="4.3" y2="11.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
-              ) : (
-                /* Moon icon */
+              ) : theme === "dark" ? (
+                /* Moon icon — dark mode active */
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                /* Monitor icon — system mode active */
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <rect x="1.5" y="2" width="13" height="9" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                  <line x1="5" y1="14" x2="11" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <line x1="8" y1="11" x2="8" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
               )}
             </button>
@@ -217,7 +230,12 @@ export function OperatorPage({ identity, onOpenArtifacts, isDark = true, onToggl
       </header>
 
       {settingsOpen && (
-        <SettingsModal identity={identity} onClose={() => setSettingsOpen(false)} />
+        <SettingsModal
+          identity={identity}
+          theme={theme}
+          onSetTheme={onSetTheme}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
 
       {/* Mode selector toolbar */}

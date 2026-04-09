@@ -11,6 +11,19 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// UI colour scheme preference.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ThemeMode {
+    /// Follow the OS `prefers-color-scheme` setting.
+    #[default]
+    System,
+    /// Always use the light palette.
+    Light,
+    /// Always use the dark palette.
+    Dark,
+}
+
 /// Which STT backend the operator has selected.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -57,6 +70,9 @@ pub struct AudioSettings {
     /// Preferred audio input device name. `None` means system default.
     #[serde(default)]
     pub audio_input_device: Option<String>,
+    /// UI colour scheme preference. Default: `System`.
+    #[serde(default)]
+    pub theme: ThemeMode,
 }
 
 impl Default for AudioSettings {
@@ -70,6 +86,7 @@ impl Default for AudioSettings {
             lyrics_threshold_auto: 0.70,
             lyrics_threshold_copilot: 0.78,
             audio_input_device: None,
+            theme: ThemeMode::System,
         }
     }
 }
@@ -88,6 +105,8 @@ struct AudioSettingsFile {
     lyrics_threshold_auto: Option<f32>,
     lyrics_threshold_copilot: Option<f32>,
     audio_input_device: Option<String>,
+    #[serde(default)]
+    theme: ThemeMode,
 }
 
 impl AudioSettings {
@@ -151,6 +170,7 @@ impl AudioSettings {
                 .lyrics_threshold_copilot
                 .unwrap_or(defaults.lyrics_threshold_copilot),
             audio_input_device: file.audio_input_device,
+            theme: file.theme,
         })
     }
 
