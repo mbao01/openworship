@@ -49,8 +49,24 @@ impl Transcriber for WhisperTranscriber {
         params.set_print_timestamps(false);
         params.set_single_segment(true);
 
+        // Whisper requires >= 1 second of audio (16_000 samples at 16 kHz).
+        // Pad with silence if the chunk is slightly short due to sample rate
+        // conversion rounding.
+        const MIN_SAMPLES: usize = 16_000;
+        let buf;
+        let input = if samples.len() < MIN_SAMPLES {
+            buf = {
+                let mut v = samples.to_vec();
+                v.resize(MIN_SAMPLES, 0.0);
+                v
+            };
+            &buf
+        } else {
+            samples
+        };
+
         self.state
-            .full(params, samples)
+            .full(params, input)
             .map_err(|e| anyhow::anyhow!("Whisper transcription error: {e}"))?;
 
         let n = self.state.full_n_segments().map_err(|e| anyhow::anyhow!("{e}"))?;
