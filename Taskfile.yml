@@ -3,7 +3,8 @@ version: "3"
 
 vars:
   PNPM: pnpm
-  CARGO: cargo
+  CARGO:
+    sh: echo "$HOME/.cargo/bin/cargo"
 
 tasks:
   # ── Default ─────────────────────────────────────────────────────────────────
@@ -74,11 +75,23 @@ tasks:
     cmds:
       - "{{.PNPM}} tauri dev"
 
+  desktop:local:
+    desc: Start Tauri desktop dev mode (debug build + Vite dev server)
+    dir: apps/desktop
+    cmds:
+      - 'PATH="$HOME/.cargo/bin:$PATH" {{.PNPM}} tauri dev'
+
   desktop:build:
     desc: Build the Tauri desktop app (release)
     dir: apps/desktop
     cmds:
-      - "{{.PNPM}} tauri build"
+      - 'PATH="$HOME/.cargo/bin:$PATH" {{.PNPM}} tauri build'
+
+  desktop:local:
+    desc: Build and launch the desktop app in production/release mode (no debug, no Vite dev server)
+    cmds:
+      - task: desktop:build
+      - open target/release/bundle/macos/OpenWorship.app
 
   desktop:icon:
     desc: Generate Tauri app icons from source image

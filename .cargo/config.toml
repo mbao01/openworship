@@ -1,0 +1,5 @@
+[env]
+# whisper.cpp (via whisper-rs/ggml) uses std::filesystem which requires macOS 10.15+,
+# and arm64 (Apple Silicon) only runs on macOS 11.0+. Set explicitly to avoid
+# build failures from the cc crate's default 10.13 deployment target.
+MACOSX_DEPLOYMENT_TARGET = "11.0"
