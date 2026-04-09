@@ -223,6 +223,13 @@ function AudioSection({
   const [devices, setDevices] = useState<AudioInputDevice[]>([]);
   const [audioLevel, setAudioLevel] = useState(0);
 
+  // Check whether the Whisper model already exists on disk.
+  useEffect(() => {
+    invoke<boolean>("check_whisper_model").then((exists) => {
+      if (exists) setDownloadState("done");
+    }).catch(() => {});
+  }, []);
+
   // Load device list on mount.
   useEffect(() => {
     invoke<AudioInputDevice[]>("list_audio_input_devices")
@@ -401,7 +408,7 @@ function AudioSection({
           <p className="block text-[10px] font-medium tracking-[0.12em] text-ash uppercase mb-2">WHISPER MODEL</p>
           {downloadState === "done" ? (
             <p className="text-xs text-chalk mt-1 leading-[1.5]">
-              Model ready — ggml-base.en.bin downloaded successfully.
+              Model ready — <span className="font-mono text-ash">ggml-base.en.bin</span> found in <span className="font-mono text-ash">~/.openworship/models/</span>.
             </p>
           ) : downloadState === "downloading" ? (
             <div className="mt-2">

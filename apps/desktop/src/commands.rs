@@ -250,6 +250,19 @@ fn start_stt_with_settings(
 }
 
 /// Download the Whisper base.en model to `~/.openworship/models/ggml-base.en.bin`.
+/// Returns `true` if a usable Whisper model file already exists on disk.
+#[tauri::command]
+pub fn check_whisper_model() -> bool {
+    #[cfg(feature = "whisper")]
+    {
+        ow_audio::resolve_model_path().is_ok()
+    }
+    #[cfg(not(feature = "whisper"))]
+    {
+        false
+    }
+}
+
 ///
 /// Emits `stt://model-download-progress` events during download with payload
 /// `{ downloaded_bytes: u64, total_bytes: u64 | null, percent: number | null }`.
