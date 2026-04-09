@@ -51,12 +51,9 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [entries]);
 
-  // Poll audio level every 100ms while mic is active.
+  // Poll audio level every 100ms whenever the mic is active.
   useEffect(() => {
-    if (!micActive) {
-      setAudioLevel(0);
-      return;
-    }
+    if (!micActive) return;
     const id = setInterval(async () => {
       const level = await invoke<number>("get_audio_level");
       setAudioLevel(level);
@@ -109,11 +106,14 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
     if (micActive) {
       invoke("stop_stt").catch(console.error);
       setMicActive(false);
+      setAudioLevel(0);
       setSttWarning(null);
     } else {
       setError(null);
       setSttWarning(null);
+      setMicActive(true);
       invoke("start_stt").catch((err: unknown) => {
+        setMicActive(false);
         setError(String(err));
       });
     }
