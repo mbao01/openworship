@@ -7,6 +7,7 @@ import { OperatorPage } from "./pages/OperatorPage";
 import { DisplayPage } from "./pages/DisplayPage";
 import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { SpeakerPage } from "./pages/SpeakerPage";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./styles/global.css";
 
 // Apply "dark" class to <html> based on the effective theme.
@@ -124,7 +125,11 @@ function AppInner() {
 }
 
 function App() {
-  return <AppInner />;
+  return (
+    <TooltipProvider>
+      <AppInner />
+    </TooltipProvider>
+  );
 }
 
 export default App;

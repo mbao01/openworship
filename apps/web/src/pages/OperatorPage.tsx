@@ -8,6 +8,15 @@ import { SettingsModal } from "../components/SettingsModal";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
 import type { ChurchIdentity, DetectionMode, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
@@ -151,7 +160,7 @@ function PreviewAndControls() {
   return (
     <div className="shrink-0 px-4 pt-3 pb-0 border-b border-iron">
       {/* Mini preview panels */}
-      <div className="flex gap-3 mb-3" style={{ height: "130px" }}>
+      <div className="flex gap-3 mb-3" style={{ height: "50%" }}>
         <MiniDisplay label="PREVIEW" item={pending} />
         <MiniDisplay label="LIVE" item={live} isLive />
       </div>
@@ -189,8 +198,20 @@ function PreviewAndControls() {
             title="Previous item"
             aria-label="Previous item"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M9 3L5 7l4 4"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
           <button
@@ -198,8 +219,20 @@ function PreviewAndControls() {
             title="Next item"
             aria-label="Next item"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 3l4 4-4 4"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
         </div>
@@ -397,59 +430,89 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
       <ModeToolbar onModeChange={setMode} />
 
       {/* ── Main three-column layout ──────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden min-h-0">
-
-        {/* Left — Schedule + Content Bank ─────────────────────────────── */}
-        <aside
+      {/* Left sidebar provider */}
+      <SidebarProvider
+        data-qa="operator-col-left-provider"
+        className="flex-1 min-h-0 overflow-hidden"
+        style={{ "--sidebar-width": "14rem", "--sidebar-width-icon": "3rem" } as React.CSSProperties}
+      >
+        {/* Left — Schedule + Content Bank */}
+        <Sidebar
           data-qa="operator-col-left"
-          className="flex flex-col w-56 shrink-0 bg-obsidian border-r border-iron overflow-hidden"
+          side="left"
+          collapsible="icon"
+          className="border-r border-sidebar-border bg-sidebar h-full"
         >
-          {/* Schedule */}
-          <div className="flex-1 overflow-y-auto p-4 min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]">
-            <SchedulePanel />
-          </div>
+          <SidebarContent className="overflow-hidden">
+            <SidebarGroup className="flex-1 min-h-0 p-0">
+              <SidebarGroupContent className="flex flex-col h-full overflow-hidden">
+                {/* Schedule */}
+                <div className="flex-1 overflow-y-auto p-4 min-h-0 group-data-[collapsible=icon]:hidden [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]">
+                  <SchedulePanel />
+                </div>
+                {/* Divider */}
+                <div className="h-px bg-iron shrink-0 group-data-[collapsible=icon]:hidden" />
+                {/* Content Bank */}
+                <div className="shrink-0 p-4 group-data-[collapsible=icon]:hidden" style={{ maxHeight: "40%" }}>
+                  <span className="block text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-3">
+                    CONTENT BANK
+                  </span>
+                  <div className="overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]" style={{ maxHeight: "200px" }}>
+                    <ScriptureSearch />
+                  </div>
+                </div>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarRail />
+        </Sidebar>
 
-          {/* Divider */}
-          <div className="h-px bg-iron shrink-0" />
-
-          {/* Content Bank — scripture search */}
-          <div className="shrink-0 p-4" style={{ maxHeight: "40%" }}>
-            <span className="block text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-3">
-              CONTENT BANK
-            </span>
-            <div className="overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]" style={{ maxHeight: "200px" }}>
-              <ScriptureSearch />
+        {/* Right sidebar provider wraps center + right */}
+        <SidebarProvider
+          data-qa="operator-col-right-provider"
+          className="flex-1 min-h-0 overflow-hidden"
+          style={{ "--sidebar-width": "15rem", "--sidebar-width-icon": "3rem" } as React.CSSProperties}
+        >
+          {/* Center — Preview panels + controls + Transcript */}
+          <main data-qa="operator-col-center" className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void">
+            <div className="flex items-center gap-1 px-2 pt-1 shrink-0 border-b border-iron/30">
+              <SidebarTrigger className="h-6 w-6 text-smoke hover:text-chalk" title="Toggle schedule panel" />
+              <div className="flex-1" />
+              <SidebarTrigger className="h-6 w-6 text-smoke hover:text-chalk" title="Toggle queue panel" />
             </div>
-          </div>
-        </aside>
+            {mode === "copilot" && <PreviewAndControls />}
+            <div className="flex-1 overflow-hidden min-h-0">
+              <TranscriptPanel />
+            </div>
+          </main>
 
-        {/* Center — Preview panels + controls + Transcript ─────────────── */}
-        <main data-qa="operator-col-center" className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void">
-          {mode === "copilot" && <PreviewAndControls />}
-          <div className="flex-1 overflow-hidden min-h-0">
-            <TranscriptPanel />
-          </div>
-        </main>
-
-        {/* Right — Queue + Detection Log ───────────────────────────────── */}
-        <aside
-          data-qa="operator-col-right"
-          className="flex flex-col w-60 shrink-0 bg-obsidian border-l border-iron overflow-hidden"
-        >
-          {/* Queue (top ~65%) */}
-          <div className="flex-1 overflow-hidden min-h-0 p-4 flex flex-col">
-            <DetectionQueue />
-          </div>
-
-          {/* Divider */}
-          <div className="h-px bg-iron shrink-0" />
-
-          {/* Detection Log (bottom ~35%) */}
-          <div className="shrink-0 overflow-hidden flex flex-col px-4 pb-4" style={{ height: "35%" }}>
-            <DetectionLog />
-          </div>
-        </aside>
-      </div>
+          {/* Right — Queue + Detection Log */}
+          <Sidebar
+            data-qa="operator-col-right"
+            side="right"
+            collapsible="icon"
+            className="border-l border-sidebar-border bg-sidebar h-full"
+          >
+            <SidebarContent className="overflow-hidden">
+              <SidebarGroup className="flex-1 min-h-0 p-0">
+                <SidebarGroupContent className="flex flex-col h-full overflow-hidden">
+                  {/* Queue */}
+                  <div className="flex-1 overflow-hidden min-h-0 p-4 flex flex-col group-data-[collapsible=icon]:hidden">
+                    <DetectionQueue />
+                  </div>
+                  {/* Divider */}
+                  <div className="h-px bg-iron shrink-0 group-data-[collapsible=icon]:hidden" />
+                  {/* Detection Log */}
+                  <div className="shrink-0 overflow-hidden flex flex-col px-4 pb-4 group-data-[collapsible=icon]:hidden" style={{ height: "35%" }}>
+                    <DetectionLog />
+                  </div>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+            <SidebarRail />
+          </Sidebar>
+        </SidebarProvider>
+      </SidebarProvider>
     </div>
   );
 }

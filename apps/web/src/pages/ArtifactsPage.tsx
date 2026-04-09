@@ -10,6 +10,26 @@ import type {
   ServiceProject,
   StorageUsage,
 } from "../lib/types";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@radix-ui/react-collapsible";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -265,9 +285,9 @@ function SharedCell({ info }: { info: CloudSyncInfo | undefined }) {
   return <span className="text-smoke text-[11px]">—</span>;
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
+// ─── Artifacts Sidebar (shadcn Sidebar, collapsible="icon") ───────────────────
 
-function Sidebar({
+function ArtifactsSidebar({
   projects,
   nav,
   onNav,
@@ -283,156 +303,187 @@ function Sidebar({
   onToggleCloud: () => void;
 }) {
   const isActive = (n: Nav) => JSON.stringify(n) === JSON.stringify(nav);
-  const btnCls = (n: Nav) => {
-    const active = isActive(n);
-    return [
-      "flex items-center gap-[8px] w-full text-left bg-transparent border-none font-sans text-[12px]",
-      "px-[10px] py-[5px] cursor-pointer transition-colors",
-      active
-        ? "text-chalk bg-white/[0.07] border-l-[2px] border-gold"
-        : "text-ash border-l-[2px] border-transparent hover:text-chalk hover:bg-white/[0.03]",
-    ].join(" ");
-  };
 
-  const sectionLabel = "text-[9px] font-semibold tracking-[0.14em] uppercase text-smoke/70 px-[10px] pt-[12px] pb-[4px] m-0";
+  const storageLabel = usage
+    ? `${formatStorageBytes(usage.used_bytes)}${usage.quota_bytes ? ` / ${formatStorageBytes(usage.quota_bytes)}` : " used"}`
+    : "2.4 GB / 5 GB";
+  const storagePct = usage?.quota_bytes
+    ? Math.min(100, (usage.used_bytes / usage.quota_bytes) * 100)
+    : 48;
 
   return (
-    <nav
+    <Sidebar
       data-qa="artifacts-sidebar"
-      className="w-[200px] shrink-0 bg-obsidian border-r border-iron flex flex-col select-none"
+      collapsible="icon"
+      className="border-r border-sidebar-border bg-sidebar"
     >
-      <div className="flex-1 py-2 overflow-y-auto min-h-0">
-        {/* LOCAL */}
-        <p className={sectionLabel}>Local</p>
-        <button
-          data-qa="artifacts-nav-all"
-          className={btnCls({ kind: "all" })}
-          onClick={() => onNav({ kind: "all" })}
-        >
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0">
-            <rect x="1" y="1" width="4.5" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
-            <rect x="7.5" y="1" width="4.5" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
-            <rect x="1" y="7.5" width="4.5" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
-            <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
-          </svg>
-          All Artifacts
-        </button>
-        <button
-          data-qa="artifacts-nav-recent"
-          className={btnCls({ kind: "recent" })}
-          onClick={() => onNav({ kind: "recent" })}
-        >
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0">
-            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.1" />
-            <path d="M6.5 4v2.5l1.5 1.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Recent
-        </button>
-        <button
-          data-qa="artifacts-nav-starred"
-          className={btnCls({ kind: "starred" })}
-          onClick={() => onNav({ kind: "starred" })}
-        >
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0">
-            <path d="M6.5 1l1.5 3.5H12L9 6.5l1 4-3.5-2.5L3 10.5l1-4L1 6.5h4z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-          </svg>
-          Starred
-        </button>
+      <SidebarContent>
+        {/* ── LOCAL ─────────────────────────────────────────────────────── */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Local</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  data-qa="artifacts-nav-all"
+                  tooltip="All Artifacts"
+                  isActive={isActive({ kind: "all" })}
+                  onClick={() => onNav({ kind: "all" })}
+                >
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <rect x="1" y="1" width="4.5" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
+                    <rect x="7.5" y="1" width="4.5" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
+                    <rect x="1" y="7.5" width="4.5" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
+                    <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="0.6" stroke="currentColor" strokeWidth="1.1" />
+                  </svg>
+                  <span>All Artifacts</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  data-qa="artifacts-nav-recent"
+                  tooltip="Recent"
+                  isActive={isActive({ kind: "recent" })}
+                  onClick={() => onNav({ kind: "recent" })}
+                >
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.1" />
+                    <path d="M6.5 4v2.5l1.5 1.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span>Recent</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  data-qa="artifacts-nav-starred"
+                  tooltip="Starred"
+                  isActive={isActive({ kind: "starred" })}
+                  onClick={() => onNav({ kind: "starred" })}
+                >
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <path d="M6.5 1l1.5 3.5H12L9 6.5l1 4-3.5-2.5L3 10.5l1-4L1 6.5h4z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                  </svg>
+                  <span>Starred</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-        {/* SERVICES */}
+        {/* ── SERVICES ──────────────────────────────────────────────────── */}
         {projects.length > 0 && (
           <>
-            <p className={sectionLabel}>Services</p>
-            {projects.map((p) => (
-              <button
-                key={p.id}
-                data-qa={`artifacts-nav-service-${p.id}`}
-                className={btnCls({ kind: "service", id: p.id, name: p.name })}
-                onClick={() => onNav({ kind: "service", id: p.id, name: p.name })}
-              >
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0">
-                  <path d="M6.5 1L2 4v7h3.5V7.5h2V11H11V4z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-                </svg>
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{p.name}</span>
-              </button>
-            ))}
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Services</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {projects.map((p) => (
+                    <SidebarMenuItem key={p.id}>
+                      <SidebarMenuButton
+                        data-qa={`artifacts-nav-service-${p.id}`}
+                        tooltip={p.name}
+                        isActive={isActive({ kind: "service", id: p.id, name: p.name })}
+                        onClick={() => onNav({ kind: "service", id: p.id, name: p.name })}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                          <path d="M6.5 1L2 4v7h3.5V7.5h2V11H11V4z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+                        </svg>
+                        <span className="truncate">{p.name}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           </>
         )}
 
-        {/* CLOUD */}
-        <p className={sectionLabel}>Cloud</p>
-        <button
-          data-qa="artifacts-nav-cloud-branch"
-          className={[
-            "flex items-center gap-[8px] w-full text-left bg-transparent border-none font-sans text-[12px]",
-            "px-[10px] py-[5px] cursor-pointer transition-colors border-l-[2px]",
-            (isActive({ kind: "cloud_branch" }) || cloudExpanded)
-              ? "text-chalk bg-white/[0.07] border-gold"
-              : "text-ash border-transparent hover:text-chalk hover:bg-white/[0.03]",
-          ].join(" ")}
-          onClick={() => { onToggleCloud(); onNav({ kind: "cloud_branch" }); }}
-        >
-          <span className="text-gold/70 shrink-0"><IconCloud /></span>
-          <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-left">My Branch</span>
-          <span className={`shrink-0 transition-transform duration-200 text-smoke ${cloudExpanded ? "rotate-0" : "-rotate-90"}`}>
-            <IconChevronDown />
-          </span>
-        </button>
-        {cloudExpanded && (
-          <div className="pl-[26px] pb-[2px]">
-            {["Downtown", "Westside", "Youth Campus"].map((branch) => (
-              <button
-                key={branch}
-                className="flex items-center gap-[7px] w-full text-left bg-transparent border-none font-sans text-[11px] text-smoke px-[10px] py-[4px] cursor-pointer hover:text-ash transition-colors"
-              >
-                <span className="w-[5px] h-[5px] rounded-full bg-smoke/40 shrink-0" />
-                {branch}
-              </button>
-            ))}
-          </div>
-        )}
-        <button
-          data-qa="artifacts-nav-cloud-shared"
-          className={btnCls({ kind: "cloud_shared" })}
-          onClick={() => onNav({ kind: "cloud_shared" })}
-        >
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0">
-            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.1" />
-            <path d="M6.5 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm0 3.5c-2 0-3 1-3 2h6c0-1-1-2-3-2z" fill="currentColor" />
-          </svg>
-          Church Shared
-        </button>
-      </div>
+        {/* ── CLOUD ─────────────────────────────────────────────────────── */}
+        <SidebarSeparator />
+        <SidebarGroup>
+          <SidebarGroupLabel>Cloud</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {/* My Branch — collapsible sub-list */}
+              <Collapsible open={cloudExpanded} onOpenChange={onToggleCloud} asChild>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      data-qa="artifacts-nav-cloud-branch"
+                      tooltip="My Branch"
+                      isActive={isActive({ kind: "cloud_branch" }) || cloudExpanded}
+                      onClick={() => onNav({ kind: "cloud_branch" })}
+                    >
+                      <IconCloud />
+                      <span>My Branch</span>
+                      <IconChevronDown
+                        className={`ml-auto transition-transform duration-200 ${cloudExpanded ? "" : "-rotate-90"}`}
+                      />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="pl-4 pt-[2px]">
+                      {["Downtown", "Westside", "Youth Campus"].map((branch) => (
+                        <SidebarMenuButton
+                          key={branch}
+                          tooltip={branch}
+                          size="sm"
+                          className="text-sidebar-foreground/60 hover:text-sidebar-foreground pl-2"
+                        >
+                          <span className="size-1.5 rounded-full bg-current shrink-0" />
+                          <span>{branch}</span>
+                        </SidebarMenuButton>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
 
-      {/* Storage usage — always shown, falls back to placeholder */}
-      <div className="px-3 py-[10px] border-t border-iron shrink-0">
-        <div className="h-[3px] bg-iron rounded-full overflow-hidden mb-[7px]">
-          <div
-            className="h-full bg-gold transition-[width] duration-300 min-w-[3px] rounded-full"
-            style={{
-              width: usage
-                ? usage.quota_bytes
-                  ? `${Math.min(100, (usage.used_bytes / usage.quota_bytes) * 100)}%`
-                  : "4%"
-                : "48%",
-            }}
-          />
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  data-qa="artifacts-nav-cloud-shared"
+                  tooltip="Church Shared"
+                  isActive={isActive({ kind: "cloud_shared" })}
+                  onClick={() => onNav({ kind: "cloud_shared" })}
+                >
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.1" />
+                    <path d="M6.5 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm0 3.5c-2 0-3 1-3 2h6c0-1-1-2-3-2z" fill="currentColor" />
+                  </svg>
+                  <span>Church Shared</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/* ── Storage footer ──────────────────────────────────────────────── */}
+      <SidebarFooter className="border-t border-sidebar-border p-3 group-data-[collapsible=icon]:p-2">
+        <div className="group-data-[collapsible=icon]:hidden">
+          <div className="h-[3px] bg-sidebar-border rounded-full overflow-hidden mb-[7px]">
+            <div
+              className="h-full bg-primary transition-[width] duration-300 rounded-full"
+              style={{ width: `${storagePct}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-sidebar-foreground/50 font-mono truncate">
+              {storageLabel}
+            </span>
+            <button className="text-[10px] text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors bg-transparent border-none cursor-pointer font-sans flex items-center gap-[3px] shrink-0">
+              Manage
+            </button>
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-smoke font-mono truncate">
-            {usage
-              ? `${formatStorageBytes(usage.used_bytes)}${usage.quota_bytes ? ` / ${formatStorageBytes(usage.quota_bytes)}` : " used"}`
-              : "2.4 GB / 5 GB"}
-          </span>
-          <button className="text-[10px] text-ash hover:text-chalk transition-colors bg-transparent border-none cursor-pointer font-sans flex items-center gap-[3px] shrink-0">
-            Manage Storage
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-              <path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+        <div className="hidden group-data-[collapsible=icon]:flex justify-center">
+          <IconCloud />
         </div>
-      </div>
-    </nav>
+      </SidebarFooter>
+
+      <SidebarRail />
+    </Sidebar>
   );
 }
 
@@ -1058,15 +1109,18 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
     : null;
 
   return (
+    <SidebarProvider>
     <div
       data-qa="artifacts-root"
-      className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden"
+      className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden w-full"
     >
       {/* ── Topbar ─────────────────────────────────────────────────────────── */}
       <header
         data-qa="artifacts-topbar"
         className="flex items-center gap-2 px-4 h-11 border-b border-iron shrink-0"
       >
+        {/* Sidebar toggle */}
+        <SidebarTrigger className="h-7 w-7 text-ash hover:text-chalk shrink-0" />
         {/* Back button + Breadcrumb */}
         <button
           data-qa="artifacts-back-btn"
@@ -1163,7 +1217,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar
+        <ArtifactsSidebar
           projects={projects}
           nav={nav}
           onNav={handleNav}
@@ -1527,5 +1581,6 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
         />
       )}
     </div>
+    </SidebarProvider>
   );
 }
