@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "../lib/tauri";
-import type { AudioInputDevice, AudioSettings, BranchSyncStatus, ChurchIdentity, DisplaySettings, EmailSettings, EmailSubscriber, MonitorInfo, S3Config, SemanticStatus, StorageUsage, SttBackend } from "../lib/types";
+import type { AudioInputDevice, AudioSettings, BranchSyncStatus, ChurchIdentity, DisplaySettings, EmailSettings, EmailSubscriber, MonitorInfo, S3Config, SemanticStatus, StorageUsage, SttBackend, ThemeMode } from "../lib/types";
 
 interface SettingsModalProps {
   identity: ChurchIdentity;
+  theme?: ThemeMode;
+  onSetTheme?: (mode: ThemeMode) => void;
   onClose: () => void;
 }
 
-type Category = "church" | "general" | "audio" | "display" | "detection" | "email" | "cloud" | "about";
+type Category = "church" | "appearance" | "audio" | "display" | "detection" | "email" | "cloud" | "about";
 
 const CATEGORIES: { id: Category; label: string }[] = [
   { id: "church", label: "Church" },
-  { id: "general", label: "General" },
+  { id: "appearance", label: "Appearance" },
   { id: "audio", label: "Audio" },
   { id: "display", label: "Display" },
   { id: "detection", label: "Detection" },
@@ -21,7 +23,7 @@ const CATEGORIES: { id: Category; label: string }[] = [
   { id: "about", label: "About" },
 ];
 
-export function SettingsModal({ identity, onClose }: SettingsModalProps) {
+export function SettingsModal({ identity, theme = "system", onSetTheme, onClose }: SettingsModalProps) {
   const [activeCategory, setActiveCategory] = useState<Category>("church");
   const [audioSettings, setAudioSettings] = useState<AudioSettings>({
     backend: "whisper",
@@ -32,6 +34,7 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
     lyrics_threshold_auto: 0.70,
     lyrics_threshold_copilot: 0.78,
     audio_input_device: null,
+    theme: "system",
   });
   const [keyVisible, setKeyVisible] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -128,7 +131,9 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
               onDeviceChange={handleDeviceChange}
             />
           )}
-          {activeCategory === "general" && <PlaceholderSection title="General" />}
+          {activeCategory === "appearance" && (
+            <AppearanceSection theme={theme} onSetTheme={onSetTheme} />
+          )}
           {activeCategory === "display" && <DisplaySection />}
           {activeCategory === "detection" && (
             <DetectionSection
@@ -150,9 +155,9 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
               className="font-sans text-[11px] font-medium tracking-[0.08em] text-chalk bg-transparent border border-iron rounded-sm py-[6px] px-4 cursor-pointer transition-colors hover:border-ash uppercase"
               onClick={onClose}
             >
-              {activeCategory === "church" ? "Close" : "Cancel"}
+              {activeCategory === "church" || activeCategory === "appearance" ? "Close" : "Cancel"}
             </button>
-            {activeCategory !== "church" && (
+            {activeCategory !== "church" && activeCategory !== "appearance" && (
               <button
                 data-qa="settings-save-btn"
                 className="font-sans text-[11px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm py-[6px] px-4 cursor-pointer transition-[filter] hover:brightness-[1.15] disabled:opacity-50 disabled:cursor-not-allowed uppercase"
@@ -752,11 +757,57 @@ function DisplaySection() {
   );
 }
 
-function PlaceholderSection({ title }: { title: string }) {
+// ─── Appearance section ────────────────────────────────────────────────────────
+
+const THEME_OPTIONS: { value: ThemeMode; label: string; description: string }[] = [
+  { value: "light", label: "Light", description: "Always use the light palette" },
+  { value: "dark",  label: "Dark",  description: "Always use the dark palette" },
+  { value: "system", label: "System", description: "Follow the OS appearance setting" },
+];
+
+function AppearanceSection({
+  theme,
+  onSetTheme,
+}: {
+  theme: ThemeMode;
+  onSetTheme?: (mode: ThemeMode) => void;
+}) {
   return (
     <div className="flex-1 p-6">
-      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">{title}</h2>
-      <p className="text-xs text-smoke mt-2 leading-[1.5]">Coming soon.</p>
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">
+        Appearance
+      </h2>
+
+      <p className="text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-3">
+        Colour Scheme
+      </p>
+      <div className="flex flex-col gap-2">
+        {THEME_OPTIONS.map(({ value, label, description }) => (
+          <button
+            key={value}
+            data-qa={`theme-option-${value}`}
+            onClick={() => onSetTheme?.(value)}
+            className={[
+              "flex items-center gap-3 w-full text-left bg-transparent border rounded-sm px-4 py-3 cursor-pointer transition-colors",
+              theme === value
+                ? "border-gold text-chalk"
+                : "border-iron text-ash hover:border-ash hover:text-chalk",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "w-3 h-3 rounded-full border shrink-0",
+                theme === value ? "bg-gold border-gold" : "bg-transparent border-ash",
+              ].join(" ")}
+              aria-hidden="true"
+            />
+            <span className="flex flex-col gap-[2px]">
+              <span className="text-[13px] font-medium">{label}</span>
+              <span className="text-[11px] text-smoke">{description}</span>
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

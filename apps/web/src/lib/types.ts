@@ -59,6 +59,9 @@ export type DetectionMode = "auto" | "copilot" | "airplane" | "offline";
 /** Matches Rust `SttBackend` enum. */
 export type SttBackend = "whisper" | "deepgram" | "off";
 
+/** Matches Rust `ThemeMode` enum. */
+export type ThemeMode = "light" | "dark" | "system";
+
 /** Matches Rust `AudioInputDevice` struct from `capture.rs`. */
 export interface AudioInputDevice {
   name: string;
@@ -76,6 +79,8 @@ export interface AudioSettings {
   lyrics_threshold_copilot: number;
   /** Preferred audio input device name; null means system default. */
   audio_input_device: string | null;
+  /** UI colour scheme preference. */
+  theme: ThemeMode;
 }
 
 /** Matches Rust `BranchRole` enum. */

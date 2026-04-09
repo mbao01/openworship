@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { invoke } from "./lib/tauri";
-import type { ChurchIdentity } from "./lib/types";
+import type { AudioSettings, ChurchIdentity, ThemeMode } from "./lib/types";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OperatorPage } from "./pages/OperatorPage";
 import { DisplayPage } from "./pages/DisplayPage";
@@ -9,39 +9,61 @@ import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { SpeakerPage } from "./pages/SpeakerPage";
 import "./styles/global.css";
 
-// Dark-first: apply "dark" class to <html> on load and persist preference.
-const THEME_KEY = "ow-theme";
-function initTheme() {
-  const stored = localStorage.getItem(THEME_KEY);
-  // Default to dark if no preference stored.
-  if (stored !== "light") {
+// Apply "dark" class to <html> based on the effective theme.
+// In System mode, we read prefers-color-scheme; the caller updates this live.
+function applyThemeClass(isDark: boolean) {
+  if (isDark) {
     document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
   }
 }
-initTheme();
+
+function resolveIsDark(mode: ThemeMode, systemPrefersDark: boolean): boolean {
+  if (mode === "dark") return true;
+  if (mode === "light") return false;
+  return systemPrefersDark;
+}
+
+// Eagerly apply a sane default before React mounts to avoid FOUC.
+// We can't read settings.json synchronously, so we bootstrap from
+// localStorage as a fast fallback (overwritten once settings load).
+// Guard for jsdom / SSR environments that don't implement matchMedia.
+const THEME_FALLBACK_KEY = "ow-theme-fallback";
+(function bootstrapTheme() {
+  const fallback = localStorage.getItem(THEME_FALLBACK_KEY) as ThemeMode | null;
+  const systemDark = typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-color-scheme: dark)").matches
+    : false;
+  applyThemeClass(resolveIsDark(fallback ?? "system", systemDark));
+})();
 
 function AppInner() {
   const navigate = useNavigate();
-  // `null` = not yet loaded, `undefined` = loaded but no identity (→ onboarding)
-  const [identity, setIdentity] = useState<ChurchIdentity | null | undefined>(
-    null
-  );
-  const [isDark, setIsDark] = useState(
-    () => document.documentElement.classList.contains("dark")
+  const [identity, setIdentity] = useState<ChurchIdentity | null | undefined>(null);
+  const [theme, setThemeState] = useState<ThemeMode>("system");
+  const systemDarkRef = useRef(
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+      : false
   );
 
-  const toggleTheme = () => {
-    const next = !isDark;
-    setIsDark(next);
-    if (next) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem(THEME_KEY, "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem(THEME_KEY, "light");
-    }
-  };
+  // Subscribe to OS appearance changes for System mode.
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (e: MediaQueryListEvent) => {
+      systemDarkRef.current = e.matches;
+      setThemeState((prev) => {
+        if (prev === "system") applyThemeClass(e.matches);
+        return prev;
+      });
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
+  // Load identity and initial theme from persisted settings.
   useEffect(() => {
     invoke<ChurchIdentity | null>("get_identity")
       .then((id) => setIdentity(id ?? undefined))
@@ -49,9 +71,29 @@ function AppInner() {
         console.error("[app] failed to load identity:", e);
         setIdentity(undefined);
       });
+
+    invoke<AudioSettings>("get_audio_settings")
+      .then((s) => {
+        const mode = s.theme ?? "system";
+        setThemeState(mode);
+        applyThemeClass(resolveIsDark(mode, systemDarkRef.current));
+        localStorage.setItem(THEME_FALLBACK_KEY, mode);
+      })
+      .catch(() => {/* use bootstrap default */});
   }, []);
 
-  // Still loading — render nothing to avoid flash of wrong page.
+  const handleSetTheme = async (mode: ThemeMode) => {
+    setThemeState(mode);
+    applyThemeClass(resolveIsDark(mode, systemDarkRef.current));
+    localStorage.setItem(THEME_FALLBACK_KEY, mode);
+    try {
+      const current = await invoke<AudioSettings>("get_audio_settings");
+      await invoke("set_audio_settings", { settings: { ...current, theme: mode } });
+    } catch (e) {
+      console.error("[app] failed to persist theme:", e);
+    }
+  };
+
   if (identity === null) return null;
 
   return (
@@ -71,8 +113,8 @@ function AppInner() {
             <OperatorPage
               identity={identity}
               onOpenArtifacts={() => navigate("/artifacts")}
-              isDark={isDark}
-              onToggleTheme={toggleTheme}
+              theme={theme}
+              onSetTheme={handleSetTheme}
             />
           )
         }

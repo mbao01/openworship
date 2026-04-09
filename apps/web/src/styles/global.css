@@ -1,9 +1,12 @@
 @import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap");
 
+/* ── Class-based dark mode variant for Tailwind v4 ────────────────────────── */
+@custom-variant dark (&:is(.dark, .dark *));
+
 /* ── Sacred Monochrome design tokens ──────────────────────────────────────── */
 @theme {
-  /* Colors */
+  /* Colors — dark palette (canonical Sacred Monochrome) */
   --color-void: #0a0a0a;
   --color-obsidian: #141414;
   --color-slate: #1e1e1e;
@@ -38,6 +41,25 @@
   /* Extended palette */
   --color-steel: #383838;
   --color-surface: #1a1a1a;
+}
+
+/* ── Light-mode palette overrides ─────────────────────────────────────────── */
+/*
+ * Sacred Monochrome light palette. Inverted tonal scale: near-white ground,
+ * near-black text. Gold and Ember are unchanged — they anchor both modes.
+ * Applied when the `.dark` class is NOT present on <html>.
+ */
+html:not(.dark) {
+  --color-void: #f5f5f5;       /* app background (near-white) */
+  --color-obsidian: #ebebeb;   /* panels, sidebars */
+  --color-slate: #dedede;      /* elevated cards, modals */
+  --color-chalk: #141414;      /* primary text (near-black) */
+  --color-ash: #5a5a5a;        /* secondary labels */
+  --color-smoke: #9a9a9a;      /* disabled, ghost text */
+  --color-iron: #c8c8c8;       /* borders, dividers */
+  --color-steel: #d4d4d4;      /* extended border/separator */
+  --color-surface: #f0f0f0;    /* surface variant */
+  /* gold and ember intentionally unchanged */
 }
 
 /* ── Base reset ───────────────────────────────────────────────────────────── */
