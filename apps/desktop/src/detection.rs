@@ -3,7 +3,7 @@
 //! within a 3-second cooldown, and routes detected content to the queue
 //! and/or the projection display based on the current operating mode.
 //!
-//! Phase 9: semantic scripture matching via Ollama embeddings.
+//! Phase 9: semantic scripture matching via local embeddings.
 //! Phase 10: song title detection + semantic song phrase detection + speech-
 //!           paced line advance for live songs.
 
@@ -12,7 +12,7 @@ use crate::songs::{self, SongSemanticIndex};
 use ow_audio::TranscriptEvent;
 use ow_core::{content_kind, DetectionMode, QueueItem, QueueStatus, ScriptureDetector, SongDetector, SongRef};
 use ow_display::ContentEvent;
-use ow_embed::{OllamaClient, SemanticIndex};
+use ow_embed::{Embedder, SemanticIndex};
 use ow_search::SearchEngine;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex, RwLock};
@@ -51,7 +51,7 @@ pub async fn run_loop(
     mode: Arc<RwLock<DetectionMode>>,
     settings: Arc<RwLock<AudioSettings>>,
     semantic_index: Arc<RwLock<Option<SemanticIndex>>>,
-    ollama: Arc<OllamaClient>,
+    embedder: Arc<dyn Embedder>,
     song_semantic_index: Arc<RwLock<Option<SongSemanticIndex>>>,
     song_refs: Arc<RwLock<Vec<SongRef>>>,
     display_tx: broadcast::Sender<ContentEvent>,
@@ -214,7 +214,13 @@ pub async fn run_loop(
                             .unwrap_or(false);
 
                         if index_ready {
-                            match ollama.embed(&text).await {
+                            let emb_clone = Arc::clone(&embedder);
+                            let text_clone = text.clone();
+                            let embed_result = tokio::task::spawn_blocking(move || {
+                                emb_clone.embed(&text_clone)
+                            })
+                            .await;
+                            match embed_result.map_err(|e| anyhow::anyhow!("{e}")).and_then(|r| r) {
                                 Ok(query_emb) => {
                                     let embed_now = Instant::now();
                                     semantic_last_run = Some(embed_now);
@@ -290,7 +296,13 @@ pub async fn run_loop(
                         let should_run = debounce_elapsed && text != song_semantic_last_text;
 
                         if should_run {
-                            match ollama.embed(&text).await {
+                            let emb_clone = Arc::clone(&embedder);
+                            let text_clone = text.clone();
+                            let embed_result = tokio::task::spawn_blocking(move || {
+                                emb_clone.embed(&text_clone)
+                            })
+                            .await;
+                            match embed_result.map_err(|e| anyhow::anyhow!("{e}")).and_then(|r| r) {
                                 Ok(query_emb) => {
                                     let embed_now = Instant::now();
                                     song_semantic_last_run = Some(embed_now);

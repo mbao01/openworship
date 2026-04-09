@@ -462,9 +462,9 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
           </label>
         </div>
         <p className="text-xs text-smoke mt-2 leading-[1.5]">
-          Uses Ollama + nomic-embed-text (running locally) to detect scripture references
-          even when the exact book/chapter/verse is not spoken. Requires Ollama to be
-          installed and running.
+          Uses a bundled AI model (nomic-embed-text) to detect scripture references
+          even when the exact book/chapter/verse is not spoken. No external setup
+          required.
         </p>
       </div>
 
@@ -480,7 +480,7 @@ function DetectionSection({ settings, onSettingsChange }: DetectionSectionProps)
             <span>
               {semanticStatus.ready
                 ? `Ready — ${semanticStatus.verse_count.toLocaleString()} verses indexed`
-                : "Building index… (Ollama must be running with nomic-embed-text)"}
+                : "Building index…"}
             </span>
           </div>
         </div>
