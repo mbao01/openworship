@@ -4,7 +4,7 @@ use crate::slides::{AnnouncementItem, SermonNote};
 use crate::slides::{save_announcements, save_sermon_notes};
 use crate::songs::Song;
 use crate::state::AppState;
-use ow_audio::{AudioConfig, AudioInputDevice, MockTranscriber, SttStatus, list_input_devices};
+use ow_audio::{AudioConfig, AudioInputDevice, SttStatus, list_input_devices};
 use ow_core::{DetectionMode, QueueItem, QueueStatus, ScriptureDetector};
 use ow_display::ContentEvent;
 use ow_search::VerseResult;
@@ -246,17 +246,7 @@ fn start_stt_with_settings(
         }
     }
 
-    // Debug / CI fallback: mock transcriber.
-    #[cfg(debug_assertions)]
-    {
-        eprintln!("[stt] starting mock transcriber (debug build, no model available)");
-        engine.start(MockTranscriber::new(), config)
-    }
-
-    #[cfg(not(debug_assertions))]
-    {
-        anyhow::bail!("No STT backend available. Download the Whisper model from Settings → Audio.")
-    }
+    anyhow::bail!("No STT backend available. Download the Whisper model from Settings → Audio.")
 }
 
 /// Download the Whisper base.en model to `~/.openworship/models/ggml-base.en.bin`.

@@ -6,35 +6,6 @@ pub trait Transcriber: Send + 'static {
 }
 
 // ---------------------------------------------------------------------------
-// Mock transcriber (always available, used in tests and when model is absent)
-// ---------------------------------------------------------------------------
-
-/// A transcriber that returns a fixed or generated string — useful for tests
-/// and UI development without a real model.
-pub struct MockTranscriber {
-    counter: u32,
-}
-
-impl MockTranscriber {
-    pub fn new() -> Self {
-        Self { counter: 0 }
-    }
-}
-
-impl Default for MockTranscriber {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Transcriber for MockTranscriber {
-    fn transcribe(&mut self, _samples: &[f32]) -> Result<String> {
-        self.counter += 1;
-        Ok(format!("[mock transcript {}]", self.counter))
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Real Whisper transcriber (only compiled with the `whisper` feature)
 // ---------------------------------------------------------------------------
 

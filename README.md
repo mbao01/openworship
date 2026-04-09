@@ -82,7 +82,7 @@ openworship/
 ├── crates/
 │   ├── ow-core/            # Core domain logic (no Tauri deps)
 │   ├── ow-search/          # Tantivy scripture search index
-│   ├── ow-audio/           # Offline STT pipeline (Whisper.cpp, MockTranscriber)
+│   ├── ow-audio/           # Offline STT pipeline (Whisper.cpp, Deepgram)
 │   ├── ow-display/         # Local WebSocket display server
 │   └── ow-db/              # SQLite Bible DB (KJV, WEB, BSB)
 │
