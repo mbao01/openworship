@@ -46,7 +46,7 @@ impl Default for AudioConfig {
     fn default() -> Self {
         Self {
             sample_rate: 16_000,
-            chunk_ms: 500,
+            chunk_ms: 1000,
             context_window_secs: 10,
             device_name: None,
         }
