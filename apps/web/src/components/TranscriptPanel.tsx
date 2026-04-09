@@ -3,6 +3,28 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { TranscriptEvent } from "../lib/types";
 
+// Multipliers for each bar to create a natural equalizer spread
+const BAR_MULTIPLIERS = [0.65, 0.85, 1.0, 0.9, 0.7];
+
+function AudioLevelBars({ level }: { level: number }) {
+  // Boost visibility (same factor as SettingsModal VU meter)
+  const boosted = Math.min(1, level * 3);
+  return (
+    <span className="flex items-end gap-[2px] h-3" aria-hidden="true">
+      {BAR_MULTIPLIERS.map((m, i) => {
+        const pct = Math.max(0.12, boosted * m);
+        return (
+          <span
+            key={i}
+            className="w-[2px] rounded-sm bg-gold transition-all duration-75"
+            style={{ height: `${Math.round(pct * 100)}%` }}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
 interface TranscriptEntry {
   id: number;
   text: string;
@@ -17,6 +39,7 @@ interface Props {
 export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   const [entries, setEntries] = useState<TranscriptEntry[]>([]);
   const [micActive, setMicActive] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [sttWarning, setSttWarning] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -26,6 +49,19 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [entries]);
+
+  // Poll audio level every 100ms while mic is active.
+  useEffect(() => {
+    if (!micActive) {
+      setAudioLevel(0);
+      return;
+    }
+    const id = setInterval(async () => {
+      const level = await invoke<number>("get_audio_level");
+      setAudioLevel(level);
+    }, 100);
+    return () => clearInterval(id);
+  }, [micActive]);
 
   // Subscribe to transcript events from the Tauri backend.
   useEffect(() => {
@@ -88,10 +124,13 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
       <div className="flex items-center justify-between px-6 py-4 border-b border-iron shrink-0">
         <div className="flex items-center gap-2">
           {micActive && (
-            <span
-              className="inline-block w-2 h-2 rounded-full bg-gold [box-shadow:0_0_0_4px_color-mix(in_srgb,var(--color-gold)_25%,transparent)] animate-[transcript-pulse_1.5s_ease-in-out_infinite] shrink-0"
-              aria-hidden="true"
-            />
+            <>
+              <span
+                className="inline-block w-2 h-2 rounded-full bg-gold [box-shadow:0_0_0_4px_color-mix(in_srgb,var(--color-gold)_25%,transparent)] animate-[transcript-pulse_1.5s_ease-in-out_infinite] shrink-0"
+                aria-hidden="true"
+              />
+              <AudioLevelBars level={audioLevel} />
+            </>
           )}
           <span className="text-[11px] font-medium tracking-[0.12em] text-ash uppercase">
             TRANSCRIPT
