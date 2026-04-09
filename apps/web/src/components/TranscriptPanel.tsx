@@ -3,6 +3,29 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { TranscriptEvent } from "../lib/types";
 
+// Multipliers for each bar to create a natural equalizer spread
+const BAR_MULTIPLIERS = [0.65, 0.85, 1.0, 0.9, 0.7];
+
+function AudioLevelBars({ level }: { level: number }) {
+  // Boost visibility (same factor as SettingsModal VU meter)
+  const boosted = Math.min(1, level * 3);
+  const clipping = level > 0.8;
+  return (
+    <span className="flex items-end gap-[2px] h-3" aria-hidden="true">
+      {BAR_MULTIPLIERS.map((m, i) => {
+        const pct = Math.max(0.12, boosted * m);
+        return (
+          <span
+            key={i}
+            className={`w-[2px] rounded-sm transition-all duration-75 ${clipping ? "bg-ember" : "bg-gold"}`}
+            style={{ height: `${Math.round(pct * 100)}%` }}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
 interface TranscriptEntry {
   id: number;
   text: string;
@@ -17,6 +40,7 @@ interface Props {
 export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   const [entries, setEntries] = useState<TranscriptEntry[]>([]);
   const [micActive, setMicActive] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [sttWarning, setSttWarning] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -26,6 +50,16 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [entries]);
+
+  // Poll audio level every 100ms whenever the mic is active.
+  useEffect(() => {
+    if (!micActive) return;
+    const id = setInterval(async () => {
+      const level = await invoke<number>("get_audio_level");
+      setAudioLevel(level);
+    }, 100);
+    return () => clearInterval(id);
+  }, [micActive]);
 
   // Subscribe to transcript events from the Tauri backend.
   useEffect(() => {
@@ -72,11 +106,14 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
     if (micActive) {
       invoke("stop_stt").catch(console.error);
       setMicActive(false);
+      setAudioLevel(0);
       setSttWarning(null);
     } else {
       setError(null);
       setSttWarning(null);
+      setMicActive(true);
       invoke("start_stt").catch((err: unknown) => {
+        setMicActive(false);
         setError(String(err));
       });
     }
@@ -96,6 +133,7 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
           <span className="text-[11px] font-medium tracking-[0.12em] text-ash uppercase">
             TRANSCRIPT
           </span>
+          <AudioLevelBars level={audioLevel} />
         </div>
         <button
           data-qa="transcript-toggle-btn"
@@ -117,7 +155,9 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
           className="flex items-center justify-between gap-2 px-6 py-2 bg-[rgba(201,168,76,0.07)] border-b border-[rgba(201,168,76,0.2)] shrink-0"
           role="alert"
         >
-          <span className="text-[11px] text-gold-muted tracking-wide leading-[1.4]">{sttWarning}</span>
+          <span className="text-[11px] text-gold-muted tracking-wide leading-[1.4]">
+            {sttWarning}
+          </span>
           <button
             data-qa="transcript-stt-warning-dismiss"
             className="bg-transparent border-none text-smoke cursor-pointer text-[10px] px-1 py-0.5 shrink-0 transition-colors leading-none hover:text-ash"
@@ -138,7 +178,9 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
       >
         {entries.length === 0 && !error && (
           <p className="text-sm text-smoke m-0">
-            {micActive ? "Listening\u2026" : "Press START MIC to begin transcription."}
+            {micActive
+              ? "Listening\u2026"
+              : "Press START MIC to begin transcription."}
           </p>
         )}
         {error && <p className="text-[13px] text-ember m-0 mb-2">{error}</p>}

@@ -48,11 +48,16 @@ impl Transcriber for WhisperTranscriber {
         params.set_print_realtime(false);
         params.set_print_timestamps(false);
         params.set_single_segment(true);
+        // Each 1-second chunk is independent; don't carry silence/noise tokens
+        // as context into the next chunk — doing so suppresses real speech.
+        params.set_no_context(true);
 
         // Whisper requires >= 1 second of audio (16_000 samples at 16 kHz).
         // Pad with silence if the chunk is slightly short due to sample rate
-        // conversion rounding.
-        const MIN_SAMPLES: usize = 16_000;
+        // conversion rounding. Use 16_160 (1.01 s) as the target rather than
+        // the bare minimum so a 1-sample rounding error at the C boundary
+        // cannot still trigger the "input too short" log.
+        const MIN_SAMPLES: usize = 16_160;
         let buf;
         let input = if samples.len() < MIN_SAMPLES {
             buf = {
@@ -77,7 +82,9 @@ impl Transcriber for WhisperTranscriber {
                 out.push(' ');
             }
         }
-        Ok(out.trim().to_string())
+        let result = out.trim().to_string();
+        eprintln!("[whisper] n_segs={n} raw={:?} out={:?}", out, result);
+        Ok(result)
     }
 }
 
