@@ -9,6 +9,7 @@ const BAR_MULTIPLIERS = [0.65, 0.85, 1.0, 0.9, 0.7];
 function AudioLevelBars({ level }: { level: number }) {
   // Boost visibility (same factor as SettingsModal VU meter)
   const boosted = Math.min(1, level * 3);
+  const clipping = level > 0.8;
   return (
     <span className="flex items-end gap-[2px] h-3" aria-hidden="true">
       {BAR_MULTIPLIERS.map((m, i) => {
@@ -16,7 +17,7 @@ function AudioLevelBars({ level }: { level: number }) {
         return (
           <span
             key={i}
-            className="w-[2px] rounded-sm bg-gold transition-all duration-75"
+            className={`w-[2px] rounded-sm transition-all duration-75 ${clipping ? "bg-ember" : "bg-gold"}`}
             style={{ height: `${Math.round(pct * 100)}%` }}
           />
         );
