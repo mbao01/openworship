@@ -2,6 +2,13 @@
 
 All notable changes to OpenWorship are documented here.
 
+## [0.3.1.1] - 2026-04-09
+
+### Changed
+
+- `MockTranscriber` removed from the public API of `ow-audio`. It now lives exclusively inside `#[cfg(test)]` in `lib.rs` — test coverage is unchanged, but the mock is no longer accidentally importable by downstream crates or the desktop app.
+- Debug-only STT fallback (`#[cfg(debug_assertions)]` block using `MockTranscriber`) removed from `start_stt_with_settings`. Debug builds without a Whisper model now surface the same "no backend available" error as release builds, preventing silent no-op transcription in debug sessions.
+
 ## [0.3.1.0] - 2026-04-08
 
 ### Added
