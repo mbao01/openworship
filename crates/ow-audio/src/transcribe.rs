@@ -38,6 +38,41 @@ impl WhisperTranscriber {
     }
 }
 
+/// Returns `true` if the text is a Whisper hallucination token rather than
+/// real transcribed speech. Whisper commonly emits bracketed/parenthesised
+/// sound descriptions and filler tokens when it hears non-speech audio.
+#[cfg(feature = "whisper")]
+fn is_hallucination(text: &str) -> bool {
+    let s = text.trim();
+    if s.is_empty() {
+        return true;
+    }
+    // Anything wrapped in [...] or (...) is a sound description, not speech.
+    // e.g. "[Silence]", "[BLANK_AUDIO]", "(humming)", "(keyboard clicking)"
+    if (s.starts_with('[') && s.ends_with(']'))
+        || (s.starts_with('(') && s.ends_with(')'))
+    {
+        return true;
+    }
+    // Catch common hallucinations that appear without brackets.
+    let lower = s.to_lowercase();
+    matches!(
+        lower.as_str(),
+        "blank_audio"
+            | "silence"
+            | "you"
+            | "thank you."
+            | "thanks for watching."
+            | "thanks for watching!"
+            | "thank you for watching."
+            | "thank you for watching!"
+            | "subscribe"
+            | "♪"
+            | "..."
+            | "!"
+    )
+}
+
 #[cfg(feature = "whisper")]
 impl Transcriber for WhisperTranscriber {
     fn transcribe(&mut self, samples: &[f32]) -> Result<String> {
@@ -47,6 +82,7 @@ impl Transcriber for WhisperTranscriber {
         params.set_print_progress(false);
         params.set_print_realtime(false);
         params.set_print_timestamps(false);
+        params.set_print_special(false);
         params.set_single_segment(true);
         // Each 1-second chunk is independent; don't carry silence/noise tokens
         // as context into the next chunk — doing so suppresses real speech.
@@ -57,11 +93,9 @@ impl Transcriber for WhisperTranscriber {
         // every chunk produces at least one segment.
         params.set_no_speech_thold(1.0);
 
-        // Whisper requires >= 1 second of audio (16_000 samples at 16 kHz).
-        // Pad with silence if the chunk is slightly short due to sample rate
-        // conversion rounding. Use 16_160 (1.01 s) as the target rather than
-        // the bare minimum so a 1-sample rounding error at the C boundary
-        // cannot still trigger the "input too short" log.
+        // Whisper requires >= 1 s of audio, but in practice needs ≥1.5 s to
+        // produce any segments at all. Our default chunk is 3 s (48_000 samples).
+        // This padding is a safety net for edge cases / sample-rate rounding.
         const MIN_SAMPLES: usize = 16_160;
         let buf;
         let input = if samples.len() < MIN_SAMPLES {
@@ -83,12 +117,14 @@ impl Transcriber for WhisperTranscriber {
         let mut out = String::new();
         for i in 0..n {
             if let Ok(seg) = self.state.full_get_segment_text(i) {
-                out.push_str(seg.trim_matches(char::is_whitespace));
-                out.push(' ');
+                let trimmed = seg.trim();
+                if !is_hallucination(trimmed) {
+                    out.push_str(trimmed);
+                    out.push(' ');
+                }
             }
         }
         let result = out.trim().to_string();
-        eprintln!("[whisper] n_segs={n} raw={:?} out={:?}", out, result);
         Ok(result)
     }
 }

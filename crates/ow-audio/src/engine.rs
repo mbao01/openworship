@@ -8,6 +8,9 @@ use std::thread;
 use std::time::Instant;
 use tokio::sync::broadcast;
 
+/// Number of consecutive empty-text chunks before emitting a warning event.
+const EMPTY_CHUNK_WARN_THRESHOLD: u32 = 5;
+
 /// Whether the STT engine is currently active.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -86,25 +89,17 @@ impl SttEngine {
         // is safe — we move it into exactly one thread and never share it.
         thread::spawn(move || {
             let capturer = capturer;
+            let mut consecutive_empty: u32 = 0;
             loop {
                 if !running_worker.load(Ordering::Acquire) {
                     break;
                 }
                 match capturer.rx.recv_timeout(std::time::Duration::from_millis(chunk_ms as u64 * 2)) {
                     Ok(samples) => {
-                        let rms = (samples.iter().map(|&s| s * s).sum::<f32>()
-                            / samples.len() as f32)
-                            .sqrt();
-                        eprintln!(
-                            "[stt] chunk: {} samples, rms={:.6}, min={:.4}, max={:.4}",
-                            samples.len(),
-                            rms,
-                            samples.iter().cloned().reduce(f32::min).unwrap_or(0.0),
-                            samples.iter().cloned().reduce(f32::max).unwrap_or(0.0),
-                        );
                         let offset_ms = start.elapsed().as_millis() as u64;
                         match transcriber.transcribe(&samples) {
                             Ok(text) if !text.is_empty() => {
+                                consecutive_empty = 0;
                                 let _ = tx.send(TranscriptEvent {
                                     text,
                                     offset_ms,
@@ -112,8 +107,17 @@ impl SttEngine {
                                     mic_active: true,
                                 });
                             }
-                            Ok(_) => {}
-                            Err(e) => eprintln!("[ow-audio] transcription error: {e}"),
+                            Ok(_) => {
+                                consecutive_empty += 1;
+                                if consecutive_empty == EMPTY_CHUNK_WARN_THRESHOLD {
+                                    eprintln!(
+                                        "[stt] {} consecutive chunks produced no text — \
+                                         model may need re-download (Settings → Audio)",
+                                        consecutive_empty,
+                                    );
+                                }
+                            }
+                            Err(e) => eprintln!("[stt] transcription error: {e}"),
                         }
                     }
                     Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
