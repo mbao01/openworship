@@ -6,6 +6,7 @@ import "./globals.css";
 const geist = Geist({
   variable: "--font-geist",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 const ebGaramond = EB_Garamond({
@@ -23,6 +24,21 @@ export const metadata: Metadata = {
     description:
       "Free, AI-powered worship display software. Detects scripture and lyrics in real time. No manual lookup. No expensive licenses.",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "openworship — AI-powered worship display software",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "openworship — AI-powered worship display software",
+    description:
+      "Free, AI-powered worship display software. Detects scripture and lyrics in real time.",
+    images: ["/og-image.png"],
   },
 };
 

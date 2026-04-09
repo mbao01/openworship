@@ -1,9 +1,4 @@
-const NAV_LINKS = [
-  { label: "Features", href: "#features" },
-  { label: "Modes", href: "#modes" },
-  { label: "Download", href: "#download" },
-  { label: "GitHub", href: "https://github.com/mbao01/openworship", external: true },
-] as const;
+import Link from "next/link";
 
 const HOW_IT_WORKS = [
   {
@@ -48,9 +43,9 @@ const MODES = [
 ] as const;
 
 const DOWNLOAD_BUTTONS = [
-  { label: "macOS (.dmg)", href: "#" },
-  { label: "Windows (.exe)", href: "#" },
-  { label: "Linux (.AppImage)", href: "#" },
+  { label: "macOS (.dmg)" },
+  { label: "Windows (.exe)" },
+  { label: "Linux (.AppImage)" },
 ] as const;
 
 const FOOTER_LINKS = [
@@ -72,19 +67,34 @@ export default function Home() {
           backdropFilter: "blur(8px)",
         }}
       >
-        <span
+        <Link
+          href="/"
           style={{
             color: "#efefef",
             fontFamily: "var(--font-geist)",
             fontSize: "14px",
             fontWeight: 500,
             letterSpacing: "-0.01em",
+            textDecoration: "none",
           }}
         >
           openworship
-        </span>
-        <nav className="hidden md:flex items-center gap-8">
-          {NAV_LINKS.map(({ label, href, ...rest }) => (
+        </Link>
+
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-8" aria-label="Main navigation">
+          {(
+            [
+              { label: "Features", href: "#features" },
+              { label: "Modes", href: "#modes" },
+              { label: "Download", href: "#download" },
+              {
+                label: "GitHub",
+                href: "https://github.com/mbao01/openworship",
+                external: true,
+              },
+            ] as const
+          ).map(({ label, href, ...rest }) => (
             <a
               key={label}
               href={href}
@@ -97,6 +107,52 @@ export default function Home() {
             </a>
           ))}
         </nav>
+
+        {/* Mobile nav — CSS-only disclosure */}
+        <details className="md:hidden relative">
+          <summary
+            className="list-none cursor-pointer select-none"
+            style={{ color: "#808080", fontSize: "20px", lineHeight: 1 }}
+            aria-label="Open navigation menu"
+          >
+            ☰
+          </summary>
+          <nav
+            className="absolute right-0 top-full flex flex-col gap-4 p-4 z-50"
+            style={{
+              background: "#141414",
+              border: "1px solid #2a2a2a",
+              minWidth: "160px",
+              marginTop: "8px",
+              borderRadius: "4px",
+            }}
+            aria-label="Mobile navigation"
+          >
+            {(
+              [
+                { label: "Features", href: "#features" },
+                { label: "Modes", href: "#modes" },
+                { label: "Download", href: "#download" },
+                {
+                  label: "GitHub",
+                  href: "https://github.com/mbao01/openworship",
+                  external: true,
+                },
+              ] as const
+            ).map(({ label, href, ...rest }) => (
+              <a
+                key={label}
+                href={href}
+                className="nav-link text-sm"
+                {...("external" in rest && rest.external
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        </details>
       </header>
 
       <main className="mx-auto w-full" style={{ maxWidth: "1200px", padding: "0 24px" }}>
@@ -171,7 +227,7 @@ export default function Home() {
                   textDecoration: "none",
                 }}
               >
-                Watch Demo
+                View on GitHub →
               </a>
             </div>
           </div>
@@ -429,14 +485,16 @@ export default function Home() {
               No account required. No telemetry. Your data stays on your machine.
             </p>
             <div className="flex flex-wrap gap-4 mb-6">
-              {DOWNLOAD_BUTTONS.map(({ label, href }) => (
-                <a
+              {DOWNLOAD_BUTTONS.map(({ label }) => (
+                <button
                   key={label}
-                  href={href}
+                  aria-disabled="true"
+                  title="Coming soon"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    gap: "8px",
                     padding: "10px 20px",
                     background: "linear-gradient(135deg, #e6c364 0%, #c9a84c 100%)",
                     color: "#0a0a0a",
@@ -444,11 +502,24 @@ export default function Home() {
                     fontSize: "14px",
                     fontWeight: 600,
                     borderRadius: "4px",
-                    textDecoration: "none",
+                    border: "none",
+                    cursor: "not-allowed",
+                    opacity: 0.6,
                   }}
                 >
                   {label}
-                </a>
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 500,
+                      padding: "1px 5px",
+                      background: "rgba(0,0,0,0.2)",
+                      borderRadius: "3px",
+                    }}
+                  >
+                    Soon
+                  </span>
+                </button>
               ))}
             </div>
             <a
@@ -472,16 +543,18 @@ export default function Home() {
           className="mx-auto flex items-center justify-between"
           style={{ maxWidth: "1200px" }}
         >
-          <span
+          <Link
+            href="/"
             style={{
               color: "#4a4a4a",
               fontFamily: "var(--font-geist)",
               fontSize: "14px",
+              textDecoration: "none",
             }}
           >
             openworship
-          </span>
-          <nav className="flex items-center gap-6">
+          </Link>
+          <nav className="flex items-center gap-6" aria-label="Footer navigation">
             {FOOTER_LINKS.map(({ label, href }) => (
               <a
                 key={label}

@@ -57,9 +57,9 @@ body {
   border-left-color: #c9a84c;
 }
 
-/* Footer link hover */
+/* Footer link hover — #808080 meets WCAG AA against #0a0a0a */
 .footer-link {
-  color: #4a4a4a;
+  color: #808080;
   text-decoration: none;
   transition: color 150ms;
 }
