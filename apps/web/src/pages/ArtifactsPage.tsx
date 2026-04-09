@@ -17,9 +17,13 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
   SidebarSeparator,
@@ -423,19 +427,16 @@ function ArtifactsSidebar({
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="pl-4 pt-[2px]">
+                    <SidebarMenuSub>
                       {["Downtown", "Westside", "Youth Campus"].map((branch) => (
-                        <SidebarMenuButton
-                          key={branch}
-                          tooltip={branch}
-                          size="sm"
-                          className="text-sidebar-foreground/60 hover:text-sidebar-foreground pl-2"
-                        >
-                          <span className="size-1.5 rounded-full bg-current shrink-0" />
-                          <span>{branch}</span>
-                        </SidebarMenuButton>
+                        <SidebarMenuSubItem key={branch}>
+                          <SidebarMenuSubButton>
+                            <span className="size-1.5 rounded-full bg-current shrink-0" />
+                            <span>{branch}</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
                       ))}
-                    </div>
+                    </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>
               </Collapsible>
@@ -1110,9 +1111,17 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
 
   return (
     <SidebarProvider>
-    <div
+    <ArtifactsSidebar
+      projects={projects}
+      nav={nav}
+      onNav={handleNav}
+      usage={storageUsage}
+      cloudExpanded={cloudExpanded}
+      onToggleCloud={() => setCloudExpanded((v) => !v)}
+    />
+    <SidebarInset
       data-qa="artifacts-root"
-      className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden w-full"
+      className="flex flex-col h-screen overflow-hidden bg-void text-chalk font-sans"
     >
       {/* ── Topbar ─────────────────────────────────────────────────────────── */}
       <header
@@ -1217,15 +1226,6 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
-        <ArtifactsSidebar
-          projects={projects}
-          nav={nav}
-          onNav={handleNav}
-          usage={storageUsage}
-          cloudExpanded={cloudExpanded}
-          onToggleCloud={() => setCloudExpanded((v) => !v)}
-        />
-
         <main className="flex-1 flex flex-col overflow-hidden bg-void min-w-0">
           {/* Section header */}
           <div className="flex items-center justify-between px-5 py-[10px] border-b border-iron shrink-0">
@@ -1580,7 +1580,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           }}
         />
       )}
-    </div>
+    </SidebarInset>
     </SidebarProvider>
   );
 }
