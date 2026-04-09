@@ -66,26 +66,10 @@ function AppInner() {
   // Load identity and initial theme from persisted settings.
   useEffect(() => {
     invoke<ChurchIdentity | null>("get_identity")
-      .then(() =>
-        setIdentity({
-          church_id: "5e620479-681e-489b-9cfb-23f838be3cc2",
-          church_name: "The New Church",
-          branch_id: "8d31851f-bfbd-4615-9836-c3380b8b8ddb",
-          branch_name: "Lekki HQ",
-          role: "hq",
-          invite_code: "5E620479",
-        }),
-      )
+      .then((id) => setIdentity(id ?? undefined))
       .catch((e) => {
         console.error("[app] failed to load identity:", e);
-        setIdentity({
-          church_id: "5e620479-681e-489b-9cfb-23f838be3cc2",
-          church_name: "The New Church",
-          branch_id: "8d31851f-bfbd-4615-9836-c3380b8b8ddb",
-          branch_name: "Lekki HQ",
-          role: "hq",
-          invite_code: "5E620479",
-        });
+        setIdentity(undefined);
       });
 
     invoke<AudioSettings>("get_audio_settings")
