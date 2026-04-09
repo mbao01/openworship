@@ -1,134 +1,195 @@
-//! Semantic scripture matching via Ollama nomic-embed-text embeddings.
+//! Semantic scripture matching via local text embeddings.
 //!
 //! Provides:
-//! - [`OllamaClient`] — async HTTP client for the Ollama embeddings API.
+//! - [`Embedder`] — trait abstracting over embedding backends (sync).
+//! - [`LocalEmbedder`] — bundled fastembed (ONNX Runtime + nomic-embed-text-v1.5).
 //! - [`SemanticIndex`] — in-memory cosine-similarity search over all embedded verses.
 //! - [`SemanticMatch`] — a matched verse with a similarity score.
 //!
-//! Graceful degradation: when Ollama is not running, [`OllamaClient::is_available`]
-//! returns `false` and callers can skip semantic search entirely.
+//! When the `ollama` feature is enabled, [`OllamaClient`] is also available as an
+//! alternative backend that delegates to a running Ollama server.
 
-use anyhow::{bail, Context, Result};
+use anyhow::Result;
 use ow_search::VerseResult;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-// ─── Default Ollama base URL ──────────────────────────────────────────────────
+// ─── Embedder trait ─────────────────────────────────────────────────────────
 
-const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
-const EMBED_MODEL: &str = "nomic-embed-text";
-
-// ─── Ollama HTTP client ───────────────────────────────────────────────────────
-
-/// Async HTTP client for the Ollama local inference server.
+/// Trait abstracting over embedding backends.
 ///
-/// Calls `/api/embeddings` to generate dense vector embeddings using the
-/// `nomic-embed-text` model.
-#[derive(Clone)]
-pub struct OllamaClient {
-    base_url: String,
-    client: reqwest::Client,
+/// All methods are **sync**. Callers running in an async context should wrap
+/// calls with `tokio::task::spawn_blocking`.
+pub trait Embedder: Send + Sync {
+    /// Generate a dense embedding vector for a single text.
+    fn embed(&self, text: &str) -> Result<Vec<f32>>;
+
+    /// Embed a batch of texts. Returns embeddings in the same order.
+    fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+        texts.iter().map(|t| self.embed(t)).collect()
+    }
 }
 
-#[derive(Serialize)]
-struct EmbedRequest<'a> {
-    model: &'a str,
-    prompt: &'a str,
+// ─── LocalEmbedder (fastembed / ONNX Runtime) ───────────────────────────────
+
+/// Bundled embedding model using fastembed (ONNX Runtime + nomic-embed-text-v1.5).
+///
+/// The model is auto-downloaded on first use (~137 MB) and cached at
+/// `~/.cache/fastembed/`. No external server required.
+pub struct LocalEmbedder {
+    model: std::sync::Mutex<fastembed::TextEmbedding>,
 }
 
-#[derive(Deserialize)]
-struct EmbedResponse {
-    embedding: Vec<f32>,
-}
-
-#[derive(Deserialize)]
-struct VersionResponse {
-    #[allow(dead_code)]
-    version: String,
-}
-
-impl OllamaClient {
-    /// Create a client pointing at the default Ollama URL (`http://localhost:11434`).
-    pub fn new() -> Self {
-        Self::with_url(DEFAULT_OLLAMA_URL)
-    }
-
-    pub fn with_url(base_url: &str) -> Self {
-        Self {
-            base_url: base_url.trim_end_matches('/').to_owned(),
-            client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(30))
-                .build()
-                .expect("failed to build reqwest client"),
-        }
-    }
-
-    /// Return `true` if Ollama is reachable and `nomic-embed-text` is available.
-    pub async fn is_available(&self) -> bool {
-        let url = format!("{}/api/version", self.base_url);
-        match self.client.get(&url).send().await {
-            Ok(resp) if resp.status().is_success() => {
-                // Also check the model is pulled
-                let version_ok = resp.json::<VersionResponse>().await.is_ok();
-                if !version_ok {
-                    return false;
-                }
-                // Quick check: try a tiny embed; fail fast
-                self.embed("test").await.is_ok()
-            }
-            _ => false,
-        }
-    }
-
-    /// Generate a dense embedding vector for the given text.
-    pub async fn embed(&self, text: &str) -> Result<Vec<f32>> {
-        let url = format!("{}/api/embeddings", self.base_url);
-        let resp = self
-            .client
-            .post(&url)
-            .json(&EmbedRequest {
-                model: EMBED_MODEL,
-                prompt: text,
-            })
-            .send()
-            .await
-            .context("failed to reach Ollama")?;
-
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
-            bail!("Ollama returned {status}: {body}");
-        }
-
-        let data: EmbedResponse = resp
-            .json()
-            .await
-            .context("failed to parse Ollama embedding response")?;
-
-        if data.embedding.is_empty() {
-            bail!("Ollama returned empty embedding");
-        }
-
-        Ok(data.embedding)
-    }
-
-    /// Embed a batch of texts sequentially. Returns embeddings in the same order.
+impl LocalEmbedder {
+    /// Initialise the local embedding model.
     ///
-    /// Unlike a true batch API this just calls [`embed`] for each item, which
-    /// is fine for the startup pre-embedding path where latency is not critical.
-    pub async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
-        let mut results = Vec::with_capacity(texts.len());
-        for text in texts {
-            results.push(self.embed(text).await?);
-        }
-        Ok(results)
+    /// On first run this downloads the ONNX weights (~137 MB) into
+    /// `~/.openworship/.cache/fastembed/`. Subsequent launches load from cache.
+    pub fn new() -> Result<Self> {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+        let cache_dir = std::path::PathBuf::from(home)
+            .join(".openworship")
+            .join(".cache")
+            .join("fastembed");
+
+        let model = fastembed::TextEmbedding::try_new(
+            fastembed::InitOptions::new(fastembed::EmbeddingModel::NomicEmbedTextV15)
+                .with_cache_dir(cache_dir)
+                .with_show_download_progress(true),
+        )?;
+        Ok(Self {
+            model: std::sync::Mutex::new(model),
+        })
     }
 }
 
-impl Default for OllamaClient {
-    fn default() -> Self {
-        Self::new()
+impl Embedder for LocalEmbedder {
+    fn embed(&self, text: &str) -> Result<Vec<f32>> {
+        let model = self.model.lock().map_err(|e| anyhow::anyhow!("lock poisoned: {e}"))?;
+        let mut results = model.embed(vec![text], None)?;
+        results
+            .pop()
+            .ok_or_else(|| anyhow::anyhow!("empty embedding result"))
+    }
+
+    fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+        let model = self.model.lock().map_err(|e| anyhow::anyhow!("lock poisoned: {e}"))?;
+        let owned: Vec<String> = texts.iter().map(|s| s.to_string()).collect();
+        model.embed(owned, None)
     }
 }
+
+// ─── OllamaClient (optional, feature-gated) ────────────────────────────────
+
+#[cfg(feature = "ollama")]
+mod ollama {
+    use anyhow::{bail, Context, Result};
+    use serde::{Deserialize, Serialize};
+
+    const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
+    const EMBED_MODEL: &str = "nomic-embed-text";
+
+    /// Async HTTP client for the Ollama local inference server.
+    #[derive(Clone)]
+    pub struct OllamaClient {
+        base_url: String,
+        client: reqwest::Client,
+    }
+
+    #[derive(Serialize)]
+    struct EmbedRequest<'a> {
+        model: &'a str,
+        prompt: &'a str,
+    }
+
+    #[derive(Deserialize)]
+    struct EmbedResponse {
+        embedding: Vec<f32>,
+    }
+
+    #[derive(Deserialize)]
+    struct VersionResponse {
+        #[allow(dead_code)]
+        version: String,
+    }
+
+    impl OllamaClient {
+        pub fn new() -> Self {
+            Self::with_url(DEFAULT_OLLAMA_URL)
+        }
+
+        pub fn with_url(base_url: &str) -> Self {
+            Self {
+                base_url: base_url.trim_end_matches('/').to_owned(),
+                client: reqwest::Client::builder()
+                    .timeout(std::time::Duration::from_secs(30))
+                    .build()
+                    .expect("failed to build reqwest client"),
+            }
+        }
+
+        pub async fn is_available(&self) -> bool {
+            let url = format!("{}/api/version", self.base_url);
+            match self.client.get(&url).send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    let version_ok = resp.json::<VersionResponse>().await.is_ok();
+                    if !version_ok {
+                        return false;
+                    }
+                    self.embed_async("test").await.is_ok()
+                }
+                _ => false,
+            }
+        }
+
+        pub async fn embed_async(&self, text: &str) -> Result<Vec<f32>> {
+            let url = format!("{}/api/embeddings", self.base_url);
+            let resp = self
+                .client
+                .post(&url)
+                .json(&EmbedRequest {
+                    model: EMBED_MODEL,
+                    prompt: text,
+                })
+                .send()
+                .await
+                .context("failed to reach Ollama")?;
+
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let body = resp.text().await.unwrap_or_default();
+                bail!("Ollama returned {status}: {body}");
+            }
+
+            let data: EmbedResponse = resp
+                .json()
+                .await
+                .context("failed to parse Ollama embedding response")?;
+
+            if data.embedding.is_empty() {
+                bail!("Ollama returned empty embedding");
+            }
+
+            Ok(data.embedding)
+        }
+    }
+
+    impl Default for OllamaClient {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    impl super::Embedder for OllamaClient {
+        fn embed(&self, text: &str) -> Result<Vec<f32>> {
+            // Block on the async method. Only suitable from a blocking context.
+            let rt = tokio::runtime::Handle::current();
+            rt.block_on(self.embed_async(text))
+        }
+    }
+}
+
+#[cfg(feature = "ollama")]
+pub use ollama::OllamaClient;
 
 // ─── Cosine similarity ────────────────────────────────────────────────────────
 
@@ -161,8 +222,9 @@ pub struct SemanticMatch {
 
 /// In-memory vector index of embedded scripture verses.
 ///
-/// Built at startup by embedding every verse through Ollama.  Exposes
-/// [`SemanticIndex::search`] for cosine-similarity lookup.
+/// Built at startup by embedding every verse through the configured
+/// [`Embedder`].  Exposes [`SemanticIndex::search`] for cosine-similarity
+/// lookup.
 pub struct SemanticIndex {
     entries: Vec<(VerseResult, Vec<f32>)>,
 }
@@ -217,31 +279,29 @@ impl SemanticIndex {
 
 // ─── Index builder ────────────────────────────────────────────────────────────
 
-/// Embed all `verses` via `client` and return a ready [`SemanticIndex`].
+/// Embed all `verses` via the given [`Embedder`] and return a ready
+/// [`SemanticIndex`].
 ///
-/// This is called from a background Tokio task at app startup so that the
-/// main thread is never blocked.  Progress is logged to stderr.
-pub async fn build_index(
-    client: &OllamaClient,
+/// This is a **sync** function. Callers should run it inside
+/// `tokio::task::spawn_blocking` so the main thread is never blocked.
+/// Verses are embedded in batches of 256 for throughput.
+pub fn build_index(
+    embedder: &dyn Embedder,
     verses: &[VerseResult],
 ) -> Result<SemanticIndex> {
     let total = verses.len();
     eprintln!("[embed] building semantic index for {total} verses…");
 
-    let mut entries = Vec::with_capacity(total);
-    for (i, verse) in verses.iter().enumerate() {
-        // Embed the verse text (not the reference) for best semantic coverage.
-        let embedding = client
-            .embed(&verse.text)
-            .await
-            .with_context(|| format!("failed to embed verse {}", verse.reference))?;
+    let texts: Vec<&str> = verses.iter().map(|v| v.text.as_str()).collect();
 
-        entries.push((verse.clone(), embedding));
-
-        if (i + 1) % 100 == 0 || i + 1 == total {
-            eprintln!("[embed] {}/{total} verses embedded", i + 1);
-        }
+    let mut all_embeddings = Vec::with_capacity(total);
+    for chunk in texts.chunks(256) {
+        let embeddings = embedder.embed_batch(chunk)?;
+        all_embeddings.extend(embeddings);
+        eprintln!("[embed] {}/{total} verses embedded", all_embeddings.len());
     }
+
+    let entries: Vec<_> = verses.iter().cloned().zip(all_embeddings).collect();
 
     eprintln!("[embed] semantic index ready ({total} verses)");
     Ok(SemanticIndex::new(entries))

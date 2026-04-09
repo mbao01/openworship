@@ -9,7 +9,7 @@ use ow_core::{DetectionMode, QueueItem, QueueStatus, ScriptureDetector};
 use ow_display::ContentEvent;
 use ow_search::VerseResult;
 use std::collections::VecDeque;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 
@@ -966,8 +966,8 @@ pub fn get_semantic_status(state: State<'_, AppState>) -> Result<SemanticStatus,
 
 /// Perform an on-demand semantic scripture search against the embedded index.
 ///
-/// Embeds `query` via Ollama and returns the top semantically similar verses.
-/// Returns an empty list when the index is not ready or Ollama is unavailable.
+/// Embeds `query` locally and returns the top semantically similar verses.
+/// Returns an empty list when the index is not ready.
 #[tauri::command]
 pub async fn search_semantic(
     query: String,
@@ -994,10 +994,11 @@ pub async fn search_semantic(
         return Ok(vec![]);
     }
 
-    let embedding = state
-        .ollama
-        .embed(&query)
+    let embedder = Arc::clone(&state.embedder);
+    let q = query.clone();
+    let embedding = tokio::task::spawn_blocking(move || embedder.embed(&q))
         .await
+        .map_err(|e| format!("embed task failed: {e}"))?
         .map_err(|e| format!("embed failed: {e}"))?;
 
     let effective_threshold = threshold.unwrap_or(0.75);

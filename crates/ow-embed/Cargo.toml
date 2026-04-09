@@ -3,10 +3,15 @@ name = "ow-embed"
 version = "0.0.1"
 edition = "2021"
 
+[features]
+default = []
+ollama = ["reqwest", "serde_json"]
+
 [dependencies]
 serde = { workspace = true }
-serde_json = { workspace = true }
+serde_json = { workspace = true, optional = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, features = ["json"], optional = true }
+fastembed = "4"
 ow-search = { path = "../ow-search" }

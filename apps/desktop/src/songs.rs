@@ -103,8 +103,11 @@ impl SongSemanticIndex {
 ///
 /// Embeds the first substantive lyric section of each song (title + verse 1
 /// / chorus) so mid-lyric phrases in the transcript can trigger a match.
-pub async fn build_song_semantic_index(
-    client: &ow_embed::OllamaClient,
+///
+/// This is a **sync** function. Callers should run it inside
+/// `tokio::task::spawn_blocking`.
+pub fn build_song_semantic_index(
+    embedder: &dyn ow_embed::Embedder,
     songs: &[Song],
 ) -> Result<SongSemanticIndex> {
     let total = songs.len();
@@ -113,19 +116,20 @@ pub async fn build_song_semantic_index(
     }
     eprintln!("[song-embed] building semantic index for {total} songs…");
 
-    let mut entries = Vec::with_capacity(total);
-    for song in songs {
-        // Embed a representative sample: title + first ~200 chars of lyrics.
-        let sample = lyric_sample(&song.title, &song.lyrics);
-        match client.embed(&sample).await {
-            Ok(emb) => {
-                entries.push((song.id, song.title.clone(), emb));
-            }
-            Err(e) => {
-                eprintln!("[song-embed] failed for '{}': {e}", song.title);
-            }
-        }
-    }
+    let samples: Vec<String> = songs
+        .iter()
+        .map(|s| lyric_sample(&s.title, &s.lyrics))
+        .collect();
+    let sample_refs: Vec<&str> = samples.iter().map(|s| s.as_str()).collect();
+
+    let embeddings = embedder.embed_batch(&sample_refs)?;
+
+    let entries: Vec<_> = songs
+        .iter()
+        .zip(embeddings)
+        .map(|(song, emb)| (song.id, song.title.clone(), emb))
+        .collect();
+
     eprintln!("[song-embed] semantic index ready ({} songs)", entries.len());
     Ok(SongSemanticIndex::new(entries))
 }

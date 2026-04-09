@@ -9,7 +9,7 @@ use crate::summaries::{EmailSettings, EmailSubscriber, ServiceSummary};
 use ow_audio::{SttEngine, SttStatus};
 use ow_core::{DetectionMode, QueueItem, SongRef};
 use ow_display::ContentEvent;
-use ow_embed::{OllamaClient, SemanticIndex};
+use ow_embed::{Embedder, SemanticIndex};
 use ow_search::SearchEngine;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, RwLock};
@@ -37,10 +37,10 @@ pub struct AppState {
     /// Global content bank, persisted to `~/.openworship/content_bank.json`.
     pub content_bank: Arc<RwLock<Vec<ContentBankEntry>>>,
     /// Scripture semantic index — `None` until the background embedding task
-    /// completes (or when Ollama is not available).
+    /// completes.
     pub semantic_index: Arc<RwLock<Option<SemanticIndex>>>,
-    /// Ollama client used for real-time query embedding during detection.
-    pub ollama: Arc<OllamaClient>,
+    /// Embedding backend used for real-time query embedding during detection.
+    pub embedder: Arc<dyn Embedder>,
     /// Song library database.
     pub songs_db: Arc<Mutex<SongsDb>>,
     /// Semantic index over song lyric phrases.

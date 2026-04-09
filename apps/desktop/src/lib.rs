@@ -17,7 +17,7 @@ mod summaries;
 
 use ow_audio::SttEngine;
 use ow_core::{DetectionMode, QueueItem, SongRef};
-use ow_embed::{OllamaClient, SemanticIndex};
+use ow_embed::SemanticIndex;
 use settings::{AudioSettings, DisplaySettings};
 use songs::SongsDb;
 use state::AppState;
@@ -69,7 +69,9 @@ pub fn run() {
 
     // ── Semantic scripture index (Phase 9) ────────────────────────────────────
     let semantic_index: Arc<RwLock<Option<SemanticIndex>>> = Arc::new(RwLock::new(None));
-    let ollama = Arc::new(OllamaClient::new());
+    let embedder: Arc<dyn ow_embed::Embedder> = Arc::new(
+        ow_embed::LocalEmbedder::new().expect("failed to initialize embedding model"),
+    );
 
     let verse_results: Vec<ow_search::VerseResult> = verses
         .iter()
@@ -163,18 +165,18 @@ pub fn run() {
     let detect_queue = Arc::clone(&queue);
     let detect_settings = Arc::clone(&audio_settings);
     let detect_semantic = Arc::clone(&semantic_index);
-    let detect_ollama = Arc::clone(&ollama);
+    let detect_embedder = Arc::clone(&embedder);
     let detect_song_semantic = Arc::clone(&song_semantic_index);
     let detect_song_refs = Arc::clone(&song_refs);
     let detect_translation = Arc::clone(&active_translation);
 
     // ── Clone Arcs for background embedding tasks ─────────────────────────────
     let embed_index = Arc::clone(&semantic_index);
-    let embed_ollama = Arc::clone(&ollama);
+    let embed_embedder = Arc::clone(&embedder);
     let embed_settings = Arc::clone(&audio_settings);
     let song_embed_db = Arc::clone(&songs_db);
     let song_embed_index = Arc::clone(&song_semantic_index);
-    let song_embed_ollama = Arc::clone(&ollama);
+    let song_embed_embedder = Arc::clone(&embedder);
 
     let app_state = AppState {
         search,
@@ -189,7 +191,7 @@ pub fn run() {
         active_project_id,
         content_bank,
         semantic_index,
-        ollama,
+        embedder,
         songs_db,
         song_semantic_index,
         song_refs,
@@ -223,7 +225,7 @@ pub fn run() {
                 detect_mode,
                 detect_settings,
                 detect_semantic,
-                detect_ollama,
+                detect_embedder,
                 detect_song_semantic,
                 detect_song_refs,
                 tx_for_detect,
@@ -241,27 +243,25 @@ pub fn run() {
                     eprintln!("[embed] semantic search disabled by settings");
                     return;
                 }
-                if !embed_ollama.is_available().await {
-                    eprintln!("[embed] Ollama not available — semantic search disabled");
-                    return;
-                }
-                match ow_embed::build_index(&embed_ollama, &verse_results).await {
-                    Ok(index) => {
+                let result = tokio::task::spawn_blocking(move || {
+                    ow_embed::build_index(&*embed_embedder, &verse_results)
+                })
+                .await;
+                match result {
+                    Ok(Ok(index)) => {
                         let count = index.len();
                         if let Ok(mut guard) = embed_index.write() {
                             *guard = Some(index);
                         }
                         eprintln!("[embed] semantic index ready ({count} verses)");
                     }
-                    Err(e) => eprintln!("[embed] failed to build semantic index: {e}"),
+                    Ok(Err(e)) => eprintln!("[embed] failed to build semantic index: {e}"),
+                    Err(e) => eprintln!("[embed] embedding task panicked: {e}"),
                 }
             });
 
             // Background: embed song lyrics for semantic song detection.
             tauri::async_runtime::spawn(async move {
-                if !song_embed_ollama.is_available().await {
-                    return;
-                }
                 let all_songs = {
                     match song_embed_db.lock() {
                         Ok(db) => db.list_songs().unwrap_or_default(),
@@ -271,15 +271,20 @@ pub fn run() {
                 if all_songs.is_empty() {
                     return;
                 }
-                match songs::build_song_semantic_index(&song_embed_ollama, &all_songs).await {
-                    Ok(index) => {
+                let result = tokio::task::spawn_blocking(move || {
+                    songs::build_song_semantic_index(&*song_embed_embedder, &all_songs)
+                })
+                .await;
+                match result {
+                    Ok(Ok(index)) => {
                         let count = index.len();
                         if let Ok(mut guard) = song_embed_index.write() {
                             *guard = Some(index);
                         }
                         eprintln!("[song-embed] song semantic index ready ({count} entries)");
                     }
-                    Err(e) => eprintln!("[song-embed] failed: {e}"),
+                    Ok(Err(e)) => eprintln!("[song-embed] failed: {e}"),
+                    Err(e) => eprintln!("[song-embed] embedding task panicked: {e}"),
                 }
             });
 
