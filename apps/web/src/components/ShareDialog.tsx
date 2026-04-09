@@ -1,58 +1,85 @@
 import { useEffect, useState } from "react";
 import { invoke } from "../lib/tauri";
-import type { AccessLevel, AclEntry, ArtifactEntry, BranchPermission, CloudSyncInfo, StorageUsage } from "../lib/types";
+import type {
+  AccessLevel,
+  AclEntry,
+  ArtifactEntry,
+  BranchPermission,
+  CloudSyncInfo,
+} from "../lib/types";
 
-// ─── Copy button ──────────────────────────────────────────────────────────────
+// ─── Permission dropdown ──────────────────────────────────────────────────────
 
-function CopyLinkButton({ artifactId }: { artifactId: string }) {
-  const [copied, setCopied] = useState(false);
-  const [link, setLink] = useState<string | null>(null);
-
-  const handleCopy = async () => {
-    try {
-      const url = await invoke<string | null>("copy_artifact_link", { artifactId });
-      if (!url) { alert("Artifact is not synced to cloud yet."); return; }
-      setLink(url);
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e) {
-      alert(String(e));
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-[10px]">
-      {link && (
-        <span className="flex-1 text-[11px] font-mono text-ash overflow-hidden text-ellipsis whitespace-nowrap" title={link}>
-          {link.length > 60 ? link.slice(0, 57) + "…" : link}
-        </span>
-      )}
-      <button
-        className="bg-transparent border border-gold text-gold font-sans text-[11px] px-3 py-[5px] rounded cursor-pointer whitespace-nowrap transition-colors hover:bg-gold/[0.1]"
-        onClick={handleCopy}
-      >
-        {copied ? "✓ Copied" : "Copy link"}
-      </button>
-    </div>
-  );
-}
-
-// ─── Permission selector ──────────────────────────────────────────────────────
-
-function PermissionSelect({
-  value, onChange,
-}: { value: BranchPermission; onChange: (p: BranchPermission) => void }) {
+function PermSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: BranchPermission;
+  onChange?: (p: BranchPermission) => void;
+  disabled?: boolean;
+}) {
   return (
     <select
-      className="bg-obsidian border border-iron text-chalk font-sans text-[11px] px-[6px] py-[3px] rounded-[3px] cursor-pointer"
+      className="appearance-none bg-obsidian border border-iron text-chalk font-sans text-[11px] px-[8px] py-[4px] pr-[22px] rounded-[3px] cursor-pointer outline-none focus:border-gold transition-colors disabled:opacity-50 disabled:cursor-default"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234a4a4a' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 7px center",
+      }}
       value={value}
-      onChange={(e) => onChange(e.target.value as BranchPermission)}
+      onChange={(e) => onChange?.(e.target.value as BranchPermission)}
+      disabled={disabled}
     >
       <option value="view">Can view</option>
       <option value="comment">Can comment</option>
       <option value="edit">Can edit</option>
     </select>
+  );
+}
+
+// ─── File icon ────────────────────────────────────────────────────────────────
+
+function FileIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M5 2.5h7l4 4v11H5v-15Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 2.5V6.5H16"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ─── Branch avatar ────────────────────────────────────────────────────────────
+
+function BranchAvatar({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  // Simple deterministic color from name
+  const hues = [220, 140, 30, 280, 0, 180];
+  const hue = hues[name.charCodeAt(0) % hues.length];
+
+  return (
+    <div
+      className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-chalk shrink-0"
+      style={{ background: `hsl(${hue}, 30%, 28%)`, border: `1px solid hsl(${hue}, 30%, 35%)` }}
+    >
+      {initials}
+    </div>
   );
 }
 
@@ -65,21 +92,27 @@ interface ShareDialogProps {
   onSyncToggled: () => void;
 }
 
-export function ShareDialog({ artifact, syncInfo, onClose, onSyncToggled }: ShareDialogProps) {
+export function ShareDialog({
+  artifact,
+  syncInfo,
+  onClose,
+  onSyncToggled,
+}: ShareDialogProps) {
   const [acl, setAcl] = useState<AclEntry[]>([]);
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("restricted");
-  const [newBranchId, setNewBranchId] = useState("");
-  const [newBranchName, setNewBranchName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [newPerm, setNewPerm] = useState<BranchPermission>("view");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [usage, setUsage] = useState<StorageUsage | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     invoke<[AclEntry[], AccessLevel]>("get_artifact_acl", { artifactId: artifact.id })
-      .then(([entries, level]) => { setAcl(entries); setAccessLevel(level); })
+      .then(([entries, level]) => {
+        setAcl(entries);
+        setAccessLevel(level);
+      })
       .catch(() => {});
-    invoke<StorageUsage>("get_storage_usage").then(setUsage).catch(() => {});
   }, [artifact.id]);
 
   const handleSave = async () => {
@@ -95,43 +128,55 @@ export function ShareDialog({ artifact, syncInfo, onClose, onSyncToggled }: Shar
     }
   };
 
-  const addBranch = () => {
-    const id = newBranchId.trim();
-    const name = newBranchName.trim();
-    if (!id || !name) return;
-    if (acl.some((e) => e.branch_id === id)) return;
-    setAcl((prev) => [...prev, { branch_id: id, branch_name: name, permission: newPerm }]);
-    setNewBranchId(""); setNewBranchName("");
+  const handleShare = () => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    // Treat input as branch name (use as both id and name)
+    if (acl.some((e) => e.branch_name.toLowerCase() === q.toLowerCase())) return;
+    setAcl((prev) => [...prev, { branch_id: q, branch_name: q, permission: newPerm }]);
+    setSearchQuery("");
   };
 
   const removeBranch = (branchId: string) =>
     setAcl((prev) => prev.filter((e) => e.branch_id !== branchId));
 
   const updatePerm = (branchId: string, perm: BranchPermission) =>
-    setAcl((prev) => prev.map((e) => e.branch_id === branchId ? { ...e, permission: perm } : e));
+    setAcl((prev) =>
+      prev.map((e) => (e.branch_id === branchId ? { ...e, permission: perm } : e))
+    );
 
   const handleSyncToggle = async () => {
     const enable = !syncInfo?.sync_enabled;
     try {
       await invoke("toggle_artifact_cloud_sync", { artifactId: artifact.id, enabled: enable });
       onSyncToggled();
-    } catch (e) { setError(String(e)); }
+    } catch (e) {
+      setError(String(e));
+    }
   };
 
-  const isSynced = syncInfo?.status === "synced" || syncInfo?.status === "syncing";
-
-  const statusDotCls = (status: string) => {
-    const color =
-      status === "synced" ? "bg-gold shadow-[0_0_4px_var(--color-gold)]" :
-      status === "syncing" ? "bg-chalk animate-spin" :
-      status === "queued" ? "bg-ash" :
-      status === "conflict" ? "bg-[#e89a00]" :
-      status === "error" ? "bg-ember" :
-      "bg-smoke";
-    return `w-2 h-2 rounded-full shrink-0 ${color}`;
+  const handleCopyLink = async () => {
+    try {
+      const url = await invoke<string | null>("copy_artifact_link", {
+        artifactId: artifact.id,
+      });
+      if (!url) {
+        if (!syncInfo?.sync_enabled) {
+          await handleSyncToggle();
+        }
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      setError(String(e));
+    }
   };
 
-  const inputCls = "bg-obsidian border border-iron rounded-[3px] text-chalk font-sans text-xs px-2 py-[5px] flex-1 min-w-[80px] outline-none transition-colors focus:border-gold";
+  // Derive "current branch" from identity (we hardcode as "You" for now)
+  const currentBranchName = "Downtown Branch";
+  const isPublic = accessLevel === "all_branches";
 
   return (
     <div
@@ -141,173 +186,199 @@ export function ShareDialog({ artifact, syncInfo, onClose, onSyncToggled }: Shar
     >
       <div
         data-qa="share-dialog"
-        className="bg-slate border border-iron rounded-[6px] w-[520px] max-h-[80vh] overflow-y-auto flex flex-col"
+        className="bg-slate border border-iron rounded-[8px] w-[480px] max-h-[85vh] overflow-y-auto flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-iron">
-          <p className="text-[13px] font-semibold text-chalk m-0 overflow-hidden text-ellipsis whitespace-nowrap">Share "{artifact.name}"</p>
-          <button
-            className="bg-transparent border-none text-ash cursor-pointer text-sm px-[6px] py-[2px] rounded-[3px] transition-colors hover:text-chalk"
-            onClick={onClose}
-            aria-label="Close"
-          >✕</button>
-        </div>
-
-        {/* Cloud sync toggle */}
-        <div className="flex items-center justify-between px-5 py-3 bg-obsidian">
-          <div className="flex items-center gap-2">
-            <span className={statusDotCls(syncInfo?.status ?? "local_only")} />
-            <span className="text-xs text-chalk">
-              {syncInfo?.sync_enabled
-                ? syncInfo.status === "synced" ? "Synced to cloud" : syncInfo.status === "syncing" ? "Syncing…" : syncInfo.status === "queued" ? "Queued for sync" : syncInfo.status === "error" ? "Sync error" : "Cloud sync on"
-                : "Local only"}
-            </span>
+        {/* ── Header ───────────────────────────────────────────────────────── */}
+        <div className="flex items-start justify-between px-5 pt-5 pb-4">
+          <div className="flex flex-col gap-[6px]">
+            <h2 className="text-[15px] font-semibold text-chalk m-0">Share</h2>
+            <div className="flex items-center gap-[7px]">
+              <span className="text-smoke">
+                <FileIcon />
+              </span>
+              <span className="text-[12px] text-ash font-mono overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
+                {artifact.name}
+              </span>
+            </div>
           </div>
           <button
-            data-qa="share-sync-toggle-btn"
-            className={[
-              "bg-transparent border font-sans text-[11px] px-3 py-[5px] rounded cursor-pointer transition-colors",
-              syncInfo?.sync_enabled
-                ? "text-gold border-gold"
-                : "text-ash border-iron hover:text-chalk hover:border-ash",
-            ].join(" ")}
-            onClick={handleSyncToggle}
+            className="bg-transparent border-none text-smoke cursor-pointer text-[13px] p-1 rounded transition-colors hover:text-chalk mt-[2px]"
+            onClick={onClose}
+            aria-label="Close"
           >
-            {syncInfo?.sync_enabled ? "Disable sync" : "Enable sync"}
+            ✕
           </button>
         </div>
 
-        {syncInfo?.sync_error && (
-          <p className="text-[11px] text-ember px-5 pt-1 m-0">{syncInfo.sync_error}</p>
-        )}
-
-        {/* Copy link — only shown when synced */}
-        {isSynced && (
-          <div className="px-5 py-[14px] border-b border-iron/60 flex flex-col gap-[10px]">
-            <p className="text-[10px] font-semibold tracking-[0.08em] text-ash uppercase m-0">SHARE LINK</p>
-            <CopyLinkButton artifactId={artifact.id} />
-          </div>
-        )}
-
-        {/* General access */}
-        <div className="px-5 py-[14px] border-b border-iron/60 flex flex-col gap-[10px]">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-ash uppercase m-0">GENERAL ACCESS</p>
-          <div className="flex gap-[6px]">
-            {(["restricted", "branch_only", "all_branches"] as AccessLevel[]).map((level) => (
-              <button
-                key={level}
-                data-qa={`share-access-${level}`}
-                className={[
-                  "flex-1 font-sans text-[11px] px-2 py-[6px] rounded cursor-pointer transition-colors",
-                  accessLevel === level
-                    ? "bg-gold/[0.06] border border-gold text-gold"
-                    : "bg-obsidian border border-iron text-ash hover:text-chalk",
-                ].join(" ")}
-                onClick={() => setAccessLevel(level)}
-              >
-                {level === "restricted" ? "Restricted" : level === "branch_only" ? "Branch only" : "All branches"}
-              </button>
-            ))}
-          </div>
-          <p className="text-[11px] text-smoke m-0">
-            {accessLevel === "restricted" && "Only explicitly listed branches can access."}
-            {accessLevel === "branch_only" && "Any branch in your church can view."}
-            {accessLevel === "all_branches" && "All branches can access; copy link works for anyone."}
-          </p>
-        </div>
-
-        {/* Branch ACL list */}
-        <div className="px-5 py-[14px] border-b border-iron/60 flex flex-col gap-[10px]">
-          <p className="text-[10px] font-semibold tracking-[0.08em] text-ash uppercase m-0">BRANCH PERMISSIONS</p>
-          {acl.length === 0 ? (
-            <p className="text-xs text-smoke m-0">No branches added yet.</p>
-          ) : (
-            <ul className="list-none m-0 p-0 flex flex-col gap-1">
-              {acl.map((e) => (
-                <li key={e.branch_id} className="flex items-center gap-2 py-[6px] border-b border-iron/40">
-                  <span className="flex-1 text-xs text-chalk overflow-hidden text-ellipsis whitespace-nowrap">{e.branch_name}</span>
-                  <PermissionSelect value={e.permission} onChange={(p) => updatePerm(e.branch_id, p)} />
-                  <button
-                    className="bg-transparent border-none text-smoke cursor-pointer text-[11px] px-[6px] py-[2px] rounded-[3px] transition-colors hover:text-ember"
-                    onClick={() => removeBranch(e.branch_id)}
-                    aria-label="Remove"
-                  >✕</button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* Add branch row */}
-          <div className="flex gap-[6px] flex-wrap">
-            <input
-              className={inputCls}
-              placeholder="Branch ID"
-              value={newBranchId}
-              onChange={(e) => setNewBranchId(e.target.value)}
-            />
-            <input
-              className={inputCls}
-              placeholder="Branch name"
-              value={newBranchName}
-              onChange={(e) => setNewBranchName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") addBranch(); }}
-            />
-            <PermissionSelect value={newPerm} onChange={setNewPerm} />
+        {/* ── Cloud sync prompt (if not synced) ───────────────────────────── */}
+        {!syncInfo?.sync_enabled && (
+          <div className="mx-5 mb-4 px-3 py-3 rounded-[5px] bg-obsidian border border-iron flex items-center justify-between gap-3">
+            <span className="text-[11px] text-ash">
+              Enable cloud sync to share with other branches
+            </span>
             <button
-              className="bg-transparent border border-iron text-chalk font-sans text-[11px] px-[10px] py-[5px] rounded cursor-pointer transition-colors hover:border-ash disabled:opacity-35 disabled:cursor-default"
-              onClick={addBranch}
-              disabled={!newBranchId.trim() || !newBranchName.trim()}
+              className="shrink-0 bg-gold text-void font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
+              onClick={handleSyncToggle}
             >
-              Add
+              Enable Sync
+            </button>
+          </div>
+        )}
+
+        {/* ── Add people / branches ────────────────────────────────────────── */}
+        <div className="px-5 pb-4">
+          <p className="text-[9px] font-semibold tracking-[0.14em] uppercase text-smoke m-0 mb-[8px]">
+            Add People or Branches
+          </p>
+          <div className="flex items-center gap-[6px]">
+            <input
+              data-qa="share-search-input"
+              className="flex-1 bg-obsidian border border-iron rounded-[4px] text-chalk font-sans text-[12px] px-[10px] py-[6px] outline-none transition-colors focus:border-gold/60 placeholder:text-smoke"
+              placeholder="Search branches or enter email…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleShare();
+              }}
+            />
+            <PermSelect value={newPerm} onChange={setNewPerm} />
+            <button
+              data-qa="share-add-btn"
+              className="bg-gold text-void font-sans text-[11px] font-semibold px-4 py-[6px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default whitespace-nowrap shrink-0"
+              onClick={handleShare}
+              disabled={!searchQuery.trim()}
+            >
+              Share
             </button>
           </div>
         </div>
 
-        {/* Storage usage */}
-        {usage && (
-          <div className="flex items-center gap-[10px] px-5 py-[10px] border-b border-iron/60">
-            <span className="text-[11px] text-ash font-mono shrink-0">
-              {formatBytes(usage.used_bytes)} used
-              {usage.quota_bytes ? ` / ${formatBytes(usage.quota_bytes)}` : ""}
-            </span>
-            {usage.quota_bytes && (
-              <div className="flex-1 h-[2px] bg-iron rounded-[1px] overflow-hidden">
-                <div
-                  className="h-full bg-gold transition-[width] duration-300 min-w-[2px]"
-                  style={{ width: `${Math.min(100, (usage.used_bytes / usage.quota_bytes) * 100)}%` }}
-                />
+        <div className="h-px bg-iron mx-0" />
+
+        {/* ── Who has access ───────────────────────────────────────────────── */}
+        <div className="px-5 py-4">
+          <p className="text-[9px] font-semibold tracking-[0.14em] uppercase text-smoke m-0 mb-[12px]">
+            Who Has Access
+          </p>
+
+          <ul className="list-none m-0 p-0 flex flex-col gap-[4px]">
+            {/* Current branch (always owner) */}
+            <li className="flex items-center gap-3 py-[6px]">
+              <BranchAvatar name={currentBranchName} />
+              <div className="flex-1 min-w-0">
+                <span className="block text-[12px] text-chalk font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+                  {currentBranchName}
+                  <span className="text-smoke font-normal"> (You)</span>
+                </span>
               </div>
+              <span className="shrink-0 px-[8px] py-[3px] rounded-[3px] text-[10px] font-semibold tracking-[0.06em] uppercase bg-gold/10 text-gold border border-gold/20">
+                Owner
+              </span>
+            </li>
+
+            {/* Public access row */}
+            {isPublic && (
+              <li className="flex items-center gap-3 py-[6px]">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-smoke/20 border border-iron shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.1" className="text-smoke" />
+                    <path d="M7 4.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 4.5c-2 0-3.5.9-3.5 2h7c0-1.1-1.5-2-3.5-2z" fill="currentColor" className="text-smoke" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[12px] text-chalk overflow-hidden text-ellipsis whitespace-nowrap">
+                    Church Shared (Public)
+                  </span>
+                </div>
+                <span className="text-[11px] text-ash">Can view</span>
+              </li>
             )}
-            <span className="text-[11px] text-smoke shrink-0">{usage.synced_count} file{usage.synced_count !== 1 ? "s" : ""} synced</span>
-          </div>
+
+            {/* ACL entries */}
+            {acl.map((entry) => (
+              <li key={entry.branch_id} className="flex items-center gap-3 py-[6px]">
+                <BranchAvatar name={entry.branch_name} />
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[12px] text-chalk overflow-hidden text-ellipsis whitespace-nowrap">
+                    {entry.branch_name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-[6px] shrink-0">
+                  <PermSelect
+                    value={entry.permission}
+                    onChange={(p) => updatePerm(entry.branch_id, p)}
+                  />
+                  <button
+                    className="bg-transparent border-none text-smoke cursor-pointer p-[3px] rounded transition-colors hover:text-ember text-[12px]"
+                    onClick={() => removeBranch(entry.branch_id)}
+                    aria-label="Remove"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* ── General access toggle ────────────────────────────────────────── */}
+        <div className="px-5 pb-4">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div
+              className={[
+                "relative w-9 h-5 rounded-full transition-colors",
+                isPublic ? "bg-gold/80" : "bg-iron",
+              ].join(" ")}
+              onClick={() =>
+                setAccessLevel((prev) =>
+                  prev === "all_branches" ? "restricted" : "all_branches"
+                )
+              }
+            >
+              <div
+                className={[
+                  "absolute top-[3px] w-[14px] h-[14px] rounded-full bg-chalk transition-[left] duration-200",
+                  isPublic ? "left-[19px]" : "left-[3px]",
+                ].join(" ")}
+              />
+            </div>
+            <span className="text-[12px] text-ash group-hover:text-chalk transition-colors">
+              Anyone in the church can view
+            </span>
+          </label>
+        </div>
+
+        {error && (
+          <p className="text-[11px] text-ember px-5 pb-2 m-0">{error}</p>
         )}
 
-        {error && <p className="text-[11px] text-ember px-5 pt-1 m-0">{error}</p>}
+        <div className="h-px bg-iron" />
 
-        {/* Footer actions */}
-        <div className="flex justify-end gap-2 px-5 py-[14px]">
+        {/* ── Footer ───────────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-5 py-4">
           <button
-            className="bg-transparent border border-iron text-ash rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
-            onClick={onClose}
-          >Cancel</button>
+            data-qa="share-copy-link-btn"
+            className="flex items-center gap-[7px] bg-transparent border border-iron text-ash font-sans text-[11px] px-[12px] py-[6px] rounded-[4px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+            onClick={handleCopyLink}
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+              <path d="M5 7a2.5 2.5 0 0 0 3.536.036l1.5-1.5a2.5 2.5 0 0 0-3.536-3.536L5.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <path d="M8 6a2.5 2.5 0 0 0-3.536-.036L3 7.464a2.5 2.5 0 0 0 3.536 3.536L7.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            {copied ? "✓ Copied!" : "Copy link"}
+          </button>
+
           <button
-            data-qa="share-save-btn"
-            className="bg-gold text-[#0a0a0a] border-none rounded font-sans text-xs font-semibold px-4 py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
+            data-qa="share-done-btn"
+            className="bg-gold text-void border-none rounded-[4px] font-sans text-[12px] font-semibold px-5 py-[7px] cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default"
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving…" : "Done"}
           </button>
         </div>
       </div>
     </div>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
-  return `${(bytes / 1073741824).toFixed(1)} GB`;
 }
