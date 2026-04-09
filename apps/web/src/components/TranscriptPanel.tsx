@@ -44,9 +44,13 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [sttWarning, setSttWarning] = useState<string | null>(null);
   const [lowSignal, setLowSignal] = useState(false);
+  const [noTranscript, setNoTranscript] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const idRef = useRef(0);
   const lowSignalTicks = useRef(0);
+  /** Ticks (100ms each) with audio signal but no transcript events. */
+  const signalNoTextTicks = useRef(0);
+  const lastEntryCount = useRef(0);
 
   // Auto-scroll to bottom whenever entries change.
   useEffect(() => {
@@ -55,10 +59,14 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
 
   // Poll audio level every 100ms whenever the mic is active.
   // After 5 s of very low signal (<0.02 RMS), show a "check your mic" hint.
+  // After 8 s of good signal but 0 transcript entries, show a "no transcription" hint.
   useEffect(() => {
     if (!micActive) {
       lowSignalTicks.current = 0;
+      signalNoTextTicks.current = 0;
+      lastEntryCount.current = 0;
       setLowSignal(false);
+      setNoTranscript(false);
       return;
     }
     const id = setInterval(async () => {
@@ -71,6 +79,18 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
         lowSignalTicks.current = 0;
         setLowSignal(false);
       }
+      // Track "has audio but no transcript" condition.
+      setEntries((prev) => {
+        if (level >= 0.02 && prev.length === lastEntryCount.current) {
+          signalNoTextTicks.current += 1;
+          if (signalNoTextTicks.current >= 80) setNoTranscript(true);
+        } else {
+          signalNoTextTicks.current = 0;
+          lastEntryCount.current = prev.length;
+          setNoTranscript(false);
+        }
+        return prev; // no mutation
+      });
     }, 100);
     return () => clearInterval(id);
   }, [micActive]);
@@ -145,7 +165,7 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
             />
           )}
           <span className="text-[11px] font-medium tracking-[0.12em] text-ash uppercase">
-            TRANSCRIPT
+            LIVE SPEECH TRANSCRIPT
           </span>
           <AudioLevelBars level={audioLevel} />
         </div>
@@ -191,6 +211,19 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
         >
           <span className="text-[11px] text-ember tracking-wide leading-[1.4]">
             Very low audio signal — check that the correct microphone is selected in Settings.
+          </span>
+        </div>
+      )}
+
+      {/* Audio present but no transcription hint */}
+      {noTranscript && !lowSignal && (
+        <div
+          className="flex items-center gap-2 px-6 py-2 bg-[rgba(201,168,76,0.07)] border-b border-[rgba(201,168,76,0.2)] shrink-0"
+          role="alert"
+        >
+          <span className="text-[11px] text-gold-muted tracking-wide leading-[1.4]">
+            Audio detected but no transcription — try re-downloading the model in Settings
+            &rarr; Audio, or restart the mic.
           </span>
         </div>
       )}

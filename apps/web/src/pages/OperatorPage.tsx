@@ -76,9 +76,14 @@ interface MiniDisplayProps {
   label: string;
   item: QueueItem | null;
   isLive?: boolean;
+  onApprove?: () => void;
+  onSkip?: () => void;
+  onClear?: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
 }
 
-function MiniDisplay({ label, item, isLive }: MiniDisplayProps) {
+function MiniDisplay({ label, item, isLive, onApprove, onSkip, onClear, onPrev, onNext }: MiniDisplayProps) {
   const isSong = item?.kind === "song";
   return (
     <div className="flex-1 flex flex-col min-w-0">
@@ -89,9 +94,9 @@ function MiniDisplay({ label, item, isLive }: MiniDisplayProps) {
           <span className="w-1.5 h-1.5 rounded-full bg-gold [box-shadow:0_0_6px_var(--color-gold)] shrink-0" />
         )}
       </div>
-      {/* Display panel — 16:9 aspect ratio, fills half the full width */}
+      {/* Display panel — 16:9 aspect ratio, centered content */}
       <div
-        className={`relative bg-void rounded-[3px] overflow-hidden flex flex-col justify-end p-4 border aspect-video w-full ${
+        className={`relative bg-void rounded-[3px] overflow-hidden flex flex-col items-center justify-center p-6 border aspect-video w-full ${
           isLive && item
             ? "border-gold/40 [box-shadow:inset_0_0_40px_rgba(201,168,76,0.04)]"
             : "border-iron/60"
@@ -99,29 +104,72 @@ function MiniDisplay({ label, item, isLive }: MiniDisplayProps) {
         aria-label={`${label} display`}
       >
         {item ? (
-          <>
-            {/* Reference — top-left */}
-            <div className="absolute top-3 left-4">
+          <div className="flex flex-col items-center justify-center text-center max-w-[85%]">
+            {/* Body text — centered */}
+            <p className={`m-0 leading-[1.6] text-chalk ${isSong ? "font-serif text-[15px] italic" : "font-serif text-[14px]"}`}>
+              {isSong ? item.reference : item.text}
+            </p>
+            {/* Reference — below text, centered */}
+            <div className="mt-3">
               <span className="font-sans text-[10px] font-medium tracking-[0.16em] text-gold uppercase">
-                {item.reference}
+                {isSong ? "" : item.reference}
               </span>
               {!isSong && item.translation && (
-                <span className="block font-sans text-[9px] tracking-wider text-ash/60 mt-0.5">
+                <span className="font-sans text-[9px] tracking-wider text-ash/60 ml-2">
                   {item.translation}
                 </span>
               )}
             </div>
-            {/* Body text */}
-            <p className={`m-0 leading-[1.5] text-chalk line-clamp-3 ${isSong ? "font-serif text-[15px] italic" : "font-serif text-[13px]"}`}>
-              {isSong ? item.reference : item.text}
-            </p>
-          </>
+          </div>
         ) : (
-          <p className="m-0 text-[11px] text-smoke/40 text-center w-full absolute inset-0 flex items-center justify-center tracking-wider uppercase">
+          <p className="m-0 text-[11px] text-smoke/40 text-center tracking-wider uppercase">
             {label === "PREVIEW" ? "No pending content" : "Display cleared"}
           </p>
         )}
       </div>
+      {/* Action buttons below panel */}
+      {label === "PREVIEW" && (
+        <div className="flex gap-2 mt-2 px-0.5">
+          <button
+            className="text-[10px] font-medium tracking-[0.1em] uppercase px-3 py-1 rounded-[3px] border border-gold text-gold bg-transparent cursor-pointer transition-colors hover:bg-gold/10 disabled:opacity-30 disabled:cursor-default"
+            onClick={onApprove}
+            disabled={!item}
+          >
+            APPROVE
+          </button>
+          <button
+            className="text-[10px] font-medium tracking-[0.1em] uppercase px-3 py-1 rounded-[3px] border border-iron text-smoke bg-transparent cursor-pointer transition-colors hover:border-ash hover:text-chalk disabled:opacity-30 disabled:cursor-default"
+            onClick={onSkip}
+            disabled={!item}
+          >
+            SKIP
+          </button>
+        </div>
+      )}
+      {label === "LIVE" && (
+        <div className="flex items-center gap-2 mt-2 px-0.5">
+          <button
+            className="text-smoke hover:text-chalk bg-transparent border border-iron rounded-[3px] w-6 h-6 flex items-center justify-center cursor-pointer transition-colors"
+            onClick={onPrev}
+            aria-label="Previous"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6 2L3 5l3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <button
+            className="text-[10px] font-medium tracking-[0.1em] uppercase px-3 py-1 rounded-[3px] border border-iron text-smoke bg-transparent cursor-pointer transition-colors hover:border-ash hover:text-chalk"
+            onClick={onClear}
+          >
+            CLEAR CONTENT
+          </button>
+          <button
+            className="text-smoke hover:text-chalk bg-transparent border border-iron rounded-[3px] w-6 h-6 flex items-center justify-center cursor-pointer transition-colors"
+            onClick={onNext}
+            aria-label="Next"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M4 2l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -144,9 +192,21 @@ function PreviewPanels() {
   const live = items.find((i) => i.status === "live") ?? null;
 
   return (
-    <div className="flex gap-3 px-4 pt-3 pb-3 border-b border-iron shrink-0">
-      <MiniDisplay label="PREVIEW" item={pending} />
-      <MiniDisplay label="LIVE" item={live} isLive />
+    <div className="flex gap-3 px-4 pt-3 pb-4 border-b border-iron shrink-0">
+      <MiniDisplay
+        label="PREVIEW"
+        item={pending}
+        onApprove={() => { if (pending) invoke("approve_item", { itemId: pending.id }).catch(console.error); }}
+        onSkip={() => { if (pending) invoke("skip_item", { itemId: pending.id }).catch(console.error); }}
+      />
+      <MiniDisplay
+        label="LIVE"
+        item={live}
+        isLive
+        onClear={() => { invoke("clear_live").catch(console.error); }}
+        onPrev={() => { invoke("prev_item").catch(console.error); }}
+        onNext={() => { invoke("next_item").catch(console.error); }}
+      />
     </div>
   );
 }
