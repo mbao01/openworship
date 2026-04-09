@@ -74,7 +74,7 @@ impl Embedder for LocalEmbedder {
     fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
         let model = self.model.lock().map_err(|e| anyhow::anyhow!("lock poisoned: {e}"))?;
         let owned: Vec<String> = texts.iter().map(|s| s.to_string()).collect();
-        Ok(model.embed(owned, None)?)
+        model.embed(owned, None)
     }
 }
 
