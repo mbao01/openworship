@@ -51,6 +51,11 @@ impl Transcriber for WhisperTranscriber {
         // Each 1-second chunk is independent; don't carry silence/noise tokens
         // as context into the next chunk — doing so suppresses real speech.
         params.set_no_context(true);
+        // With 1-second chunks the default no_speech_thold (0.6) is too
+        // aggressive — even clear speech in a short window scores high on the
+        // no-speech probability, causing 0 segments. Disable the filter so
+        // every chunk produces at least one segment.
+        params.set_no_speech_thold(1.0);
 
         // Whisper requires >= 1 second of audio (16_000 samples at 16 kHz).
         // Pad with silence if the chunk is slightly short due to sample rate
