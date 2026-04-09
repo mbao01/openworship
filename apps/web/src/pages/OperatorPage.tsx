@@ -7,7 +7,7 @@ import { SchedulePanel } from "../components/SchedulePanel";
 import { SettingsModal } from "../components/SettingsModal";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
-import type { ChurchIdentity, DetectionMode, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
+import type { ChurchIdentity, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
@@ -82,39 +82,42 @@ function MiniDisplay({ label, item, isLive }: MiniDisplayProps) {
   const isSong = item?.kind === "song";
   return (
     <div className="flex-1 flex flex-col min-w-0">
-      <div className="flex items-center gap-2 mb-1 px-1">
-        <span className="text-[10px] font-medium tracking-[0.14em] text-smoke uppercase">{label}</span>
+      {/* Panel label row */}
+      <div className="flex items-center gap-2 mb-1.5 px-0.5">
+        <span className="text-[9px] font-semibold tracking-[0.16em] text-smoke uppercase">{label}</span>
         {isLive && item && (
-          <span className="w-1.5 h-1.5 rounded-full bg-gold [box-shadow:0_0_4px_var(--color-gold)] shrink-0" />
+          <span className="w-1.5 h-1.5 rounded-full bg-gold [box-shadow:0_0_6px_var(--color-gold)] shrink-0" />
         )}
       </div>
+      {/* Display panel */}
       <div
-        className={`relative flex-1 bg-void rounded-sm overflow-hidden flex flex-col justify-end p-3 min-h-0 border ${
-          isLive && item ? "border-gold/30" : "border-iron/50"
+        className={`relative bg-void rounded-[3px] overflow-hidden flex flex-col justify-end p-4 border h-[160px] ${
+          isLive && item
+            ? "border-gold/40 [box-shadow:inset_0_0_40px_rgba(201,168,76,0.04)]"
+            : "border-iron/60"
         }`}
-        style={{ aspectRatio: "16/9" }}
         aria-label={`${label} display`}
       >
         {item ? (
           <>
-            {/* Reference label — top-left */}
-            <div className="absolute top-2 left-3">
-              <span className="font-sans text-[9px] font-medium tracking-[0.14em] text-gold uppercase">
+            {/* Reference — top-left */}
+            <div className="absolute top-3 left-4">
+              <span className="font-sans text-[10px] font-medium tracking-[0.16em] text-gold uppercase">
                 {item.reference}
               </span>
               {!isSong && item.translation && (
-                <span className="block font-sans text-[8px] tracking-wider text-ash/70 mt-0.5">
+                <span className="block font-sans text-[9px] tracking-wider text-ash/60 mt-0.5">
                   {item.translation}
                 </span>
               )}
             </div>
-            {/* Content preview */}
-            <p className={`m-0 leading-snug text-chalk line-clamp-3 ${isSong ? "font-serif text-[11px] italic" : "font-serif text-[10px]"}`}>
+            {/* Body text */}
+            <p className={`m-0 leading-[1.5] text-chalk line-clamp-3 ${isSong ? "font-serif text-[15px] italic" : "font-serif text-[13px]"}`}>
               {isSong ? item.reference : item.text}
             </p>
           </>
         ) : (
-          <p className="m-0 text-[10px] text-smoke/50 text-center w-full absolute inset-0 flex items-center justify-center">
+          <p className="m-0 text-[11px] text-smoke/40 text-center w-full absolute inset-0 flex items-center justify-center tracking-wider uppercase">
             {label === "PREVIEW" ? "No pending content" : "Display cleared"}
           </p>
         )}
@@ -123,111 +126,27 @@ function MiniDisplay({ label, item, isLive }: MiniDisplayProps) {
   );
 }
 
-// ─── Preview + Control Section ────────────────────────────────────────────────
+// ─── Full-width Preview Panels ────────────────────────────────────────────────
 
-function PreviewAndControls() {
+function PreviewPanels() {
   const [items, setItems] = useState<QueueItem[]>([]);
 
   useEffect(() => {
     invoke<QueueItem[]>("get_queue").then(setItems).catch(console.error);
     let unlisten: UnlistenFn | null = null;
-    listen<QueueItem[]>("detection://queue-updated", (e) => setItems(e.payload)).then((fn) => { unlisten = fn; });
+    listen<QueueItem[]>("detection://queue-updated", (e) => setItems(e.payload)).then(
+      (fn) => { unlisten = fn; }
+    );
     return () => { unlisten?.(); };
   }, []);
 
   const pending = items.find((i) => i.status === "pending") ?? null;
   const live = items.find((i) => i.status === "live") ?? null;
 
-  function handleApprove() {
-    if (pending) invoke("approve_item", { id: pending.id }).catch(console.error);
-  }
-  function handleSkip() {
-    if (pending) invoke("dismiss_item", { id: pending.id }).catch(console.error);
-  }
-  function handleClearContent() {
-    invoke("clear_display").catch(console.error);
-  }
-
   return (
-    <div className="shrink-0 px-4 pt-3 pb-0 border-b border-iron">
-      {/* Mini preview panels */}
-      <div className="flex gap-3 mb-3" style={{ height: "50%" }}>
-        <MiniDisplay label="PREVIEW" item={pending} />
-        <MiniDisplay label="LIVE" item={live} isLive />
-      </div>
-
-      {/* Control bar */}
-      <div className="flex items-center gap-2 pb-3">
-        <button
-          data-qa="operator-approve-btn"
-          className="font-sans text-[11px] font-medium tracking-[0.1em] text-void bg-gold border-none rounded-sm px-4 py-1.5 cursor-pointer uppercase hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          onClick={handleApprove}
-          disabled={!pending}
-        >
-          APPROVE
-        </button>
-        <button
-          data-qa="operator-skip-btn"
-          className="font-sans text-[11px] font-medium tracking-[0.1em] text-chalk bg-transparent border border-iron rounded-sm px-4 py-1.5 cursor-pointer uppercase hover:border-ash transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          onClick={handleSkip}
-          disabled={!pending}
-        >
-          SKIP
-        </button>
-        <div className="flex-1" />
-        <button
-          data-qa="operator-clear-btn"
-          className="font-sans text-[11px] font-medium tracking-[0.1em] text-ash bg-transparent border border-iron/50 rounded-sm px-4 py-1.5 cursor-pointer uppercase hover:border-ash hover:text-chalk transition-colors"
-          onClick={handleClearContent}
-          title="Clear current display content"
-        >
-          CLEAR CONTENT
-        </button>
-        <div className="flex items-center gap-1">
-          <button
-            className="w-6 h-6 flex items-center justify-center text-smoke hover:text-chalk bg-transparent border-none rounded-sm cursor-pointer transition-colors"
-            title="Previous item"
-            aria-label="Previous item"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M9 3L5 7l4 4"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-          <button
-            className="w-6 h-6 flex items-center justify-center text-smoke hover:text-chalk bg-transparent border-none rounded-sm cursor-pointer transition-colors"
-            title="Next item"
-            aria-label="Next item"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M5 3l4 4-4 4"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
+    <div className="flex gap-3 px-4 pt-3 pb-3 border-b border-iron shrink-0">
+      <MiniDisplay label="PREVIEW" item={pending} />
+      <MiniDisplay label="LIVE" item={live} isLive />
     </div>
   );
 }
@@ -302,7 +221,6 @@ const THEME_CYCLE: ThemeMode[] = ["system", "dark", "light"];
 
 export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSetTheme }: OperatorPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [mode, setMode] = useState<DetectionMode>("copilot");
   const [displayView, setDisplayView] = useState<"audience" | "stage">("audience");
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
@@ -420,7 +338,10 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
       )}
 
       {/* ── Mode toolbar ─────────────────────────────────────────────────── */}
-      <ModeToolbar onModeChange={setMode} />
+      <ModeToolbar />
+
+      {/* ── Full-width preview panels ─────────────────────────────────────── */}
+      <PreviewPanels />
 
       {/* ── Main three-column layout ──────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden min-h-0">
@@ -492,9 +413,8 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
           )}
         </aside>
 
-        {/* Center — Preview panels + controls + Transcript ─────────────── */}
+        {/* Center — Transcript ─────────────────────────────────────────── */}
         <main data-qa="operator-col-center" className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void">
-          {mode === "copilot" && <PreviewAndControls />}
           <div className="flex-1 overflow-hidden min-h-0">
             <TranscriptPanel />
           </div>
