@@ -43,8 +43,10 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   const [audioLevel, setAudioLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [sttWarning, setSttWarning] = useState<string | null>(null);
+  const [lowSignal, setLowSignal] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const idRef = useRef(0);
+  const lowSignalTicks = useRef(0);
 
   // Auto-scroll to bottom whenever entries change.
   useEffect(() => {
@@ -52,11 +54,23 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   }, [entries]);
 
   // Poll audio level every 100ms whenever the mic is active.
+  // After 5 s of very low signal (<0.02 RMS), show a "check your mic" hint.
   useEffect(() => {
-    if (!micActive) return;
+    if (!micActive) {
+      lowSignalTicks.current = 0;
+      setLowSignal(false);
+      return;
+    }
     const id = setInterval(async () => {
       const level = await invoke<number>("get_audio_level");
       setAudioLevel(level);
+      if (level < 0.02) {
+        lowSignalTicks.current += 1;
+        if (lowSignalTicks.current >= 50) setLowSignal(true);
+      } else {
+        lowSignalTicks.current = 0;
+        setLowSignal(false);
+      }
     }, 100);
     return () => clearInterval(id);
   }, [micActive]);
@@ -166,6 +180,18 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Low-signal hint */}
+      {lowSignal && (
+        <div
+          className="flex items-center gap-2 px-6 py-2 bg-[rgba(196,76,76,0.07)] border-b border-[rgba(196,76,76,0.2)] shrink-0"
+          role="alert"
+        >
+          <span className="text-[11px] text-ember tracking-wide leading-[1.4]">
+            Very low audio signal — check that the correct microphone is selected in Settings.
+          </span>
         </div>
       )}
 
