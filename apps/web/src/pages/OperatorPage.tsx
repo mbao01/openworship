@@ -343,8 +343,8 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
       {/* ── Full-width preview panels ─────────────────────────────────────── */}
       <PreviewPanels />
 
-      {/* ── Main three-column layout ──────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden min-h-0">
+      {/* ── Main three-column layout — aspect-video (16:9) like preview panels */}
+      <div className="flex aspect-video shrink-0 overflow-hidden w-full">
 
         {/* Left — Schedule + Content Bank ─────────────────────────────── */}
         <aside
