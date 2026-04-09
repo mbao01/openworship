@@ -120,27 +120,29 @@ cargo --version
 
 ## Running locally
 
-**Start the Tauri dev server** (launches both the Vite frontend and the native window):
+**Start the full Tauri desktop app** (real Rust backend + Vite frontend):
 
 ```bash
-cd apps/desktop
-cargo tauri dev
+pnpm desktop:dev
 ```
 
-This command:
+This is the recommended way to run OpenWorship locally. It:
+- Compiles the Rust backend (SQLite Bible DB, Tantivy search, Whisper/Deepgram STT, WebSocket display server)
 - Runs `pnpm --filter @openworship/web dev` to start the Vite dev server on `http://localhost:1420`
-- Compiles the Rust backend and opens the native desktop window pointing at the dev server
-- Watches both the frontend and backend for changes and hot-reloads automatically
+- Opens the native desktop window pointing at the dev server
+- Watches both frontend and backend for changes and hot-reloads automatically
+- All Tauri `invoke()` calls reach real Rust handlers — no mocked responses
 
 > **Note:** The first build will take a few minutes while Cargo compiles all dependencies. Subsequent builds are much faster.
 
 **Frontend only** (no native window — useful for pure UI work):
 
 ```bash
-cd apps/web
 pnpm dev
 # open http://localhost:1420
 ```
+
+> Tauri IPC (`invoke()`) is unavailable in this mode. Use `pnpm desktop:dev` for full integration testing.
 
 ---
 
@@ -155,7 +157,7 @@ pnpm dev
 | Check Rust | `cargo check` |
 | Rust lints | `cargo clippy -- -D warnings` |
 | Rust tests | `cargo test` |
-| Desktop dev | `cd apps/desktop && cargo tauri dev` |
+| Desktop dev | `pnpm desktop:dev` |
 | Desktop build | `cd apps/desktop && cargo tauri build` |
 
 ---
