@@ -294,7 +294,7 @@ function AudioSection({
 
   // Normalise 0–1 RMS to a visual percentage with slight boost for visibility.
   const levelPct = Math.min(100, Math.round(audioLevel * 300));
-  const levelColor = levelPct > 80 ? "bg-ember" : levelPct > 50 ? "bg-gold" : "bg-green-400";
+  const levelColor = levelPct > 80 ? "bg-ember" : "bg-gold";
 
   return (
     <div className="flex-1 p-6">

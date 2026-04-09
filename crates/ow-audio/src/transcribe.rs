@@ -94,7 +94,7 @@ impl Transcriber for WhisperTranscriber {
         params.set_no_speech_thold(1.0);
 
         // Whisper requires >= 1 s of audio, but in practice needs ≥1.5 s to
-        // produce any segments at all. Our default chunk is 3 s (48_000 samples).
+        // produce any segments at all. Our default chunk is 2 s (32_000 samples).
         // This padding is a safety net for edge cases / sample-rate rounding.
         const MIN_SAMPLES: usize = 16_160;
         let buf;
