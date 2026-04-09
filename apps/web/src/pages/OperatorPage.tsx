@@ -8,15 +8,6 @@ import { SettingsModal } from "../components/SettingsModal";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
 import type { ChurchIdentity, DetectionMode, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
@@ -313,6 +304,8 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mode, setMode] = useState<DetectionMode>("copilot");
   const [displayView, setDisplayView] = useState<"audience" | "stage">("audience");
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
 
   return (
     <div data-qa="operator-root" className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden">
@@ -430,89 +423,143 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
       <ModeToolbar onModeChange={setMode} />
 
       {/* ── Main three-column layout ──────────────────────────────────────── */}
-      {/* Left sidebar provider */}
-      <SidebarProvider
-        data-qa="operator-col-left-provider"
-        className="flex-1 min-h-0 overflow-hidden"
-        style={{ "--sidebar-width": "14rem", "--sidebar-width-icon": "3rem" } as React.CSSProperties}
-      >
-        {/* Left — Schedule + Content Bank */}
-        <Sidebar
+      <div className="flex flex-1 overflow-hidden min-h-0">
+
+        {/* Left — Schedule + Content Bank ─────────────────────────────── */}
+        <aside
           data-qa="operator-col-left"
-          side="left"
-          collapsible="icon"
-          className="border-r border-sidebar-border bg-sidebar h-full"
+          data-open={leftOpen}
+          className={[
+            "flex flex-col shrink-0 bg-obsidian border-r border-iron overflow-hidden",
+            "transition-[width] duration-200 ease-linear",
+            leftOpen ? "w-56" : "w-10",
+          ].join(" ")}
         >
-          <SidebarContent className="overflow-hidden">
-            <SidebarGroup className="flex-1 min-h-0 p-0">
-              <SidebarGroupContent className="flex flex-col h-full overflow-hidden">
-                {/* Schedule */}
-                <div className="flex-1 overflow-y-auto p-4 min-h-0 group-data-[collapsible=icon]:hidden [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]">
-                  <SchedulePanel />
-                </div>
-                {/* Divider */}
-                <div className="h-px bg-iron shrink-0 group-data-[collapsible=icon]:hidden" />
-                {/* Content Bank */}
-                <div className="shrink-0 p-4 group-data-[collapsible=icon]:hidden" style={{ maxHeight: "40%" }}>
-                  <span className="block text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-3">
-                    CONTENT BANK
-                  </span>
-                  <div className="overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]" style={{ maxHeight: "200px" }}>
-                    <ScriptureSearch />
-                  </div>
-                </div>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarRail />
-        </Sidebar>
-
-        {/* Right sidebar provider wraps center + right */}
-        <SidebarProvider
-          data-qa="operator-col-right-provider"
-          className="flex-1 min-h-0 overflow-hidden"
-          style={{ "--sidebar-width": "15rem", "--sidebar-width-icon": "3rem" } as React.CSSProperties}
-        >
-          {/* Center — Preview panels + controls + Transcript */}
-          <main data-qa="operator-col-center" className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void">
-            <div className="flex items-center gap-1 px-2 pt-1 shrink-0 border-b border-iron/30">
-              <SidebarTrigger className="h-6 w-6 text-smoke hover:text-chalk" title="Toggle schedule panel" />
-              <div className="flex-1" />
-              <SidebarTrigger className="h-6 w-6 text-smoke hover:text-chalk" title="Toggle queue panel" />
-            </div>
-            {mode === "copilot" && <PreviewAndControls />}
-            <div className="flex-1 overflow-hidden min-h-0">
-              <TranscriptPanel />
-            </div>
-          </main>
-
-          {/* Right — Queue + Detection Log */}
-          <Sidebar
-            data-qa="operator-col-right"
-            side="right"
-            collapsible="icon"
-            className="border-l border-sidebar-border bg-sidebar h-full"
+          {/* Collapse toggle */}
+          <button
+            className="h-8 shrink-0 flex items-center justify-center text-smoke hover:text-chalk border-b border-iron transition-colors bg-transparent cursor-pointer"
+            onClick={() => setLeftOpen((v) => !v)}
+            title={leftOpen ? "Collapse schedule panel" : "Expand schedule panel"}
+            aria-label={leftOpen ? "Collapse schedule panel" : "Expand schedule panel"}
           >
-            <SidebarContent className="overflow-hidden">
-              <SidebarGroup className="flex-1 min-h-0 p-0">
-                <SidebarGroupContent className="flex flex-col h-full overflow-hidden">
-                  {/* Queue */}
-                  <div className="flex-1 overflow-hidden min-h-0 p-4 flex flex-col group-data-[collapsible=icon]:hidden">
-                    <DetectionQueue />
-                  </div>
-                  {/* Divider */}
-                  <div className="h-px bg-iron shrink-0 group-data-[collapsible=icon]:hidden" />
-                  {/* Detection Log */}
-                  <div className="shrink-0 overflow-hidden flex flex-col px-4 pb-4 group-data-[collapsible=icon]:hidden" style={{ height: "35%" }}>
-                    <DetectionLog />
-                  </div>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
-            <SidebarRail />
-          </Sidebar>
-        </SidebarProvider>
-      </SidebarProvider>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              {leftOpen ? (
+                <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              ) : (
+                <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              )}
+            </svg>
+          </button>
+
+          {/* Expanded content */}
+          {leftOpen && (
+            <>
+              {/* Schedule */}
+              <div className="flex-1 overflow-y-auto p-4 min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]">
+                <SchedulePanel />
+              </div>
+
+              {/* Divider */}
+              <div className="h-px bg-iron shrink-0" />
+
+              {/* Content Bank — scripture search */}
+              <div className="shrink-0 p-4" style={{ maxHeight: "40%" }}>
+                <span className="block text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-3">
+                  CONTENT BANK
+                </span>
+                <div className="overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]" style={{ maxHeight: "200px" }}>
+                  <ScriptureSearch />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Icon rail when collapsed */}
+          {!leftOpen && (
+            <div className="flex flex-col items-center pt-3 gap-3">
+              {/* Calendar icon for Schedule */}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Schedule">
+                <rect x="1.5" y="2.5" width="11" height="10" rx="1" stroke="currentColor" strokeWidth="1.1" />
+                <path d="M1.5 5.5h11" stroke="currentColor" strokeWidth="1.1" />
+                <path d="M4.5 1v3M9.5 1v3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              </svg>
+              {/* Search icon for Content Bank */}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Content Bank">
+                <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.1" />
+                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              </svg>
+            </div>
+          )}
+        </aside>
+
+        {/* Center — Preview panels + controls + Transcript ─────────────── */}
+        <main data-qa="operator-col-center" className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void">
+          {mode === "copilot" && <PreviewAndControls />}
+          <div className="flex-1 overflow-hidden min-h-0">
+            <TranscriptPanel />
+          </div>
+        </main>
+
+        {/* Right — Queue + Detection Log ───────────────────────────────── */}
+        <aside
+          data-qa="operator-col-right"
+          data-open={rightOpen}
+          className={[
+            "flex flex-col shrink-0 bg-obsidian border-l border-iron overflow-hidden",
+            "transition-[width] duration-200 ease-linear",
+            rightOpen ? "w-60" : "w-10",
+          ].join(" ")}
+        >
+          {/* Collapse toggle */}
+          <button
+            className="h-8 shrink-0 flex items-center justify-center text-smoke hover:text-chalk border-b border-iron transition-colors bg-transparent cursor-pointer"
+            onClick={() => setRightOpen((v) => !v)}
+            title={rightOpen ? "Collapse queue panel" : "Expand queue panel"}
+            aria-label={rightOpen ? "Collapse queue panel" : "Expand queue panel"}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              {rightOpen ? (
+                <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              ) : (
+                <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              )}
+            </svg>
+          </button>
+
+          {/* Expanded content */}
+          {rightOpen && (
+            <>
+              {/* Queue (top ~65%) */}
+              <div className="flex-1 overflow-hidden min-h-0 p-4 flex flex-col">
+                <DetectionQueue />
+              </div>
+
+              {/* Divider */}
+              <div className="h-px bg-iron shrink-0" />
+
+              {/* Detection Log (bottom ~35%) */}
+              <div className="shrink-0 overflow-hidden flex flex-col px-4 pb-4" style={{ height: "35%" }}>
+                <DetectionLog />
+              </div>
+            </>
+          )}
+
+          {/* Icon rail when collapsed */}
+          {!rightOpen && (
+            <div className="flex flex-col items-center pt-3 gap-3">
+              {/* Queue icon */}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Queue">
+                <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              </svg>
+              {/* Log icon */}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Detection Log">
+                <rect x="1.5" y="1.5" width="11" height="11" rx="1" stroke="currentColor" strokeWidth="1.1" />
+                <path d="M4 5h6M4 7.5h4M4 10h2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              </svg>
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
