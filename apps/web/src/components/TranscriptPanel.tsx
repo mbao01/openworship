@@ -125,14 +125,12 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
       <div className="flex items-center justify-between px-6 py-4 border-b border-iron shrink-0">
         <div className="flex items-center gap-2">
           {micActive && (
-            <>
-              <span
-                className="inline-block w-2 h-2 rounded-full bg-gold [box-shadow:0_0_0_4px_color-mix(in_srgb,var(--color-gold)_25%,transparent)] animate-[transcript-pulse_1.5s_ease-in-out_infinite] shrink-0"
-                aria-hidden="true"
-              />
-              <AudioLevelBars level={audioLevel} />
-            </>
+            <span
+              className="inline-block w-2 h-2 rounded-full bg-gold [box-shadow:0_0_0_4px_color-mix(in_srgb,var(--color-gold)_25%,transparent)] animate-[transcript-pulse_1.5s_ease-in-out_infinite] shrink-0"
+              aria-hidden="true"
+            />
           )}
+          <AudioLevelBars level={audioLevel} />
           <span className="text-[11px] font-medium tracking-[0.12em] text-ash uppercase">
             TRANSCRIPT
           </span>

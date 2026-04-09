@@ -51,8 +51,10 @@ impl Transcriber for WhisperTranscriber {
 
         // Whisper requires >= 1 second of audio (16_000 samples at 16 kHz).
         // Pad with silence if the chunk is slightly short due to sample rate
-        // conversion rounding.
-        const MIN_SAMPLES: usize = 16_000;
+        // conversion rounding. Use 16_160 (1.01 s) as the target rather than
+        // the bare minimum so a 1-sample rounding error at the C boundary
+        // cannot still trigger the "input too short" log.
+        const MIN_SAMPLES: usize = 16_160;
         let buf;
         let input = if samples.len() < MIN_SAMPLES {
             buf = {
