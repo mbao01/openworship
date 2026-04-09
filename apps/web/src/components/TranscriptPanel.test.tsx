@@ -18,7 +18,7 @@ describe("TranscriptPanel", () => {
 
   it("renders the transcript heading", () => {
     render(<TranscriptPanel />);
-    expect(screen.getByText("TRANSCRIPT")).toBeInTheDocument();
+    expect(screen.getByText("LIVE SPEECH TRANSCRIPT")).toBeInTheDocument();
   });
 
   it("shows START MIC button when idle", () => {
