@@ -205,9 +205,9 @@ export function DisplayPage() {
         <>
           {isSong ? (
             <>
-              {/* Song title header — fixed at top-left per Stitch design */}
+              {/* Song title header — fixed at top-left per reference */}
               <div className="absolute top-[8vh] left-[10%]">
-                <span className="block font-sans text-xl font-medium tracking-[0.15em] [font-variant:small-caps] text-gold">
+                <span className="block font-sans text-sm font-medium tracking-[0.2em] text-gold uppercase">
                   {content.reference}
                 </span>
               </div>
@@ -266,7 +266,7 @@ export function DisplayPage() {
               )}
             </>
           ) : (
-        <div data-qa="display-content" className="absolute top-1/2 left-[10%] -translate-y-1/2 max-w-[55vw]">
+        <div data-qa="display-content" className="absolute top-[18%] left-[10%] max-w-[80vw]">
           {isCountdown ? (
             <div className="flex flex-col items-start gap-4">
               {content.reference && (
@@ -302,17 +302,17 @@ export function DisplayPage() {
             </div>
           ) : (
             <>
-              <div className="mb-6">
-                <span className="block font-sans text-xl font-medium tracking-[0.15em] [font-variant:small-caps] text-gold">
+              <div className="mb-8">
+                <span className="block font-sans text-sm font-medium tracking-[0.2em] text-gold uppercase">
                   {content.reference}
                 </span>
                 {content.translation && (
-                  <span className="block font-sans text-sm tracking-widest text-ash font-normal mt-1">
+                  <span className="block font-sans text-xs tracking-[0.16em] text-ash/70 font-normal mt-1 uppercase">
                     {content.translation}
                   </span>
                 )}
               </div>
-              <p className="m-0 font-serif text-[clamp(3rem,6vw,6rem)] font-semibold italic leading-[1.15] text-chalk text-left">
+              <p className="m-0 font-serif text-[clamp(3rem,5.5vw,5.5rem)] font-semibold leading-[1.18] text-chalk text-left">
                 {content.text}
               </p>
             </>
