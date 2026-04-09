@@ -70,6 +70,12 @@ tasks:
 
   # ── Desktop (Tauri) ──────────────────────────────────────────────────────────
   desktop:dev:
+    desc: Start Tauri desktop dev mode
+    dir: apps/desktop
+    cmds:
+      - "{{.PNPM}} tauri dev"
+
+  desktop:local:
     desc: Start Tauri desktop dev mode (debug build + Vite dev server)
     dir: apps/desktop
     cmds:
