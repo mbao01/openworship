@@ -130,10 +130,10 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
               aria-hidden="true"
             />
           )}
-          <AudioLevelBars level={audioLevel} />
           <span className="text-[11px] font-medium tracking-[0.12em] text-ash uppercase">
             TRANSCRIPT
           </span>
+          <AudioLevelBars level={audioLevel} />
         </div>
         <button
           data-qa="transcript-toggle-btn"
@@ -155,7 +155,9 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
           className="flex items-center justify-between gap-2 px-6 py-2 bg-[rgba(201,168,76,0.07)] border-b border-[rgba(201,168,76,0.2)] shrink-0"
           role="alert"
         >
-          <span className="text-[11px] text-gold-muted tracking-wide leading-[1.4]">{sttWarning}</span>
+          <span className="text-[11px] text-gold-muted tracking-wide leading-[1.4]">
+            {sttWarning}
+          </span>
           <button
             data-qa="transcript-stt-warning-dismiss"
             className="bg-transparent border-none text-smoke cursor-pointer text-[10px] px-1 py-0.5 shrink-0 transition-colors leading-none hover:text-ash"
@@ -176,7 +178,9 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
       >
         {entries.length === 0 && !error && (
           <p className="text-sm text-smoke m-0">
-            {micActive ? "Listening\u2026" : "Press START MIC to begin transcription."}
+            {micActive
+              ? "Listening\u2026"
+              : "Press START MIC to begin transcription."}
           </p>
         )}
         {error && <p className="text-[13px] text-ember m-0 mb-2">{error}</p>}
