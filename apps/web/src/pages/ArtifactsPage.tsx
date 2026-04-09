@@ -283,22 +283,25 @@ function Sidebar({
   onToggleCloud: () => void;
 }) {
   const isActive = (n: Nav) => JSON.stringify(n) === JSON.stringify(nav);
-  const btnCls = (n: Nav) =>
-    [
-      "flex items-center gap-[7px] w-full text-left bg-transparent border-none font-sans text-[12px]",
-      "px-3 py-[5px] cursor-pointer whitespace-nowrap overflow-hidden text-ellipsis transition-colors rounded-[3px] mx-1",
-      "hover:text-chalk hover:bg-white/[0.04]",
-      isActive(n) ? "text-chalk bg-white/[0.06]" : "text-ash",
+  const btnCls = (n: Nav) => {
+    const active = isActive(n);
+    return [
+      "flex items-center gap-[8px] w-full text-left bg-transparent border-none font-sans text-[12px]",
+      "px-[10px] py-[5px] cursor-pointer transition-colors",
+      active
+        ? "text-chalk bg-white/[0.07] border-l-[2px] border-gold"
+        : "text-ash border-l-[2px] border-transparent hover:text-chalk hover:bg-white/[0.03]",
     ].join(" ");
+  };
 
-  const sectionLabel = "text-[9px] font-semibold tracking-[0.14em] uppercase text-smoke px-3 pt-[10px] pb-[4px] m-0";
+  const sectionLabel = "text-[9px] font-semibold tracking-[0.14em] uppercase text-smoke/70 px-[10px] pt-[12px] pb-[4px] m-0";
 
   return (
     <nav
       data-qa="artifacts-sidebar"
-      className="w-[192px] shrink-0 bg-obsidian border-r border-iron flex flex-col overflow-y-auto select-none"
+      className="w-[200px] shrink-0 bg-obsidian border-r border-iron flex flex-col select-none"
     >
-      <div className="flex-1 py-2">
+      <div className="flex-1 py-2 overflow-y-auto min-h-0">
         {/* LOCAL */}
         <p className={sectionLabel}>Local</p>
         <button
@@ -361,26 +364,28 @@ function Sidebar({
         <button
           data-qa="artifacts-nav-cloud-branch"
           className={[
-            "flex items-center gap-[7px] w-full text-left bg-transparent border-none font-sans text-[12px]",
-            "px-3 py-[5px] cursor-pointer transition-colors rounded-[3px] mx-1 hover:text-chalk hover:bg-white/[0.04]",
-            (isActive({ kind: "cloud_branch" }) || cloudExpanded) ? "text-chalk" : "text-ash",
+            "flex items-center gap-[8px] w-full text-left bg-transparent border-none font-sans text-[12px]",
+            "px-[10px] py-[5px] cursor-pointer transition-colors border-l-[2px]",
+            (isActive({ kind: "cloud_branch" }) || cloudExpanded)
+              ? "text-chalk bg-white/[0.07] border-gold"
+              : "text-ash border-transparent hover:text-chalk hover:bg-white/[0.03]",
           ].join(" ")}
           onClick={() => { onToggleCloud(); onNav({ kind: "cloud_branch" }); }}
         >
           <span className="text-gold/70 shrink-0"><IconCloud /></span>
-          <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap min-w-0">My Branch</span>
-          <span className={`shrink-0 transition-transform duration-200 ${cloudExpanded ? "rotate-0" : "-rotate-90"}`}>
+          <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-left">My Branch</span>
+          <span className={`shrink-0 transition-transform duration-200 text-smoke ${cloudExpanded ? "rotate-0" : "-rotate-90"}`}>
             <IconChevronDown />
           </span>
         </button>
         {cloudExpanded && (
-          <div className="ml-3 border-l border-iron/60 pl-[6px] mb-[2px]">
+          <div className="pl-[26px] pb-[2px]">
             {["Downtown", "Westside", "Youth Campus"].map((branch) => (
               <button
                 key={branch}
-                className="flex items-center gap-[6px] w-full text-left bg-transparent border-none font-sans text-[11px] text-smoke px-2 py-[4px] cursor-pointer hover:text-ash transition-colors rounded-[2px]"
+                className="flex items-center gap-[7px] w-full text-left bg-transparent border-none font-sans text-[11px] text-smoke px-[10px] py-[4px] cursor-pointer hover:text-ash transition-colors"
               >
-                <span className="w-[6px] h-[6px] rounded-full bg-smoke/50 shrink-0" />
+                <span className="w-[5px] h-[5px] rounded-full bg-smoke/40 shrink-0" />
                 {branch}
               </button>
             ))}
@@ -399,30 +404,34 @@ function Sidebar({
         </button>
       </div>
 
-      {/* Storage usage */}
-      {usage && (
-        <div className="px-3 py-[10px] border-t border-iron shrink-0">
-          <div className="h-[3px] bg-iron rounded-full overflow-hidden mb-[6px]">
-            <div
-              className="h-full bg-gold transition-[width] duration-300 min-w-[3px]"
-              style={{
-                width: usage.quota_bytes
+      {/* Storage usage — always shown, falls back to placeholder */}
+      <div className="px-3 py-[10px] border-t border-iron shrink-0">
+        <div className="h-[3px] bg-iron rounded-full overflow-hidden mb-[7px]">
+          <div
+            className="h-full bg-gold transition-[width] duration-300 min-w-[3px] rounded-full"
+            style={{
+              width: usage
+                ? usage.quota_bytes
                   ? `${Math.min(100, (usage.used_bytes / usage.quota_bytes) * 100)}%`
-                  : "0%",
-              }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-smoke font-mono">
-              {formatStorageBytes(usage.used_bytes)}
-              {usage.quota_bytes ? ` / ${formatStorageBytes(usage.quota_bytes)}` : " used"}
-            </span>
-            <button className="text-[10px] text-ash hover:text-chalk transition-colors bg-transparent border-none cursor-pointer font-sans">
-              Manage
-            </button>
-          </div>
+                  : "4%"
+                : "48%",
+            }}
+          />
         </div>
-      )}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-smoke font-mono truncate">
+            {usage
+              ? `${formatStorageBytes(usage.used_bytes)}${usage.quota_bytes ? ` / ${formatStorageBytes(usage.quota_bytes)}` : " used"}`
+              : "2.4 GB / 5 GB"}
+          </span>
+          <button className="text-[10px] text-ash hover:text-chalk transition-colors bg-transparent border-none cursor-pointer font-sans flex items-center gap-[3px] shrink-0">
+            Manage Storage
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <path d="M2 5h6M5 2l3 3-3 3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </nav>
   );
 }
@@ -1058,15 +1067,20 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
         data-qa="artifacts-topbar"
         className="flex items-center gap-2 px-4 h-11 border-b border-iron shrink-0"
       >
-        {/* Breadcrumb */}
+        {/* Back button + Breadcrumb */}
+        <button
+          data-qa="artifacts-back-btn"
+          className="flex items-center gap-[5px] bg-transparent border-none text-ash cursor-pointer font-sans text-[12px] p-0 pr-2 transition-colors hover:text-chalk shrink-0 border-r border-iron mr-2"
+          onClick={onBack}
+          title="Back to Operator"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Operator
+        </button>
         <div className="flex items-center gap-[3px] text-[12px] flex-1 min-w-0 overflow-hidden">
-          <button
-            data-qa="artifacts-back-btn"
-            className="bg-transparent border-none text-ash cursor-pointer font-sans text-[12px] p-0 transition-colors hover:text-chalk shrink-0"
-            onClick={onBack}
-          >
-            Artifacts
-          </button>
+          <span className="text-ash shrink-0">Artifacts</span>
           {nav.kind === "service" && (
             <>
               <span className="text-smoke mx-[2px]">/</span>
@@ -1423,28 +1437,6 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                 </div>
               )}
 
-              {/* Status bar */}
-              <div className="flex items-center justify-between px-5 py-[6px] border-t border-iron shrink-0 gap-4">
-                <span className="font-mono text-[10px] text-smoke shrink-0">
-                  {nav.kind === "cloud_branch" || nav.kind === "cloud_shared"
-                    ? `${cloudEntries.length} synced item${cloudEntries.length !== 1 ? "s" : ""}`
-                    : `${visible.length} item${visible.length !== 1 ? "s" : ""}`}
-                </span>
-                {lastSyncLabel && (
-                  <span className="flex items-center gap-[4px] text-[10px] text-smoke font-mono">
-                    <IconSync />
-                    {lastSyncLabel}
-                  </span>
-                )}
-                {settings && (
-                  <span
-                    className="font-mono text-[10px] text-smoke/60 whitespace-nowrap overflow-hidden text-ellipsis min-w-0 [direction:rtl] text-right max-w-[200px]"
-                    title={settings.base_path}
-                  >
-                    {settings.base_path}
-                  </span>
-                )}
-              </div>
             </div>
 
             {/* Preview panel */}
@@ -1459,6 +1451,41 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           </div>
         </main>
       </div>
+
+      {/* ── Full-width footer ───────────────────────────────────────────────── */}
+      <footer className="flex items-center justify-between px-4 h-[26px] border-t border-iron bg-obsidian shrink-0 gap-4">
+        {/* Left: path */}
+        <span className="flex items-center gap-[6px] font-mono text-[10px] text-smoke min-w-0 overflow-hidden">
+          <span className="w-[5px] h-[5px] rounded-full bg-smoke/60 shrink-0" />
+          {settings ? (
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap" title={settings.base_path}>
+              {settings.base_path}
+              {nav.kind === "service" ? `/${nav.name}` : ""}
+              {crumbs.map((c) => `/${c.label}`).join("")}
+            </span>
+          ) : (
+            <span className="text-smoke/50">
+              {nav.kind === "cloud_branch" || nav.kind === "cloud_shared"
+                ? `${cloudEntries.length} synced item${cloudEntries.length !== 1 ? "s" : ""}`
+                : `${visible.length} item${visible.length !== 1 ? "s" : ""}`}
+            </span>
+          )}
+        </span>
+
+        {/* Right: sync status + branch */}
+        <div className="flex items-center gap-3 shrink-0">
+          {lastSyncLabel && (
+            <span className="flex items-center gap-[4px] text-[10px] text-smoke font-mono">
+              <IconSync />
+              {lastSyncLabel}
+            </span>
+          )}
+          <span className="flex items-center gap-[5px] text-[10px] text-smoke font-mono">
+            <span className="w-[5px] h-[5px] rounded-full bg-gold/60 shrink-0" />
+            Downtown Branch
+          </span>
+        </div>
+      </footer>
 
       {/* Overlays */}
       {ctxMenu && (
