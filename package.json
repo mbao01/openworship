@@ -8,7 +8,8 @@
     "build": "pnpm --filter @openworship/web build",
     "lint": "pnpm --filter './apps/**' lint",
     "type-check": "pnpm --filter './apps/**' type-check",
-    "test": "pnpm --filter @openworship/web test"
+    "test": "pnpm --filter @openworship/web test",
+    "desktop:dev": "cd apps/desktop && pnpm tauri dev"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2"
