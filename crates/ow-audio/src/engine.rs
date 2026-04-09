@@ -92,6 +92,16 @@ impl SttEngine {
                 }
                 match capturer.rx.recv_timeout(std::time::Duration::from_millis(chunk_ms as u64 * 2)) {
                     Ok(samples) => {
+                        let rms = (samples.iter().map(|&s| s * s).sum::<f32>()
+                            / samples.len() as f32)
+                            .sqrt();
+                        eprintln!(
+                            "[stt] chunk: {} samples, rms={:.6}, min={:.4}, max={:.4}",
+                            samples.len(),
+                            rms,
+                            samples.iter().cloned().reduce(f32::min).unwrap_or(0.0),
+                            samples.iter().cloned().reduce(f32::max).unwrap_or(0.0),
+                        );
                         let offset_ms = start.elapsed().as_millis() as u64;
                         match transcriber.transcribe(&samples) {
                             Ok(text) if !text.is_empty() => {
