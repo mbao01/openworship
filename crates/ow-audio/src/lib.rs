@@ -7,7 +7,7 @@
 //! - `coreml`    — enables Apple CoreML acceleration on macOS (implies `whisper`).
 //! - `deepgram`  — enables `DeepgramTranscriber` for online streaming STT.
 //!
-//! Without any feature the public API is still fully available via `MockTranscriber`.
+//! The `whisper` feature is required for production use.
 
 mod capture;
 mod deepgram;
@@ -18,7 +18,7 @@ pub(crate) mod transcribe;
 pub use capture::{AudioConfig, AudioInputDevice, list_input_devices};
 pub use engine::{SttEngine, SttStatus};
 pub use event::TranscriptEvent;
-pub use transcribe::{MockTranscriber, Transcriber};
+pub use transcribe::Transcriber;
 #[cfg(feature = "whisper")]
 pub use transcribe::{WhisperTranscriber, default_model_path, resolve_model_path};
 #[cfg(feature = "deepgram")]
@@ -29,7 +29,30 @@ mod tests {
     use super::*;
     use crate::transcribe::Transcriber;
 
-    // ─── MockTranscriber ──────────────────────────────────────────────────────
+    // ─── MockTranscriber (test-only) ─────────────────────────────────────────
+
+    struct MockTranscriber {
+        counter: u32,
+    }
+
+    impl MockTranscriber {
+        fn new() -> Self {
+            Self { counter: 0 }
+        }
+    }
+
+    impl Default for MockTranscriber {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    impl Transcriber for MockTranscriber {
+        fn transcribe(&mut self, _samples: &[f32]) -> anyhow::Result<String> {
+            self.counter += 1;
+            Ok(format!("[mock transcript {}]", self.counter))
+        }
+    }
 
     #[test]
     fn test_mock_transcriber_increments() {
