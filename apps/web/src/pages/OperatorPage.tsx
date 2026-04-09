@@ -89,9 +89,9 @@ function MiniDisplay({ label, item, isLive }: MiniDisplayProps) {
           <span className="w-1.5 h-1.5 rounded-full bg-gold [box-shadow:0_0_6px_var(--color-gold)] shrink-0" />
         )}
       </div>
-      {/* Display panel */}
+      {/* Display panel — 16:9 aspect ratio, fills half the full width */}
       <div
-        className={`relative bg-void rounded-[3px] overflow-hidden flex flex-col justify-end p-4 border h-[160px] ${
+        className={`relative bg-void rounded-[3px] overflow-hidden flex flex-col justify-end p-4 border aspect-video w-full ${
           isLive && item
             ? "border-gold/40 [box-shadow:inset_0_0_40px_rgba(201,168,76,0.04)]"
             : "border-iron/60"
