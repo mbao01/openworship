@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Sacred Monochrome palette */
+  --color-void: #0a0a0a;
+  --color-obsidian: #141414;
+  --color-iron: #2a2a2a;
+  --color-smoke: #4a4a4a;
+  --color-ash: #808080;
+  --color-chalk: #efefef;
+  --color-gold: #c9a84c;
+  --color-gold-light: #e6c364;
+
+  /* Semantic aliases */
+  --color-background: var(--color-void);
+  --color-surface: var(--color-obsidian);
+  --color-border: var(--color-iron);
+  --color-text-primary: var(--color-chalk);
+  --color-text-secondary: var(--color-ash);
+  --color-accent: var(--color-gold);
+
+  /* Fonts */
+  --font-serif: var(--font-garamond);
+  --font-sans: var(--font-geist);
+}
+
+html {
+  background: #0a0a0a;
+  color: #efefef;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: #0a0a0a;
+  color: #efefef;
+  font-family: var(--font-geist, system-ui, sans-serif);
+  min-height: 100vh;
+}
+
+/* Navigation hover */
+.nav-link {
+  color: #808080;
+  text-decoration: none;
+  transition: color 150ms;
+}
+.nav-link:hover {
+  color: #efefef;
+}
+
+/* Mode card hover — gold left border */
+.mode-card {
+  border-left: 2px solid #2a2a2a;
+  transition: border-left-color 150ms;
+}
+.mode-card:hover {
+  border-left-color: #c9a84c;
+}
+
+/* Footer link hover — #808080 meets WCAG AA against #0a0a0a */
+.footer-link {
+  color: #808080;
+  text-decoration: none;
+  transition: color 150ms;
+}
+.footer-link:hover {
+  color: #efefef;
+}

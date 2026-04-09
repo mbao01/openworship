@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "pnpm --filter @openworship/web dev",
     "build": "pnpm --filter @openworship/web build",
-    "lint": "pnpm --filter @openworship/web lint",
-    "type-check": "pnpm --filter @openworship/web type-check",
+    "lint": "pnpm --filter './apps/**' lint",
+    "type-check": "pnpm --filter './apps/**' type-check",
     "test": "pnpm --filter @openworship/web test"
   },
   "devDependencies": {
