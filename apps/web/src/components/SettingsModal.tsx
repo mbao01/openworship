@@ -10,16 +10,17 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type Category = "church" | "appearance" | "audio" | "display" | "detection" | "email" | "cloud" | "about";
+type Category = "church" | "appearance" | "audio" | "display" | "detection" | "email" | "cloud" | "shortcuts" | "about";
 
 const CATEGORIES: { id: Category; label: string }[] = [
-  { id: "church", label: "Church" },
+  { id: "church", label: "General" },
   { id: "appearance", label: "Appearance" },
   { id: "audio", label: "Audio" },
   { id: "display", label: "Display" },
   { id: "detection", label: "Detection" },
-  { id: "email", label: "Email" },
+  { id: "email", label: "Service" },
   { id: "cloud", label: "Cloud" },
+  { id: "shortcuts", label: "Shortcuts" },
   { id: "about", label: "About" },
 ];
 
@@ -88,34 +89,48 @@ export function SettingsModal({ identity, theme = "system", onSetTheme, onClose 
   return (
     <div
       data-qa="settings-modal"
-      className="fixed inset-0 z-[100] bg-void/75 flex items-center justify-center"
+      className="fixed inset-0 z-[100] bg-void/80 flex items-center justify-center"
       ref={overlayRef}
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-label="Settings"
     >
-      <div className="flex w-[740px] h-[580px] bg-obsidian border border-iron overflow-hidden">
+      <div className="flex w-[780px] h-[600px] bg-obsidian border border-iron overflow-hidden rounded-sm shadow-2xl">
         {/* Left nav */}
-        <nav className="w-[170px] shrink-0 bg-void border-r border-iron flex flex-col py-6">
-          <p className="text-[10px] font-medium tracking-[0.14em] text-smoke uppercase px-4 pb-4 m-0">SETTINGS</p>
-          {CATEGORIES.map((cat) => (
+        <nav className="w-[160px] shrink-0 bg-void border-r border-iron flex flex-col">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-iron shrink-0">
+            <p className="text-[11px] font-medium tracking-[0.14em] text-chalk m-0">Settings</p>
             <button
-              key={cat.id}
-              data-qa={`settings-nav-${cat.id}`}
-              className={[
-                "block w-full bg-transparent border-none border-l-2 py-[10px] px-4",
-                "text-left font-sans text-[13px] font-normal cursor-pointer transition-colors",
-                "hover:text-chalk hover:bg-white/[0.03]",
-                activeCategory === cat.id
-                  ? "text-chalk border-l-gold"
-                  : "text-ash border-l-transparent",
-              ].join(" ")}
-              onClick={() => setActiveCategory(cat.id)}
+              data-qa="settings-close-x-btn"
+              className="w-5 h-5 flex items-center justify-center text-ash hover:text-chalk bg-transparent border-none cursor-pointer transition-colors rounded-sm hover:bg-white/[0.06]"
+              onClick={onClose}
+              aria-label="Close settings"
             >
-              {cat.label}
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
             </button>
-          ))}
+          </div>
+          <div className="flex-1 py-2 overflow-y-auto">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                data-qa={`settings-nav-${cat.id}`}
+                className={[
+                  "block w-full bg-transparent border-none border-l-2 py-2 px-4",
+                  "text-left font-sans text-[13px] font-normal cursor-pointer transition-colors",
+                  "hover:text-chalk hover:bg-white/[0.03]",
+                  activeCategory === cat.id
+                    ? "text-chalk border-l-gold"
+                    : "text-ash border-l-transparent",
+                ].join(" ")}
+                onClick={() => setActiveCategory(cat.id)}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </nav>
 
         {/* Right content area */}
@@ -145,6 +160,7 @@ export function SettingsModal({ identity, theme = "system", onSetTheme, onClose 
           )}
           {activeCategory === "email" && <EmailSection identity={identity} />}
           {activeCategory === "cloud" && <CloudSection />}
+          {activeCategory === "shortcuts" && <ShortcutsSection />}
           {activeCategory === "about" && <AboutSection />}
 
           {/* Footer */}
@@ -155,9 +171,9 @@ export function SettingsModal({ identity, theme = "system", onSetTheme, onClose 
               className="font-sans text-[11px] font-medium tracking-[0.08em] text-chalk bg-transparent border border-iron rounded-sm py-[6px] px-4 cursor-pointer transition-colors hover:border-ash uppercase"
               onClick={onClose}
             >
-              {activeCategory === "church" || activeCategory === "appearance" ? "Close" : "Cancel"}
+              {activeCategory === "church" || activeCategory === "appearance" || activeCategory === "shortcuts" || activeCategory === "about" ? "Close" : "Cancel"}
             </button>
-            {activeCategory !== "church" && activeCategory !== "appearance" && (
+            {activeCategory !== "church" && activeCategory !== "appearance" && activeCategory !== "shortcuts" && activeCategory !== "about" && (
               <button
                 data-qa="settings-save-btn"
                 className="font-sans text-[11px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm py-[6px] px-4 cursor-pointer transition-[filter] hover:brightness-[1.15] disabled:opacity-50 disabled:cursor-not-allowed uppercase"
@@ -818,6 +834,37 @@ function AboutSection() {
       <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">About</h2>
       <p className="text-xs text-smoke mt-2 leading-[1.5]">
         openworship — AI-powered worship presentation.
+      </p>
+    </div>
+  );
+}
+
+// ─── Shortcuts section ─────────────────────────────────────────────────────────
+
+const KEYBOARD_SHORTCUTS: { key: string; description: string }[] = [
+  { key: "Space", description: "Approve top suggestion" },
+  { key: "Escape", description: "Dismiss / clear display" },
+  { key: "↑ / ↓", description: "Navigate queue items" },
+  { key: "⌘ ,", description: "Open settings" },
+  { key: "⌘ M", description: "Toggle microphone" },
+];
+
+function ShortcutsSection() {
+  return (
+    <div className="flex-1 p-6">
+      <h2 className="text-[13px] font-medium tracking-[0.1em] text-chalk uppercase mb-6 pb-4 border-b border-iron">Shortcuts</h2>
+      <div className="flex flex-col gap-1">
+        {KEYBOARD_SHORTCUTS.map(({ key, description }) => (
+          <div key={key} className="flex items-center justify-between py-2 border-b border-iron/30">
+            <span className="text-[13px] text-ash">{description}</span>
+            <kbd className="font-mono text-[11px] text-chalk bg-slate border border-iron rounded-sm px-2 py-0.5 tracking-wide">
+              {key}
+            </kbd>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-smoke mt-6">
+        Keyboard shortcuts are active when the main window is focused.
       </p>
     </div>
   );

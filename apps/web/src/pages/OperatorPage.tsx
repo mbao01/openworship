@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { ContentPanel } from "../components/ContentPanel";
 import { DetectionQueue } from "../components/DetectionQueue";
 import { ModeToolbar } from "../components/ModeToolbar";
+import { ScriptureSearch } from "../components/ScriptureSearch";
 import { SchedulePanel } from "../components/SchedulePanel";
 import { SettingsModal } from "../components/SettingsModal";
-import { SongLibrary } from "../components/SongLibrary";
-import { SummaryPanel } from "../components/SummaryPanel";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
 import type { ChurchIdentity, DetectionMode, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
@@ -33,7 +31,7 @@ function TranslationSwitcher() {
       setTranslations(list);
       setActive(current);
     } catch {
-      // Backend not ready yet — switcher stays hidden until next render
+      // Backend not ready yet
     }
   }, []);
 
@@ -45,7 +43,6 @@ function TranslationSwitcher() {
     try {
       await invoke("switch_live_translation", { translation });
     } catch {
-      // revert on error
       load();
     }
   };
@@ -54,10 +51,7 @@ function TranslationSwitcher() {
 
   return (
     <div className="flex items-center gap-2">
-      <label
-        className="text-[10px] text-smoke tracking-[0.06em] uppercase"
-        htmlFor="translation-select"
-      >
+      <label className="text-[10px] text-smoke tracking-[0.06em] uppercase" htmlFor="translation-select">
         Translation
       </label>
       <select
@@ -76,9 +70,62 @@ function TranslationSwitcher() {
   );
 }
 
-// ─── Copilot Mode: Featured Detection Card ───────────────────────────────────
+// ─── Mini Preview Panel ───────────────────────────────────────────────────────
 
-function CopilotFeaturedDetection() {
+interface MiniDisplayProps {
+  label: string;
+  item: QueueItem | null;
+  isLive?: boolean;
+}
+
+function MiniDisplay({ label, item, isLive }: MiniDisplayProps) {
+  const isSong = item?.kind === "song";
+  return (
+    <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex items-center gap-2 mb-1 px-1">
+        <span className="text-[10px] font-medium tracking-[0.14em] text-smoke uppercase">{label}</span>
+        {isLive && item && (
+          <span className="w-1.5 h-1.5 rounded-full bg-gold [box-shadow:0_0_4px_var(--color-gold)] shrink-0" />
+        )}
+      </div>
+      <div
+        className={`relative flex-1 bg-void rounded-sm overflow-hidden flex flex-col justify-end p-3 min-h-0 border ${
+          isLive && item ? "border-gold/30" : "border-iron/50"
+        }`}
+        style={{ aspectRatio: "16/9" }}
+        aria-label={`${label} display`}
+      >
+        {item ? (
+          <>
+            {/* Reference label — top-left */}
+            <div className="absolute top-2 left-3">
+              <span className="font-sans text-[9px] font-medium tracking-[0.14em] text-gold uppercase">
+                {item.reference}
+              </span>
+              {!isSong && item.translation && (
+                <span className="block font-sans text-[8px] tracking-wider text-ash/70 mt-0.5">
+                  {item.translation}
+                </span>
+              )}
+            </div>
+            {/* Content preview */}
+            <p className={`m-0 leading-snug text-chalk line-clamp-3 ${isSong ? "font-serif text-[11px] italic" : "font-serif text-[10px]"}`}>
+              {isSong ? item.reference : item.text}
+            </p>
+          </>
+        ) : (
+          <p className="m-0 text-[10px] text-smoke/50 text-center w-full absolute inset-0 flex items-center justify-center">
+            {label === "PREVIEW" ? "No pending content" : "Display cleared"}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Preview + Control Section ────────────────────────────────────────────────
+
+function PreviewAndControls() {
   const [items, setItems] = useState<QueueItem[]>([]);
 
   useEffect(() => {
@@ -88,63 +135,156 @@ function CopilotFeaturedDetection() {
     return () => { unlisten?.(); };
   }, []);
 
-  const top = items.find((i) => i.status === "pending");
-  if (!top) return null;
+  const pending = items.find((i) => i.status === "pending") ?? null;
+  const live = items.find((i) => i.status === "live") ?? null;
 
-  function handleApprove() { invoke("approve_item", { id: top!.id }).catch(console.error); }
-  function handleDismiss() { invoke("dismiss_item", { id: top!.id }).catch(console.error); }
+  function handleApprove() {
+    if (pending) invoke("approve_item", { id: pending.id }).catch(console.error);
+  }
+  function handleSkip() {
+    if (pending) invoke("dismiss_item", { id: pending.id }).catch(console.error);
+  }
+  function handleClearContent() {
+    invoke("clear_display").catch(console.error);
+  }
 
   return (
-    <div
-      data-qa="copilot-featured-detection"
-      className="mx-6 mt-4 mb-0 border border-gold-muted/40 border-l-2 border-l-gold rounded-sm p-4 bg-slate shrink-0"
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] font-medium tracking-[0.16em] text-gold uppercase">AI Suggestion</span>
-        {top.kind === "song" && <span className="text-[11px] text-gold">♪</span>}
-        <span className="text-xs font-medium text-chalk ml-auto">{top.reference}</span>
-        {top.translation && top.kind !== "song" && (
-          <span className="font-mono text-[10px] text-ash">{top.translation}</span>
-        )}
+    <div className="shrink-0 px-4 pt-3 pb-0 border-b border-iron">
+      {/* Mini preview panels */}
+      <div className="flex gap-3 mb-3" style={{ height: "130px" }}>
+        <MiniDisplay label="PREVIEW" item={pending} />
+        <MiniDisplay label="LIVE" item={live} isLive />
       </div>
-      {top.kind !== "song" && (
-        <p className="text-sm leading-[1.5] text-ash m-0 mb-3 line-clamp-2">{top.text}</p>
-      )}
-      {top.confidence != null && (
-        <div className="h-[2px] bg-iron rounded-sm mb-3">
-          <div className="h-full bg-gold rounded-sm" style={{ width: `${Math.round(top.confidence * 100)}%` }} />
-        </div>
-      )}
-      <div className="flex gap-2">
+
+      {/* Control bar */}
+      <div className="flex items-center gap-2 pb-3">
         <button
-          data-qa="copilot-approve-btn"
-          className="font-sans text-[11px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm px-3 py-1.5 cursor-pointer uppercase hover:brightness-110 transition-all"
+          data-qa="operator-approve-btn"
+          className="font-sans text-[11px] font-medium tracking-[0.1em] text-void bg-gold border-none rounded-sm px-4 py-1.5 cursor-pointer uppercase hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           onClick={handleApprove}
+          disabled={!pending}
         >
           APPROVE
         </button>
         <button
-          data-qa="copilot-dismiss-btn"
-          className="font-sans text-[11px] font-medium tracking-[0.08em] text-chalk bg-transparent border border-iron rounded-sm px-3 py-1.5 cursor-pointer uppercase hover:border-ash transition-colors"
-          onClick={handleDismiss}
+          data-qa="operator-skip-btn"
+          className="font-sans text-[11px] font-medium tracking-[0.1em] text-chalk bg-transparent border border-iron rounded-sm px-4 py-1.5 cursor-pointer uppercase hover:border-ash transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={handleSkip}
+          disabled={!pending}
         >
-          DISMISS
+          SKIP
         </button>
+        <div className="flex-1" />
+        <button
+          data-qa="operator-clear-btn"
+          className="font-sans text-[11px] font-medium tracking-[0.1em] text-ash bg-transparent border border-iron/50 rounded-sm px-4 py-1.5 cursor-pointer uppercase hover:border-ash hover:text-chalk transition-colors"
+          onClick={handleClearContent}
+          title="Clear current display content"
+        >
+          CLEAR CONTENT
+        </button>
+        <div className="flex items-center gap-1">
+          <button
+            className="w-6 h-6 flex items-center justify-center text-smoke hover:text-chalk bg-transparent border-none rounded-sm cursor-pointer transition-colors"
+            title="Previous item"
+            aria-label="Previous item"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            className="w-6 h-6 flex items-center justify-center text-smoke hover:text-chalk bg-transparent border-none rounded-sm cursor-pointer transition-colors"
+            title="Next item"
+            aria-label="Next item"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// Cycle: system → dark → light → system
+// ─── Detection Log ────────────────────────────────────────────────────────────
+
+interface LogEntry {
+  id: number;
+  ts: number;
+  label: string;
+  reference: string;
+}
+
+let _logId = 0;
+
+function DetectionLog() {
+  const [entries, setEntries] = useState<LogEntry[]>([]);
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+    listen<QueueItem[]>("detection://queue-updated", (e) => {
+      const live = e.payload.find((i) => i.status === "live");
+      if (live) {
+        setEntries((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.reference === live.reference) return prev;
+          const entry: LogEntry = {
+            id: ++_logId,
+            ts: Date.now(),
+            label: live.kind === "song" ? "♪ SONG" : "MATCH",
+            reference: live.reference,
+          };
+          return [...prev.slice(-19), entry];
+        });
+      }
+    }).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
+  }, []);
+
+  const fmt = (ts: number) => {
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+  };
+
+  return (
+    <div className="flex flex-col min-h-0 overflow-hidden pt-3">
+      <span className="text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-2 shrink-0">
+        DETECTION LOG
+      </span>
+      <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-0.5 [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]">
+        {entries.length === 0 ? (
+          <p className="text-[11px] text-smoke/60 m-0">No events yet.</p>
+        ) : (
+          entries.map((e) => (
+            <div key={e.id} className="flex items-baseline gap-2">
+              <span className="font-mono text-[9px] text-smoke shrink-0">{fmt(e.ts)}</span>
+              <span className="text-[10px] text-ash shrink-0">{e.label}</span>
+              <span className="text-[10px] text-gold truncate">{e.reference}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Theme cycle ──────────────────────────────────────────────────────────────
+
 const THEME_CYCLE: ThemeMode[] = ["system", "dark", "light"];
+
+// ─── OperatorPage ─────────────────────────────────────────────────────────────
 
 export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSetTheme }: OperatorPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mode, setMode] = useState<DetectionMode>("copilot");
+  const [displayView, setDisplayView] = useState<"audience" | "stage">("audience");
 
   return (
     <div data-qa="operator-root" className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden">
-      {/* Custom title bar */}
+
+      {/* ── Title bar ────────────────────────────────────────────────────── */}
       <header data-qa="operator-titlebar" className="h-9 bg-void flex items-center justify-between px-4 border-b border-iron shrink-0">
         <div className="flex items-center gap-2">
           <span data-qa="operator-appname" className="text-xs text-ash tracking-[0.08em] font-normal">openworship</span>
@@ -153,6 +293,25 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
         </div>
         <div className="flex items-center gap-3">
           <TranslationSwitcher />
+
+          {/* AUDIENCE / STAGE toggle */}
+          <div className="flex items-stretch h-5 rounded-sm overflow-hidden border border-iron">
+            {(["audience", "stage"] as const).map((v) => (
+              <button
+                key={v}
+                className={`font-sans text-[10px] font-medium tracking-[0.1em] px-3 border-none cursor-pointer transition-colors uppercase ${
+                  displayView === v
+                    ? "bg-gold text-void"
+                    : "bg-transparent text-ash hover:text-chalk"
+                }`}
+                onClick={() => setDisplayView(v)}
+                aria-pressed={displayView === v}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+
           {onOpenArtifacts && (
             <button
               data-qa="open-artifacts-btn"
@@ -181,7 +340,6 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
               aria-label="Cycle theme"
             >
               {theme === "light" ? (
-                /* Sun icon — light mode active */
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.2" />
                   <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -194,12 +352,10 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
                   <line x1="2.9" y1="13.1" x2="4.3" y2="11.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
               ) : theme === "dark" ? (
-                /* Moon icon — dark mode active */
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
                 </svg>
               ) : (
-                /* Monitor icon — system mode active */
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                   <rect x="1.5" y="2" width="13" height="9" rx="1" stroke="currentColor" strokeWidth="1.2" />
                   <line x1="5" y1="14" x2="11" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -215,7 +371,6 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
             title="Settings"
             aria-label="Open settings"
           >
-            {/* Gear icon — 16×16 SVG */}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path
                 d="M6.5 1h3l.5 1.5a5.5 5.5 0 0 1 1.2.7l1.5-.5 1.5 2.6-1.2 1a5.6 5.6 0 0 1 0 1.4l1.2 1-1.5 2.6-1.5-.5a5.5 5.5 0 0 1-1.2.7L9.5 15h-3l-.5-1.5a5.5 5.5 0 0 1-1.2-.7l-1.5.5L1.8 10.8l1.2-1a5.6 5.6 0 0 1 0-1.4l-1.2-1 1.5-2.6 1.5.5A5.5 5.5 0 0 1 6 2.5L6.5 1Z"
@@ -238,31 +393,61 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
         />
       )}
 
-      {/* Mode selector toolbar */}
+      {/* ── Mode toolbar ─────────────────────────────────────────────────── */}
       <ModeToolbar onModeChange={setMode} />
 
-      {/* Main layout — three columns */}
+      {/* ── Main three-column layout ──────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Left: Schedule + Song Library + Summaries */}
-        <aside data-qa="operator-col-left" className="flex flex-col overflow-hidden min-h-0 w-1/4 bg-obsidian border-r border-iron p-4 overflow-y-auto">
-          <SchedulePanel />
-          <div className="h-px bg-iron my-4 shrink-0" aria-hidden="true" />
-          <SongLibrary />
-          <div className="h-px bg-iron my-4 shrink-0" aria-hidden="true" />
-          <ContentPanel />
-          <div className="h-px bg-iron my-4 shrink-0" aria-hidden="true" />
-          <SummaryPanel />
+
+        {/* Left — Schedule + Content Bank ─────────────────────────────── */}
+        <aside
+          data-qa="operator-col-left"
+          className="flex flex-col w-56 shrink-0 bg-obsidian border-r border-iron overflow-hidden"
+        >
+          {/* Schedule */}
+          <div className="flex-1 overflow-y-auto p-4 min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]">
+            <SchedulePanel />
+          </div>
+
+          {/* Divider */}
+          <div className="h-px bg-iron shrink-0" />
+
+          {/* Content Bank — scripture search */}
+          <div className="shrink-0 p-4" style={{ maxHeight: "40%" }}>
+            <span className="block text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-3">
+              CONTENT BANK
+            </span>
+            <div className="overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]" style={{ maxHeight: "200px" }}>
+              <ScriptureSearch />
+            </div>
+          </div>
         </aside>
 
-        {/* Center: Live transcript (+ Copilot featured detection when in copilot mode) */}
-        <main data-qa="operator-col-center" className="flex flex-col overflow-hidden min-h-0 w-1/2 bg-void">
-          {mode === "copilot" && <CopilotFeaturedDetection />}
-          <TranscriptPanel />
+        {/* Center — Preview panels + controls + Transcript ─────────────── */}
+        <main data-qa="operator-col-center" className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void">
+          {mode === "copilot" && <PreviewAndControls />}
+          <div className="flex-1 overflow-hidden min-h-0">
+            <TranscriptPanel />
+          </div>
         </main>
 
-        {/* Right: Detection queue */}
-        <aside data-qa="operator-col-right" className="flex flex-col overflow-hidden min-h-0 w-1/4 bg-obsidian border-l border-iron p-4">
-          <DetectionQueue />
+        {/* Right — Queue + Detection Log ───────────────────────────────── */}
+        <aside
+          data-qa="operator-col-right"
+          className="flex flex-col w-60 shrink-0 bg-obsidian border-l border-iron overflow-hidden"
+        >
+          {/* Queue (top ~65%) */}
+          <div className="flex-1 overflow-hidden min-h-0 p-4 flex flex-col">
+            <DetectionQueue />
+          </div>
+
+          {/* Divider */}
+          <div className="h-px bg-iron shrink-0" />
+
+          {/* Detection Log (bottom ~35%) */}
+          <div className="shrink-0 overflow-hidden flex flex-col px-4 pb-4" style={{ height: "35%" }}>
+            <DetectionLog />
+          </div>
         </aside>
       </div>
     </div>
