@@ -355,6 +355,7 @@ pub fn run() {
             commands::delete_sermon_note,
             commands::push_sermon_note,
             commands::advance_sermon_note,
+            commands::rewind_sermon_note,
             commands::get_active_sermon_note,
             // ── Phase 16: Cloud Sync ───────────────────────────────────────
             commands::get_cloud_config,
