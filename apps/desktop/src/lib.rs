@@ -70,9 +70,22 @@ pub fn run() {
 
     // ── Semantic scripture index (Phase 9) ────────────────────────────────────
     let semantic_index: Arc<RwLock<Option<SemanticIndex>>> = Arc::new(RwLock::new(None));
-    let embedder: Arc<dyn ow_embed::Embedder> = Arc::new(
-        ow_embed::LocalEmbedder::new().expect("failed to initialize embedding model"),
-    );
+    // Only initialise the heavy ONNX model when semantic search is actually
+    // enabled.  Loading it unconditionally was the primary cause of the 800%
+    // CPU / 16 GB memory spike (ONNX Runtime allocates a full thread-pool and
+    // keeps model weights resident for the lifetime of the process).
+    let semantic_enabled_at_startup = audio_settings
+        .read()
+        .map(|s| s.semantic_enabled)
+        .unwrap_or(true);
+    let embedder: Arc<dyn ow_embed::Embedder> = if semantic_enabled_at_startup {
+        Arc::new(
+            ow_embed::LocalEmbedder::new().expect("failed to initialize embedding model"),
+        )
+    } else {
+        eprintln!("[embed] semantic search disabled — skipping ONNX model init");
+        Arc::new(ow_embed::NullEmbedder)
+    };
 
     let verse_results: Vec<ow_search::VerseResult> = verses
         .iter()

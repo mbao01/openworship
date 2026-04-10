@@ -75,7 +75,7 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
       setAudioLevel(level);
       if (level < 0.02) {
         lowSignalTicks.current += 1;
-        if (lowSignalTicks.current >= 50) setLowSignal(true);
+        if (lowSignalTicks.current >= 10) setLowSignal(true);
       } else {
         lowSignalTicks.current = 0;
         setLowSignal(false);
@@ -84,7 +84,7 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
       setEntries((prev) => {
         if (level >= 0.02 && prev.length === lastEntryCount.current) {
           signalNoTextTicks.current += 1;
-          if (signalNoTextTicks.current >= 80) setNoTranscript(true);
+          if (signalNoTextTicks.current >= 16) setNoTranscript(true);
         } else {
           signalNoTextTicks.current = 0;
           lastEntryCount.current = prev.length;
@@ -92,7 +92,7 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
         }
         return prev; // no mutation
       });
-    }, 100);
+    }, 500);
     return () => clearInterval(id);
   }, [micActive]);
 
