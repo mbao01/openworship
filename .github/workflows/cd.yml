@@ -12,7 +12,56 @@ permissions:
   contents: write
 
 jobs:
+  # ── Pre-build the scripture embedding index ──────────────────────────────────
+  # Runs once on Linux before the platform matrix. The index is keyed on the
+  # SHA-256 of the Bible source files so it is only regenerated when content
+  # actually changes. The fastembed ONNX model is cached separately.
+  generate-embedding-index:
+    runs-on: ubuntu-22.04
+    name: Build scripture embedding index
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .
+          cache-targets: "true"
+
+      - name: Cache fastembed ONNX model
+        uses: actions/cache@v4
+        with:
+          path: ~/.openworship/.cache/fastembed
+          key: fastembed-nomic-embed-text-v1.5
+
+      - name: Cache pre-built embedding index
+        id: index-cache
+        uses: actions/cache@v4
+        with:
+          path: apps/desktop/resources
+          key: scripture-index-${{ hashFiles('crates/ow-db/data/*.txt') }}
+
+      - name: Build embedding index (all translations)
+        if: steps.index-cache.outputs.cache-hit != 'true'
+        run: |
+          cargo run -p ow-embed-builder --release -- --translation KJV
+          cargo run -p ow-embed-builder --release -- --translation WEB
+          cargo run -p ow-embed-builder --release -- --translation BSB
+
+      - name: Upload embedding index artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scripture-index
+          path: apps/desktop/resources/
+          if-no-files-found: error
+
+  # ── Platform release builds ───────────────────────────────────────────────────
   release:
+    needs: generate-embedding-index
     strategy:
       fail-fast: false
       matrix:
@@ -62,6 +111,12 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Download pre-built embedding index
+        uses: actions/download-artifact@v4
+        with:
+          name: scripture-index
+          path: apps/desktop/resources/
+
       - name: Build and publish Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -83,4 +138,9 @@ jobs:
           releaseBody: "See CHANGELOG for details."
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          # Inject the pre-built embedding index resources into the bundle.
+          # The --config flag merges with tauri.conf.json; resources are only
+          # bundled in release builds where the index files have been downloaded.
+          args: >-
+            ${{ matrix.args }}
+            --config '{"bundle":{"resources":["resources/scripture_index_*.bin","resources/scripture_index_*.sha256"]}}'
