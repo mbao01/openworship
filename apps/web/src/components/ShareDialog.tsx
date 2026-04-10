@@ -106,6 +106,7 @@ export function ShareDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [syncConfirmPending, setSyncConfirmPending] = useState(false);
   const [identity, setIdentity] = useState<ChurchIdentity | null>(null);
 
   useEffect(() => {
@@ -137,11 +138,19 @@ export function ShareDialog({
   };
 
   const handleShare = () => {
-    const q = searchQuery.trim();
-    if (!q) return;
-    // Treat input as branch name (use as both id and name)
-    if (acl.some((e) => e.branch_name.toLowerCase() === q.toLowerCase())) return;
-    setAcl((prev) => [...prev, { branch_id: q, branch_name: q, permission: newPerm }]);
+    // Support comma-separated branch names; trim and filter empty entries
+    const names = searchQuery
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (names.length === 0) return;
+    setAcl((prev) => {
+      const existing = new Set(prev.map((e) => e.branch_name.toLowerCase()));
+      const toAdd = names
+        .filter((name) => !existing.has(name.toLowerCase()))
+        .map((name) => ({ branch_id: name, branch_name: name, permission: newPerm }));
+      return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+    });
     setSearchQuery("");
   };
 
@@ -169,8 +178,9 @@ export function ShareDialog({
         artifactId: artifact.id,
       });
       if (!url) {
+        // Sync is not enabled — prompt the user instead of auto-enabling
         if (!syncInfo?.sync_enabled) {
-          await handleSyncToggle();
+          setSyncConfirmPending(true);
         }
         return;
       }
@@ -180,6 +190,13 @@ export function ShareDialog({
     } catch (e) {
       setError(String(e));
     }
+  };
+
+  const handleConfirmSyncAndCopy = async () => {
+    setSyncConfirmPending(false);
+    await handleSyncToggle();
+    // After enabling sync, retry the copy
+    await handleCopyLink();
   };
 
   const currentBranchName = identity?.branch_name ?? "This Branch";
@@ -355,6 +372,28 @@ export function ShareDialog({
             </span>
           </label>
         </div>
+
+        {syncConfirmPending && (
+          <div className="mx-5 mb-4 px-3 py-3 rounded-[5px] bg-obsidian border border-gold/40 flex items-center justify-between gap-3">
+            <span className="text-[11px] text-ash">
+              Sharing requires cloud sync. Enable sync now?
+            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                className="bg-transparent border border-iron text-ash font-sans text-[11px] px-3 py-[5px] rounded-[3px] cursor-pointer hover:text-chalk hover:border-ash transition-colors"
+                onClick={() => setSyncConfirmPending(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-gold text-void font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
+                onClick={handleConfirmSyncAndCopy}
+              >
+                Enable &amp; Copy
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <p className="text-[11px] text-ember px-5 pb-2 m-0">{error}</p>
