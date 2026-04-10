@@ -550,6 +550,191 @@ pub fn clear_queue(state: State<'_, AppState>, app: AppHandle) -> Result<(), Str
     Ok(())
 }
 
+// ─── Queue navigation commands ────────────────────────────────────────────────
+
+/// Build the appropriate `ContentEvent` for a queue item based on its `kind`.
+fn content_event_for_item(item: &QueueItem) -> ow_display::ContentEvent {
+    use ow_core::content_kind;
+    match item.kind.as_str() {
+        content_kind::SONG => {
+            ow_display::ContentEvent::song(
+                item.reference.clone(),
+                item.text.clone(),
+                item.translation.clone(),
+            )
+        }
+        content_kind::ANNOUNCEMENT => {
+            ow_display::ContentEvent::announcement(
+                item.reference.clone(),
+                item.text.clone(),
+                item.image_url.clone(),
+            )
+        }
+        content_kind::CUSTOM_SLIDE => {
+            ow_display::ContentEvent::custom_slide(
+                item.reference.clone(),
+                item.text.clone(),
+                item.image_url.clone(),
+            )
+        }
+        content_kind::COUNTDOWN => {
+            ow_display::ContentEvent::countdown(
+                item.reference.clone(),
+                item.duration_secs.unwrap_or(0),
+            )
+        }
+        content_kind::SERMON_NOTE => {
+            ow_display::ContentEvent::sermon_note(
+                item.reference.clone(),
+                item.text.clone(),
+                0,
+                1,
+            )
+        }
+        // Default: scripture (and any unknown kinds)
+        _ => ow_display::ContentEvent::scripture(
+            item.reference.clone(),
+            item.text.clone(),
+            item.translation.clone(),
+        ),
+    }
+}
+
+/// Skip (dismiss) a specific pending queue item.
+///
+/// Called by the SKIP button on the preview panel.
+#[tauri::command]
+pub fn skip_item(
+    item_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+    if let Some(item) = q.iter_mut().find(|i| i.id == item_id) {
+        item.status = QueueStatus::Dismissed;
+    } else {
+        return Err(format!("item {item_id} not found in queue"));
+    }
+    let snapshot: Vec<QueueItem> = q.iter().cloned().collect();
+    drop(q);
+    let _ = app.emit(crate::detection::QUEUE_UPDATED_EVENT, snapshot);
+    Ok(())
+}
+
+/// Advance to the next pending item in the queue.
+///
+/// Dismisses the currently live item and promotes the next pending item to
+/// live.  If there is no pending item, clears the display.
+/// Called by the NEXT button on the live panel.
+#[tauri::command]
+pub fn next_item(state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
+    let new_live = {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        // Dismiss the current live item.
+        if let Some(item) = q.iter_mut().find(|i| i.status == QueueStatus::Live) {
+            item.status = QueueStatus::Dismissed;
+        }
+        // Promote the first pending item.
+        if let Some(next) = q.iter_mut().find(|i| i.status == QueueStatus::Pending) {
+            next.status = QueueStatus::Live;
+            Some(next.clone())
+        } else {
+            None
+        }
+    };
+
+    if let Some(item) = new_live {
+        let _ = state.display_tx.send(content_event_for_item(&item));
+    } else {
+        let _ = state.display_tx.send(ow_display::ContentEvent::clear());
+    }
+
+    let snapshot: Vec<QueueItem> = state
+        .queue
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .cloned()
+        .collect();
+    let _ = app.emit(crate::detection::QUEUE_UPDATED_EVENT, snapshot);
+    Ok(())
+}
+
+/// Go back to the previous item in the queue.
+///
+/// Dismisses the current live item and re-promotes the most recently
+/// dismissed item to live.  No-op if there is no previous item.
+/// Called by the PREV button on the live panel.
+#[tauri::command]
+pub fn prev_item(state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
+    let new_live = {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+
+        // Find the index of the current live item.
+        let live_idx = q.iter().position(|i| i.status == QueueStatus::Live);
+
+        // Find the last dismissed item before live (or the last dismissed if no live).
+        let prev_idx = match live_idx {
+            Some(li) => q.iter().take(li).rposition(|i| i.status == QueueStatus::Dismissed),
+            None => q.iter().rposition(|i| i.status == QueueStatus::Dismissed),
+        };
+
+        if let Some(pi) = prev_idx {
+            // Dismiss the current live item.
+            if let Some(li) = live_idx {
+                q[li].status = QueueStatus::Dismissed;
+            }
+            // Re-promote the previous item.
+            q[pi].status = QueueStatus::Live;
+            Some(q[pi].clone())
+        } else {
+            None
+        }
+    };
+
+    if let Some(item) = new_live {
+        let _ = state.display_tx.send(content_event_for_item(&item));
+
+        let snapshot: Vec<QueueItem> = state
+            .queue
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter()
+            .cloned()
+            .collect();
+        let _ = app.emit(crate::detection::QUEUE_UPDATED_EVENT, snapshot);
+    }
+    // If no previous item, do nothing (button is a no-op).
+    Ok(())
+}
+
+/// Clear the currently displayed content.
+///
+/// Dismisses the live queue item (if any) and sends a clear event to the
+/// display WebSocket.  Called by the CLEAR CONTENT button.
+#[tauri::command]
+pub fn clear_live(state: State<'_, AppState>, app: AppHandle) -> Result<(), String> {
+    {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        for item in q.iter_mut() {
+            if item.status == QueueStatus::Live {
+                item.status = QueueStatus::Dismissed;
+            }
+        }
+    }
+    let _ = state.display_tx.send(ow_display::ContentEvent::clear());
+
+    let snapshot: Vec<QueueItem> = state
+        .queue
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .cloned()
+        .collect();
+    let _ = app.emit(crate::detection::QUEUE_UPDATED_EVENT, snapshot);
+    Ok(())
+}
+
 // ─── Shared detection helper ──────────────────────────────────────────────────
 
 /// Detect scripture references in `text`, look them up, and push results to the
@@ -2330,4 +2515,58 @@ pub fn get_storage_usage(state: State<'_, AppState>) -> Result<crate::cloud_sync
         .map_err(|e| e.to_string())?
         .get_storage_usage()
         .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::content_event_for_item;
+    use ow_core::{QueueItem, content_kind};
+
+    #[test]
+    fn content_event_scripture_kind() {
+        let item = QueueItem::new("John 3:16".into(), "For God so loved".into(), "KJV".into());
+        let ev = content_event_for_item(&item);
+        assert_eq!(ev.kind, "scripture");
+        assert_eq!(ev.reference, "John 3:16");
+    }
+
+    #[test]
+    fn content_event_song_kind() {
+        let item = QueueItem::new_song(
+            "Amazing Grace".into(),
+            "Amazing grace how sweet".into(),
+            "Hymn".into(),
+            1,
+        );
+        let ev = content_event_for_item(&item);
+        assert_eq!(ev.kind, "song");
+        assert_eq!(ev.reference, "Amazing Grace");
+    }
+
+    #[test]
+    fn content_event_announcement_kind() {
+        let item = QueueItem::new_announcement(
+            "Church Picnic".into(),
+            "This Sunday at 2pm".into(),
+            None,
+        );
+        let ev = content_event_for_item(&item);
+        assert_eq!(ev.kind, "announcement");
+    }
+
+    #[test]
+    fn content_event_countdown_kind() {
+        let item = QueueItem::new_countdown("Offering".into(), 300);
+        let ev = content_event_for_item(&item);
+        assert_eq!(ev.kind, "countdown");
+        assert_eq!(ev.duration_secs, Some(300));
+    }
+
+    #[test]
+    fn content_event_unknown_kind_falls_back_to_scripture() {
+        let mut item = QueueItem::new("Ref".into(), "Text".into(), "T".into());
+        item.kind = "unknown_future_kind".into();
+        let ev = content_event_for_item(&item);
+        assert_eq!(ev.kind, "scripture");
+    }
 }
