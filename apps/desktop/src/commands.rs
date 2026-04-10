@@ -1596,6 +1596,28 @@ pub fn create_announcement(
     Ok(item)
 }
 
+/// Update an existing announcement's fields (title, body, image_url, keyword_cue).
+#[tauri::command]
+pub fn update_announcement(
+    id: String,
+    title: String,
+    body: String,
+    image_url: Option<String>,
+    keyword_cue: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let mut guard = state.announcements.write().map_err(|e| e.to_string())?;
+    let ann = guard
+        .iter_mut()
+        .find(|a| a.id == id)
+        .ok_or_else(|| format!("announcement {id} not found"))?;
+    ann.title = title;
+    ann.body = body;
+    ann.image_url = image_url;
+    ann.keyword_cue = keyword_cue;
+    save_announcements(&guard).map_err(|e| e.to_string())
+}
+
 /// Delete an announcement by ID.
 #[tauri::command]
 pub fn delete_announcement(id: String, state: State<'_, AppState>) -> Result<(), String> {

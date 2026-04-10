@@ -8,6 +8,7 @@
 //!           paced line advance for live songs.
 
 use crate::settings::AudioSettings;
+use crate::slides::AnnouncementItem;
 use crate::songs::{self, SongSemanticIndex};
 use ow_audio::TranscriptEvent;
 use ow_core::{content_kind, DetectionMode, QueueItem, QueueStatus, ScriptureDetector, SongDetector, SongRef};
@@ -57,6 +58,7 @@ pub async fn run_loop(
     display_tx: broadcast::Sender<ContentEvent>,
     app: AppHandle,
     active_translation: Arc<RwLock<String>>,
+    announcements: Arc<RwLock<Vec<AnnouncementItem>>>,
 ) {
     let scripture_detector = ScriptureDetector::new();
     let mut song_detector = SongDetector::default();
@@ -176,6 +178,87 @@ pub async fn run_loop(
                             &display_tx,
                             &app,
                         );
+                        let _ = app.emit(QUEUE_UPDATED_EVENT, snapshot);
+                    }
+                }
+
+                // ── Announcement keyword-cue matching ─────────────────────────
+                {
+                    let text_lower = text.to_lowercase();
+                    let cues: Vec<(String, String)> = {
+                        let guard = announcements.read().unwrap_or_else(|e| e.into_inner());
+                        guard
+                            .iter()
+                            .filter_map(|a| {
+                                a.keyword_cue.as_deref().map(|cue| (a.id.clone(), cue.to_lowercase()))
+                            })
+                            .collect()
+                    };
+                    for (ann_id, cue_lower) in cues {
+                        if cue_lower.is_empty() {
+                            continue;
+                        }
+                        let key = format!("ann:{ann_id}");
+                        if cooldown.contains_key(&key) {
+                            continue;
+                        }
+                        if !text_lower.contains(&cue_lower) {
+                            continue;
+                        }
+                        {
+                            let q = queue.lock().unwrap_or_else(|e| e.into_inner());
+                            if q.iter().any(|i| {
+                                i.reference == ann_id
+                                    && matches!(i.status, QueueStatus::Pending | QueueStatus::Live)
+                            }) {
+                                continue;
+                            }
+                        }
+                        // Look up the full announcement to build the queue item.
+                        let ann = {
+                            let guard = announcements.read().unwrap_or_else(|e| e.into_inner());
+                            guard.iter().find(|a| a.id == ann_id).cloned()
+                        };
+                        let Some(ann) = ann else { continue };
+                        cooldown.insert(key, now);
+
+                        let ev = ContentEvent::announcement(
+                            ann.title.clone(),
+                            ann.body.clone(),
+                            ann.image_url.clone(),
+                        );
+                        let mut item = ow_core::QueueItem::new_announcement(
+                            ann.title.clone(),
+                            ann.body.clone(),
+                            ann.image_url.clone(),
+                        );
+                        item.confidence = Some(1.0);
+
+                        let snapshot = {
+                            let mut q = queue.lock().unwrap_or_else(|e| e.into_inner());
+                            match current_mode {
+                                DetectionMode::Auto | DetectionMode::Offline => {
+                                    let _ = display_tx.send(ev);
+                                    for it in q.iter_mut() {
+                                        if it.status == QueueStatus::Live {
+                                            it.status = QueueStatus::Dismissed;
+                                        }
+                                    }
+                                    item.status = QueueStatus::Live;
+                                }
+                                DetectionMode::Copilot => { /* stays Pending */ }
+                                DetectionMode::Airplane => unreachable!(),
+                            }
+                            q.push_back(item);
+                            while q.len() > QUEUE_CAP {
+                                if let Some(pos) = q.iter().position(|i| i.status == QueueStatus::Dismissed) {
+                                    q.remove(pos);
+                                } else {
+                                    q.pop_front();
+                                }
+                            }
+                            q.iter().cloned().collect::<Vec<_>>()
+                        };
                         let _ = app.emit(QUEUE_UPDATED_EVENT, snapshot);
                     }
                 }

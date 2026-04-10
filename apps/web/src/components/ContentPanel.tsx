@@ -7,39 +7,44 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "../lib/tauri";
+import { toastError } from "../lib/toast";
 import type { AnnouncementItem, SermonNote } from "../lib/types";
 
 // Shared classes
 const inputCls = "w-full bg-void border-none border-b border-b-[rgba(42,42,42,0.8)] text-chalk font-sans text-xs py-2 px-0 outline-none transition-colors focus:border-b-gold";
-const textareaCls = "w-full box-border bg-void border border-[rgba(42,42,42,0.8)] rounded-[3px] text-chalk font-sans text-xs p-2 resize-y outline-none transition-colors focus:border-gold";
+const textareaCls = "w-full box-sizing-border bg-void border border-[rgba(42,42,42,0.8)] rounded-[3px] text-chalk font-sans text-xs p-2 resize-y outline-none transition-colors focus:border-gold";
 const btnBaseCls = "bg-none border border-[rgba(42,42,42,0.8)] text-ash rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:text-chalk hover:not-disabled:border-ash";
 const btnPrimaryCls = "bg-none border border-gold text-gold rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-gold hover:not-disabled:text-void";
 const sectionTitleCls = "text-[10px] font-semibold tracking-[0.14em] uppercase text-ash";
+
+type AnnForm = { title: string; body: string; image_url: string; keyword_cue: string };
+const emptyForm = (): AnnForm => ({ title: "", body: "", image_url: "", keyword_cue: "" });
+const itemToForm = (item: AnnouncementItem): AnnForm => ({
+  title: item.title,
+  body: item.body ?? "",
+  image_url: item.image_url ?? "",
+  keyword_cue: item.keyword_cue ?? "",
+});
 
 // ─── Announcement library ─────────────────────────────────────────────────────
 
 function AnnouncementLibrary() {
   const [items, setItems] = useState<AnnouncementItem[]>([]);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({
-    title: "",
-    body: "",
-    image_url: "",
-    keyword_cue: "",
-  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<AnnForm>(emptyForm());
+  const [editForm, setEditForm] = useState<AnnForm>(emptyForm());
 
   const load = useCallback(async () => {
     try {
       const list = await invoke<AnnouncementItem[]>("list_announcements");
       setItems(list);
     } catch {
-      // ignore
+      // silently ignore load failures — non-critical on startup
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const handleCreate = async () => {
     if (!form.title.trim()) return;
@@ -50,11 +55,34 @@ function AnnouncementLibrary() {
         imageUrl: form.image_url.trim() || null,
         keywordCue: form.keyword_cue.trim() || null,
       });
-      setForm({ title: "", body: "", image_url: "", keyword_cue: "" });
+      setForm(emptyForm());
       setCreating(false);
       await load();
     } catch (e) {
-      console.error("[ContentPanel] create_announcement failed:", e);
+      toastError("Failed to create announcement")(e);
+    }
+  };
+
+  const startEdit = (item: AnnouncementItem) => {
+    setEditingId(item.id);
+    setEditForm(itemToForm(item));
+    setCreating(false);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingId || !editForm.title.trim()) return;
+    try {
+      await invoke("update_announcement", {
+        id: editingId,
+        title: editForm.title.trim(),
+        body: editForm.body.trim(),
+        imageUrl: editForm.image_url.trim() || null,
+        keywordCue: editForm.keyword_cue.trim() || null,
+      });
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      toastError("Failed to update announcement")(e);
     }
   };
 
@@ -62,16 +90,17 @@ function AnnouncementLibrary() {
     try {
       await invoke("push_announcement_to_display", { id });
     } catch (e) {
-      console.error("[ContentPanel] push_announcement_to_display failed:", e);
+      toastError("Failed to push announcement")(e);
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await invoke("delete_announcement", { id });
+      if (editingId === id) setEditingId(null);
       await load();
     } catch (e) {
-      console.error("[ContentPanel] delete_announcement failed:", e);
+      toastError("Failed to delete announcement")(e);
     }
   };
 
@@ -81,7 +110,7 @@ function AnnouncementLibrary() {
         <span className={sectionTitleCls}>Announcements</span>
         <button
           className="bg-none border border-[rgba(42,42,42,0.8)] text-ash rounded-[3px] w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 hover:text-chalk hover:border-ash"
-          onClick={() => setCreating((v) => !v)}
+          onClick={() => { setCreating((v) => !v); setEditingId(null); }}
           title={creating ? "Cancel" : "New announcement"}
         >
           {creating ? "✕" : "+"}
@@ -93,7 +122,12 @@ function AnnouncementLibrary() {
           <input className={inputCls} placeholder="Title *" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
           <textarea className={textareaCls} placeholder="Body text" rows={3} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
           <input className={inputCls} placeholder="Image URL (optional)" value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} />
-          <input className={inputCls} placeholder="Keyword cue (optional)" value={form.keyword_cue} onChange={(e) => setForm((f) => ({ ...f, keyword_cue: e.target.value }))} />
+          <input
+            className={inputCls}
+            placeholder="Keyword cue — auto-triggers when spoken (optional)"
+            value={form.keyword_cue}
+            onChange={(e) => setForm((f) => ({ ...f, keyword_cue: e.target.value }))}
+          />
           <div className="flex gap-2">
             <button className={btnPrimaryCls} onClick={handleCreate} disabled={!form.title.trim()}>Save</button>
             <button className={btnBaseCls} onClick={() => setCreating(false)}>Cancel</button>
@@ -107,29 +141,56 @@ function AnnouncementLibrary() {
 
       <ul className="list-none m-0 p-0 flex flex-col gap-1">
         {items.map((item) => (
-          <li key={item.id} className="flex items-center gap-2 py-2 px-2 rounded-[3px] bg-void">
-            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-xs text-chalk whitespace-nowrap overflow-hidden text-ellipsis">{item.title}</span>
-              {item.keyword_cue && (
-                <span className="text-[10px] text-smoke" title="Keyword cue">⌨ {item.keyword_cue}</span>
-              )}
-            </div>
-            <div className="flex gap-1 shrink-0">
-              <button
-                className="bg-none border-none border-transparent text-ash px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-gold"
-                onClick={() => void handlePush(item.id)}
-                title="Push to display"
-              >
-                ▶
-              </button>
-              <button
-                className="bg-none border-none border-transparent text-smoke px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-ember"
-                onClick={() => void handleDelete(item.id)}
-                title="Delete"
-              >
-                ✕
-              </button>
-            </div>
+          <li key={item.id} className="flex flex-col rounded-[3px] bg-void">
+            {editingId === item.id ? (
+              <div className="flex flex-col gap-2 p-2">
+                <input className={inputCls} placeholder="Title *" value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} />
+                <textarea className={textareaCls} placeholder="Body text" rows={2} value={editForm.body} onChange={(e) => setEditForm((f) => ({ ...f, body: e.target.value }))} />
+                <input className={inputCls} placeholder="Image URL (optional)" value={editForm.image_url} onChange={(e) => setEditForm((f) => ({ ...f, image_url: e.target.value }))} />
+                <input
+                  className={inputCls}
+                  placeholder="Keyword cue (optional)"
+                  value={editForm.keyword_cue}
+                  onChange={(e) => setEditForm((f) => ({ ...f, keyword_cue: e.target.value }))}
+                />
+                <div className="flex gap-2">
+                  <button className={btnPrimaryCls} onClick={handleUpdate} disabled={!editForm.title.trim()}>Save</button>
+                  <button className={btnBaseCls} onClick={() => setEditingId(null)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 py-2 px-2">
+                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className="text-xs text-chalk whitespace-nowrap overflow-hidden text-ellipsis">{item.title}</span>
+                  {item.keyword_cue ? (
+                    <span className="text-[10px] text-gold/70" title="Auto-triggers when this phrase is spoken">⌨ {item.keyword_cue}</span>
+                  ) : null}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    className="bg-none border-none border-transparent text-ash px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-gold"
+                    onClick={() => void handlePush(item.id)}
+                    title="Push to display"
+                  >
+                    ▶
+                  </button>
+                  <button
+                    className="bg-none border-none border-transparent text-ash px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-chalk"
+                    onClick={() => startEdit(item)}
+                    title="Edit"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    className="bg-none border-none border-transparent text-smoke px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-ember"
+                    onClick={() => void handleDelete(item.id)}
+                    title="Delete"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -154,7 +215,7 @@ function CustomSlidePanel() {
       });
       setForm({ title: "", body: "", image_url: "" });
     } catch (e) {
-      console.error("[ContentPanel] push_custom_slide failed:", e);
+      toastError("Failed to push custom slide")(e);
     } finally {
       setBusy(false);
     }
@@ -196,7 +257,7 @@ function CountdownPanel() {
         durationSecs: minutes * 60,
       });
     } catch (e) {
-      console.error("[ContentPanel] start_countdown failed:", e);
+      toastError("Failed to start countdown")(e);
     } finally {
       setBusy(false);
     }
@@ -255,9 +316,7 @@ function SermonNotesPanel() {
 
   const loadActiveNote = useCallback(async () => {
     try {
-      const result = await invoke<[SermonNote, number] | null>(
-        "get_active_sermon_note"
-      );
+      const result = await invoke<[SermonNote, number] | null>("get_active_sermon_note");
       if (result) {
         setActiveNoteId(result[0].id);
         setActiveSlide(result[1]);
@@ -277,21 +336,15 @@ function SermonNotesPanel() {
 
   const handleCreate = async () => {
     if (!noteTitle.trim() || !slidesText.trim()) return;
-    const slides = slidesText
-      .split("\n---\n")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const slides = slidesText.split("\n---\n").map((s) => s.trim()).filter(Boolean);
     try {
-      await invoke("create_sermon_note", {
-        title: noteTitle.trim(),
-        slides,
-      });
+      await invoke("create_sermon_note", { title: noteTitle.trim(), slides });
       setNoteTitle("");
       setSlidesText("");
       setCreating(false);
       await load();
     } catch (e) {
-      console.error("[ContentPanel] create_sermon_note failed:", e);
+      toastError("Failed to create sermon note")(e);
     }
   };
 
@@ -300,7 +353,7 @@ function SermonNotesPanel() {
       await invoke("push_sermon_note", { id });
       await loadActiveNote();
     } catch (e) {
-      console.error("[ContentPanel] push_sermon_note failed:", e);
+      toastError("Failed to push sermon note")(e);
     }
   };
 
@@ -309,7 +362,7 @@ function SermonNotesPanel() {
       await invoke("advance_sermon_note");
       await loadActiveNote();
     } catch (e) {
-      console.error("[ContentPanel] advance_sermon_note failed:", e);
+      toastError("Failed to advance slide")(e);
     }
   };
 
@@ -319,7 +372,7 @@ function SermonNotesPanel() {
       await load();
       if (activeNoteId === id) setActiveNoteId(null);
     } catch (e) {
-      console.error("[ContentPanel] delete_sermon_note failed:", e);
+      toastError("Failed to delete sermon note")(e);
     }
   };
 

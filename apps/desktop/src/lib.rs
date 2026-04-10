@@ -169,6 +169,7 @@ pub fn run() {
     let detect_song_semantic = Arc::clone(&song_semantic_index);
     let detect_song_refs = Arc::clone(&song_refs);
     let detect_translation = Arc::clone(&active_translation);
+    let detect_announcements = Arc::clone(&announcements);
 
     // ── Clone Arcs for background embedding tasks ─────────────────────────────
     let embed_index = Arc::clone(&semantic_index);
@@ -231,6 +232,7 @@ pub fn run() {
                 tx_for_detect,
                 app_handle,
                 detect_translation,
+                detect_announcements,
             ));
 
             // Background: embed all scripture verses.
@@ -343,6 +345,7 @@ pub fn run() {
             // ── Announcements + custom slides ──────────────────────────────
             commands::list_announcements,
             commands::create_announcement,
+            commands::update_announcement,
             commands::delete_announcement,
             commands::push_announcement_to_display,
             commands::push_custom_slide,
