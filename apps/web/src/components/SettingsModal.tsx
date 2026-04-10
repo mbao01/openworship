@@ -1061,6 +1061,8 @@ const DEFAULT_EMAIL_SETTINGS: EmailSettings = {
   auto_send: false,
 };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function EmailSection({ identity }: { identity: ChurchIdentity }) {
   const [settings, setSettings] = useState<EmailSettings>(DEFAULT_EMAIL_SETTINGS);
   const [anthropicKeySet, setAnthropicKeySet] = useState(false);
@@ -1069,6 +1071,7 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
   const [testEmail, setTestEmail] = useState("");
+  const [testEmailErr, setTestEmailErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [smtpMsg, setSmtpMsg] = useState<string | null>(null);
@@ -1104,13 +1107,19 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
   };
 
   const handleTestEmail = async () => {
-    if (!testEmail.trim()) return;
+    const addr = testEmail.trim();
+    if (!addr) return;
+    if (!EMAIL_RE.test(addr)) {
+      setTestEmailErr("Enter a valid email address.");
+      return;
+    }
+    setTestEmailErr(null);
     setSendingTest(true);
     setSmtpMsg(null);
     setSmtpErr(null);
     try {
-      await invoke("send_test_email", { toEmail: testEmail.trim() });
-      setSmtpMsg(`Test email sent to ${testEmail.trim()}.`);
+      await invoke("send_test_email", { toEmail: addr });
+      setSmtpMsg(`Test email sent to ${addr}.`);
     } catch (e) {
       setSmtpErr(String(e));
     } finally {
@@ -1119,12 +1128,17 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
   };
 
   const handleAddSubscriber = async () => {
-    if (!newEmail.trim()) return;
+    const addr = newEmail.trim();
+    if (!addr) return;
+    if (!EMAIL_RE.test(addr)) {
+      setSubErr("Enter a valid email address.");
+      return;
+    }
     setSubErr(null);
     try {
       const sub = await invoke<EmailSubscriber>("add_email_subscriber", {
         churchId: identity.church_id,
-        email: newEmail.trim(),
+        email: addr,
         name: newName.trim() || null,
       });
       setSubscribers((prev) => [...prev, sub]);
@@ -1260,13 +1274,16 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
 
         {/* Test email */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <input
-            className={`${inputCls} flex-1 min-w-0`}
-            type="email"
-            placeholder="test@example.com"
-            value={testEmail}
-            onChange={(e) => setTestEmail(e.target.value)}
-          />
+          <div className="flex flex-col flex-1 min-w-0 gap-1">
+            <input
+              className={`${inputCls} flex-1 min-w-0`}
+              type="email"
+              placeholder="test@example.com"
+              value={testEmail}
+              onChange={(e) => { setTestEmail(e.target.value); setTestEmailErr(null); }}
+            />
+            {testEmailErr && <p className="text-[11px] text-ember">{testEmailErr}</p>}
+          </div>
           <button
             className="font-sans text-[11px] font-medium tracking-[0.08em] text-ash bg-transparent border-none py-1 px-2 cursor-pointer transition-colors hover:text-chalk uppercase"
             onClick={handleTestEmail}
@@ -1318,7 +1335,7 @@ function EmailSection({ identity }: { identity: ChurchIdentity }) {
             type="email"
             placeholder="email@example.com"
             value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
+            onChange={(e) => { setNewEmail(e.target.value); setSubErr(null); }}
             onKeyDown={(e) => { if (e.key === "Enter") handleAddSubscriber(); }}
           />
           <button
@@ -1345,12 +1362,22 @@ const DEFAULT_S3_CONFIG: S3Config = {
   secret_access_key: "",
 };
 
+const CLOUD_REQUIRED_FIELDS = ["endpoint_url", "bucket", "region", "access_key_id"] as const;
+type CloudRequiredField = typeof CLOUD_REQUIRED_FIELDS[number];
+const CLOUD_FIELD_LABELS: Record<CloudRequiredField, string> = {
+  endpoint_url: "Endpoint URL",
+  bucket: "Bucket",
+  region: "Region",
+  access_key_id: "Access Key ID",
+};
+
 function CloudSection() {
   const [config, setConfig] = useState<S3Config>(DEFAULT_S3_CONFIG);
   const [usage, setUsage] = useState<StorageUsage | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [cloudFieldErrors, setCloudFieldErrors] = useState<Partial<Record<CloudRequiredField, string>>>({});
 
   useEffect(() => {
     invoke<S3Config | null>("get_cloud_config")
@@ -1360,6 +1387,17 @@ function CloudSection() {
   }, []);
 
   const handleSave = async () => {
+    const errors: Partial<Record<CloudRequiredField, string>> = {};
+    for (const field of CLOUD_REQUIRED_FIELDS) {
+      if (!config[field].trim()) {
+        errors[field] = `${CLOUD_FIELD_LABELS[field]} is required.`;
+      }
+    }
+    if (Object.keys(errors).length > 0) {
+      setCloudFieldErrors(errors);
+      return;
+    }
+    setCloudFieldErrors({});
     setSaving(true);
     setErr(null);
     setSaved(false);
@@ -1389,8 +1427,9 @@ function CloudSection() {
           type="text"
           placeholder="https://s3.amazonaws.com"
           value={config.endpoint_url}
-          onChange={(e) => setConfig((p) => ({ ...p, endpoint_url: e.target.value }))}
+          onChange={(e) => { setConfig((p) => ({ ...p, endpoint_url: e.target.value })); setCloudFieldErrors((fe) => ({ ...fe, endpoint_url: undefined })); }}
         />
+        {cloudFieldErrors.endpoint_url && <p className="text-[11px] text-ember mt-1">{cloudFieldErrors.endpoint_url}</p>}
       </div>
 
       <div className="mb-6">
@@ -1400,8 +1439,9 @@ function CloudSection() {
           type="text"
           placeholder="openworship-artifacts"
           value={config.bucket}
-          onChange={(e) => setConfig((p) => ({ ...p, bucket: e.target.value }))}
+          onChange={(e) => { setConfig((p) => ({ ...p, bucket: e.target.value })); setCloudFieldErrors((fe) => ({ ...fe, bucket: undefined })); }}
         />
+        {cloudFieldErrors.bucket && <p className="text-[11px] text-ember mt-1">{cloudFieldErrors.bucket}</p>}
       </div>
 
       <div className="mb-6">
@@ -1411,8 +1451,9 @@ function CloudSection() {
           type="text"
           placeholder="us-east-1"
           value={config.region}
-          onChange={(e) => setConfig((p) => ({ ...p, region: e.target.value }))}
+          onChange={(e) => { setConfig((p) => ({ ...p, region: e.target.value })); setCloudFieldErrors((fe) => ({ ...fe, region: undefined })); }}
         />
+        {cloudFieldErrors.region && <p className="text-[11px] text-ember mt-1">{cloudFieldErrors.region}</p>}
       </div>
 
       <div className="mb-6">
@@ -1422,8 +1463,9 @@ function CloudSection() {
           type="text"
           placeholder="AKIA…"
           value={config.access_key_id}
-          onChange={(e) => setConfig((p) => ({ ...p, access_key_id: e.target.value }))}
+          onChange={(e) => { setConfig((p) => ({ ...p, access_key_id: e.target.value })); setCloudFieldErrors((fe) => ({ ...fe, access_key_id: undefined })); }}
         />
+        {cloudFieldErrors.access_key_id && <p className="text-[11px] text-ember mt-1">{cloudFieldErrors.access_key_id}</p>}
       </div>
 
       <div className="mb-6">
@@ -1464,7 +1506,7 @@ function CloudSection() {
         data-qa="cloud-save-btn"
         className="font-sans text-[11px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm py-[6px] px-4 cursor-pointer transition-[filter] hover:brightness-[1.15] disabled:opacity-50 disabled:cursor-not-allowed uppercase"
         onClick={handleSave}
-        disabled={saving || !config.endpoint_url.trim()}
+        disabled={saving}
       >
         {saving ? "Saving…" : "Save Cloud Config"}
       </button>
