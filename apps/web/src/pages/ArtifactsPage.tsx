@@ -1258,8 +1258,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
         await invoke("import_artifact_file", {
           serviceId: svcId,
           parentPath,
-          fileName: file.name,
-          filePath: (file as File & { path?: string }).path ?? file.name,
+          sourcePath: (file as File & { path?: string }).path ?? file.name,
         });
       }
       await loadEntries();

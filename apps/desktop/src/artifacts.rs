@@ -98,8 +98,8 @@ impl Default for ArtifactsSettings {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
         Self {
             base_path: PathBuf::from(home)
-                .join("OpenWorship")
-                .join("Artifacts")
+                .join(".openworship")
+                .join("artifacts")
                 .to_string_lossy()
                 .into_owned(),
         }
