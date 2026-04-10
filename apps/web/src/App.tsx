@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { invoke } from "./lib/tauri";
 import type { AudioSettings, ChurchIdentity, ThemeMode } from "./lib/types";
 import { OnboardingPage } from "./pages/OnboardingPage";
@@ -7,6 +7,7 @@ import { OperatorPage } from "./pages/OperatorPage";
 import { DisplayPage } from "./pages/DisplayPage";
 import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { SpeakerPage } from "./pages/SpeakerPage";
+import { SplashScreen } from "./components/SplashScreen";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./styles/global.css";
 
@@ -41,7 +42,12 @@ const THEME_FALLBACK_KEY = "ow-theme-fallback";
 
 function AppInner() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Splash only runs on the main operator window ("/"); display/speaker are
+  // separate Tauri windows that load their routes directly and don't need it.
+  const isMainWindow = location.pathname === "/";
   const [identity, setIdentity] = useState<ChurchIdentity | null | undefined>(null);
+  const [splashDone, setSplashDone] = useState(!isMainWindow);
   const [theme, setThemeState] = useState<ThemeMode>("system");
   const systemDarkRef = useRef(
     typeof window.matchMedia === "function"
@@ -95,7 +101,18 @@ function AppInner() {
     }
   };
 
-  if (identity === null) return null;
+  // Show splash while the backend initialises (main window only).
+  if (!splashDone) {
+    return (
+      <SplashScreen
+        isReady={identity !== null}
+        onDone={() => setSplashDone(true)}
+      />
+    );
+  }
+
+  // After the splash, identity has been resolved: null (loading) is gone.
+  const resolvedIdentity = identity as ChurchIdentity | undefined;
 
   return (
     <Routes>
@@ -108,11 +125,11 @@ function AppInner() {
       <Route
         path="/"
         element={
-          identity === undefined ? (
+          resolvedIdentity === undefined ? (
             <OnboardingPage onComplete={(id) => setIdentity(id)} />
           ) : (
             <OperatorPage
-              identity={identity}
+              identity={resolvedIdentity}
               onOpenArtifacts={() => navigate("/artifacts")}
               theme={theme}
               onSetTheme={handleSetTheme}
