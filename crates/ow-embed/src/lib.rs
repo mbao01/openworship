@@ -30,6 +30,21 @@ pub trait Embedder: Send + Sync {
     }
 }
 
+// ─── NullEmbedder ────────────────────────────────────────────────────────────
+
+/// No-op embedder used when semantic search is disabled.
+///
+/// All embed calls return an error so the detection loop's `sem_enabled` guard
+/// must remain in place.  Using this avoids loading the ONNX model into memory
+/// when the feature is turned off.
+pub struct NullEmbedder;
+
+impl Embedder for NullEmbedder {
+    fn embed(&self, _text: &str) -> Result<Vec<f32>> {
+        anyhow::bail!("semantic search is disabled")
+    }
+}
+
 // ─── LocalEmbedder (fastembed / ONNX Runtime) ───────────────────────────────
 
 /// Bundled embedding model using fastembed (ONNX Runtime + nomic-embed-text-v1.5).
@@ -316,7 +331,7 @@ pub fn build_index(
     let texts: Vec<&str> = verses.iter().map(|v| v.text.as_str()).collect();
 
     let mut all_embeddings = Vec::with_capacity(total);
-    for chunk in texts.chunks(256) {
+    for chunk in texts.chunks(32) {
         let embeddings = embedder.embed_batch(chunk)?;
         all_embeddings.extend(embeddings);
         eprintln!("[embed] {}/{total} verses embedded", all_embeddings.len());
