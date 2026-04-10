@@ -825,28 +825,50 @@ function PreviewPanel({
   onClose: () => void;
   onShare: (e: ArtifactEntry) => void;
 }) {
-  const cat = mimeCategory(entry.mime_type);
-  const isImage = cat === "image";
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const mime = entry.mime_type ?? "";
+  const isImage = mime.startsWith("image/");
+  const isVideo = mime.startsWith("video/");
+  const isAudio = mime.startsWith("audio/");
+  const isPdf = mime.includes("pdf");
+  const isText = mime.startsWith("text/") && !isPdf;
+
+  const [fileSrc, setFileSrc] = useState<string | null>(null);
+  const [textContent, setTextContent] = useState<string | null>(null);
+  const [textTruncated, setTextTruncated] = useState(false);
+  const [textLoading, setTextLoading] = useState(false);
 
   useEffect(() => {
-    if (isImage && entry.path) {
+    if ((isImage || isVideo || isAudio || isPdf) && entry.path) {
       try {
-        setImgSrc(convertFileSrc(entry.path));
+        setFileSrc(convertFileSrc(entry.path));
       } catch {
-        setImgSrc(null);
+        setFileSrc(null);
       }
     } else {
-      setImgSrc(null);
+      setFileSrc(null);
     }
-  }, [isImage, entry.path]);
+    setTextContent(null);
+    setTextTruncated(false);
+  }, [entry.path, isImage, isVideo, isAudio, isPdf]);
+
+  useEffect(() => {
+    if (!isText || !entry.id) return;
+    setTextLoading(true);
+    invoke<[string, boolean]>("read_text_file", { id: entry.id, maxBytes: 65536 })
+      .then(([text, truncated]) => {
+        setTextContent(text);
+        setTextTruncated(truncated);
+      })
+      .catch(() => setTextContent(null))
+      .finally(() => setTextLoading(false));
+  }, [entry.id, isText]);
 
   const ext = entry.name.split(".").pop()?.toUpperCase() ?? "—";
 
   return (
-    <div className="w-[220px] shrink-0 bg-obsidian border-l border-iron flex flex-col overflow-hidden">
+    <div className="w-[260px] shrink-0 bg-obsidian border-l border-iron flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-2">
+      <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
         <span className="text-[9px] font-semibold tracking-[0.12em] uppercase text-smoke">Preview</span>
         <button
           className="bg-transparent border-none text-smoke cursor-pointer text-[12px] px-1 py-[2px] rounded hover:text-ash transition-colors"
@@ -857,15 +879,52 @@ function PreviewPanel({
         </button>
       </div>
 
-      {/* Thumbnail */}
-      <div className="mx-3 mb-3 rounded-[4px] overflow-hidden bg-void border border-iron aspect-video flex items-center justify-center">
-        {imgSrc ? (
+      {/* Render area — fills remaining vertical space */}
+      <div className="mx-3 mb-2 rounded-[4px] overflow-hidden bg-void border border-iron flex-1 flex items-center justify-center min-h-0">
+        {isImage && fileSrc ? (
           <img
-            src={imgSrc}
+            src={fileSrc}
             alt={entry.name}
-            className="w-full h-full object-cover"
-            onError={() => setImgSrc(null)}
+            className="w-full h-full object-contain"
+            onError={() => setFileSrc(null)}
           />
+        ) : isVideo && fileSrc ? (
+          <video
+            src={fileSrc}
+            controls
+            className="w-full h-full object-contain"
+          />
+        ) : isAudio && fileSrc ? (
+          <div className="flex flex-col items-center gap-3 p-3 w-full">
+            <span className="text-[32px]">🎵</span>
+            <audio src={fileSrc} controls className="w-full" />
+          </div>
+        ) : isPdf && fileSrc ? (
+          <iframe
+            src={fileSrc}
+            title={entry.name}
+            className="w-full h-full border-none"
+          />
+        ) : isText ? (
+          <div className="w-full h-full overflow-auto p-2">
+            {textLoading ? (
+              <span className="text-[10px] text-smoke">Loading…</span>
+            ) : textContent !== null ? (
+              <>
+                <pre className="text-[10px] font-mono text-ash m-0 whitespace-pre-wrap break-words leading-[1.5]">
+                  {textContent}
+                </pre>
+                {textTruncated && (
+                  <p className="text-[9px] text-smoke mt-2 m-0 italic">— truncated at 64 KB —</p>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-2 text-smoke h-full justify-center">
+                <span className="text-[28px]">{fileIconChar(entry)}</span>
+                <span className="text-[10px] font-mono">{ext}</span>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-smoke">
             <span className="text-[28px]">{fileIconChar(entry)}</span>
@@ -874,39 +933,25 @@ function PreviewPanel({
         )}
       </div>
 
-      {/* Meta */}
-      <div className="px-3 flex flex-col gap-3 flex-1 overflow-y-auto pb-3">
-        <p className="text-[12px] font-medium text-chalk m-0 break-words leading-[1.4]">{entry.name}</p>
-
-        <div className="flex flex-col gap-[8px]">
+      {/* Compact metadata footer */}
+      <div className="px-3 pb-3 shrink-0 flex flex-col gap-[6px]">
+        <p className="text-[11px] font-medium text-chalk m-0 break-words leading-[1.3] truncate" title={entry.name}>
+          {entry.name}
+        </p>
+        <div className="flex items-center gap-2 flex-wrap">
           {entry.mime_type && (
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-smoke shrink-0">Format</span>
-              <span className="text-[11px] font-mono text-ash text-right">{ext}</span>
-            </div>
+            <span className="text-[10px] font-mono text-smoke">{ext}</span>
           )}
           {!entry.is_dir && entry.size_bytes > 0 && (
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-smoke shrink-0">Size</span>
-              <span className="text-[11px] font-mono text-ash text-right">{formatBytes(entry.size_bytes)}</span>
-            </div>
+            <span className="text-[10px] font-mono text-smoke">{formatBytes(entry.size_bytes)}</span>
           )}
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-smoke shrink-0">Modified</span>
-            <span className="text-[11px] font-mono text-ash text-right">{formatDate(entry.modified_at_ms)}</span>
-          </div>
+          <span className="text-[10px] font-mono text-smoke">{formatDate(entry.modified_at_ms)}</span>
           {syncInfo?.sync_enabled && (
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-smoke shrink-0">Sync</span>
-              <span className="text-[11px] font-mono text-ash text-right capitalize">
-                {syncInfo.status.replace("_", " ")}
-              </span>
-            </div>
+            <span className="text-[10px] font-mono text-smoke capitalize">{syncInfo.status.replace("_", " ")}</span>
           )}
         </div>
-
         <button
-          className="mt-auto w-full bg-transparent border border-iron rounded-[3px] text-ash font-sans text-[11px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+          className="w-full bg-transparent border border-iron rounded-[3px] text-ash font-sans text-[11px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
           onClick={() => onShare(entry)}
         >
           Share…
