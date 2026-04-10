@@ -1,0 +1,15 @@
+[package]
+name = "ow-embed-builder"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "ow-embed-builder"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+ow-db = { path = "../../crates/ow-db" }
+ow-search = { path = "../../crates/ow-search" }
+ow-embed = { path = "../../crates/ow-embed" }
+sha2 = { workspace = true }
