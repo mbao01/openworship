@@ -2184,6 +2184,21 @@ pub fn import_artifact_file(
         .map_err(|e| e.to_string())
 }
 
+/// Upload raw file bytes from the frontend.  Used when the native filesystem
+/// path is not available (standard `<input type="file">` in the Tauri webview).
+#[tauri::command]
+pub fn write_artifact_bytes(
+    service_id: Option<String>,
+    parent_path: Option<String>,
+    file_name: String,
+    data: Vec<u8>,
+    state: State<'_, AppState>,
+) -> Result<ArtifactEntry, String> {
+    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    crate::artifacts::write_artifact_bytes(&mut db, service_id, parent_path, file_name, data)
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn rename_artifact(
     id: String,

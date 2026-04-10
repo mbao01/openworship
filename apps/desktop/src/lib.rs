@@ -375,6 +375,7 @@ pub fn run() {
             commands::search_artifacts,
             commands::create_artifact_dir,
             commands::import_artifact_file,
+            commands::write_artifact_bytes,
             commands::rename_artifact,
             commands::delete_artifact,
             commands::move_artifact,

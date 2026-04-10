@@ -379,6 +379,46 @@ pub fn import_file(
     Ok(entry)
 }
 
+/// Write raw bytes from the frontend directly into the artifact store.
+/// This is the primary upload path for the Tauri webview, where the native
+/// file path is not accessible via `<input type="file">`.
+pub fn write_artifact_bytes(
+    db: &mut ArtifactsDb,
+    service_id: Option<String>,
+    parent_path: Option<String>,
+    file_name: String,
+    data: Vec<u8>,
+) -> Result<ArtifactEntry> {
+    safe_name(&file_name)?;
+    db.ensure_base_dir()?;
+    let bucket = parent_path
+        .clone()
+        .unwrap_or_else(|| service_id.as_deref().unwrap_or("_local").to_string());
+    let rel = format!("{bucket}/{file_name}");
+    let dest = db.abs_path(&rel);
+    if let Some(p) = dest.parent() {
+        std::fs::create_dir_all(p)?;
+    }
+    std::fs::write(&dest, &data)
+        .with_context(|| format!("write artifact: {}", dest.display()))?;
+    let mime_type = mime_guess::from_path(&dest).first().map(|m| m.to_string());
+    let entry = ArtifactEntry {
+        id: new_id(),
+        service_id,
+        path: rel,
+        name: file_name,
+        is_dir: false,
+        parent_path: Some(bucket),
+        size_bytes: Some(data.len() as i64),
+        mime_type,
+        starred: false,
+        created_at_ms: now_ms(),
+        modified_at_ms: now_ms(),
+    };
+    db.upsert(&entry)?;
+    Ok(entry)
+}
+
 pub fn rename_artifact(db: &mut ArtifactsDb, id: &str, new_name: String) -> Result<ArtifactEntry> {
     safe_name(&new_name)?;
     let mut e = db

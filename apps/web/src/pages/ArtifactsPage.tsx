@@ -1255,10 +1255,12 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
     const svcId = nav.kind === "service" ? nav.id : null;
     try {
       for (const file of Array.from(files)) {
-        await invoke("import_artifact_file", {
+        const buffer = await file.arrayBuffer();
+        await invoke("write_artifact_bytes", {
           serviceId: svcId,
           parentPath,
-          sourcePath: (file as File & { path?: string }).path ?? file.name,
+          fileName: file.name,
+          data: Array.from(new Uint8Array(buffer)),
         });
       }
       await loadEntries();
