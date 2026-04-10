@@ -681,6 +681,137 @@ function NewFolderModal({
   );
 }
 
+function MoveFolderModal({
+  entry,
+  onConfirm,
+  onCancel,
+}: {
+  entry: ArtifactEntry;
+  onConfirm: (newParentPath: string) => void;
+  onCancel: () => void;
+}) {
+  const [folders, setFolders] = useState<ArtifactEntry[]>([]);
+  const [browsePath, setBrowsePath] = useState<string | null>(null);
+  const [crumbs, setCrumbs] = useState<Array<{ label: string; path: string | null }>>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  useEffect(() => {
+    invoke<ArtifactEntry[]>("list_artifacts", {
+      serviceId: entry.service_id ?? null,
+      parentPath: browsePath,
+    })
+      .then((list) => setFolders(list.filter((e) => e.is_dir && e.id !== entry.id)))
+      .catch(() => {});
+  }, [browsePath, entry.service_id, entry.id]);
+
+  const handleOpen = (folder: ArtifactEntry) => {
+    setCrumbs((prev) => [...prev, { label: folder.name, path: browsePath }]);
+    setBrowsePath(folder.path);
+    setSelected(folder.path);
+  };
+
+  const handleCrumb = (idx: number) => {
+    const target = crumbs[idx];
+    setCrumbs(crumbs.slice(0, idx));
+    setBrowsePath(target.path);
+    setSelected(target.path);
+  };
+
+  const handleRoot = () => {
+    setCrumbs([]);
+    setBrowsePath(null);
+    setSelected(null);
+  };
+
+  const destinationPath = selected ?? browsePath ?? `${entry.service_id ?? "_local"}`;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/65 flex items-center justify-center z-[900]"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-slate border border-iron rounded-[6px] p-5 w-[360px] flex flex-col gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-[13px] font-semibold text-chalk m-0">Move to Folder</p>
+
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-1 text-[11px] text-ash flex-wrap">
+          <button className="text-ash hover:text-chalk transition-colors" onClick={handleRoot}>
+            Root
+          </button>
+          {crumbs.map((c, i) => (
+            <span key={i} className="flex items-center gap-1">
+              <span className="text-iron">/</span>
+              <button
+                className="text-ash hover:text-chalk transition-colors"
+                onClick={() => handleCrumb(i)}
+              >
+                {c.label}
+              </button>
+            </span>
+          ))}
+          {browsePath && (
+            <span className="flex items-center gap-1">
+              <span className="text-iron">/</span>
+              <span className="text-chalk">{crumbs.length > 0 ? browsePath.split("/").pop() : browsePath}</span>
+            </span>
+          )}
+        </div>
+
+        {/* Folder list */}
+        <div className="bg-obsidian border border-iron rounded-[3px] min-h-[120px] max-h-[200px] overflow-y-auto">
+          {folders.length === 0 ? (
+            <p className="text-[11px] text-iron px-3 py-2 m-0">No sub-folders here.</p>
+          ) : (
+            folders.map((f) => (
+              <div
+                key={f.id}
+                className={`flex items-center justify-between px-3 py-[6px] cursor-pointer text-[12px] transition-colors hover:bg-white/5 ${selected === f.path ? "text-gold bg-white/5" : "text-chalk"}`}
+                onClick={() => setSelected(f.path)}
+                onDoubleClick={() => handleOpen(f)}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-ash">📁</span>
+                  {f.name}
+                </span>
+                <button
+                  className="text-[10px] text-iron hover:text-chalk transition-colors ml-2"
+                  onClick={(e) => { e.stopPropagation(); handleOpen(f); }}
+                  title="Open folder"
+                >
+                  ▸
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <p className="text-[10px] text-ash m-0">
+          Moving <span className="text-chalk">{entry.name}</span> to:{" "}
+          <span className="text-gold font-mono">{destinationPath}</span>
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <button
+            className="bg-transparent text-ash border border-iron rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            className="bg-gold text-void border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12]"
+            onClick={() => onConfirm(destinationPath)}
+          >
+            Move Here
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Preview panel ────────────────────────────────────────────────────────────
 
 function PreviewPanel({
@@ -861,6 +992,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   // ── Cloud sync state ────────────────────────────────────────────────────────
   const [syncInfoMap, setSyncInfoMap] = useState<Map<string, CloudSyncInfo>>(new Map());
   const [sharing, setSharing] = useState<ArtifactEntry | null>(null);
+  const [movingEntry, setMovingEntry] = useState<ArtifactEntry | null>(null);
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
   const [cloudEntries, setCloudEntries] = useState<CloudSyncInfo[]>([]);
 
@@ -1025,9 +1157,22 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
 
   const handleShare = (e: ArtifactEntry) => setSharing(e);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleMoveTo = (_entry: ArtifactEntry) => {
-    // TODO: implement move to dialog
+  const handleMoveTo = (entry: ArtifactEntry) => setMovingEntry(entry);
+
+  const handleMoveConfirm = async (newParentPath: string) => {
+    if (!movingEntry) return;
+    setError(null);
+    try {
+      await invoke<ArtifactEntry>("move_artifact", {
+        id: movingEntry.id,
+        newParentPath,
+      });
+      setMovingEntry(null);
+      await loadEntries();
+    } catch (err) {
+      setError(String(err));
+      setMovingEntry(null);
+    }
   };
 
   const handleSyncNow = async (e: ArtifactEntry) => {
@@ -1044,9 +1189,12 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   const handleSyncAll = async () => {
     setSyncing(true);
     try {
-      await invoke("sync_all_artifacts");
+      const result = await invoke<{ total: number; succeeded: number; failed: number }>("sync_all_artifacts");
       await loadEntries();
       invoke<StorageUsage>("get_storage_usage").then(setStorageUsage).catch(() => {});
+      if (result.failed > 0) {
+        setError(`Sync completed: ${result.succeeded}/${result.total} succeeded, ${result.failed} failed.`);
+      }
     } catch (err) {
       setError(String(err));
     } finally {
@@ -1578,6 +1726,13 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
             loadEntries();
             invoke<StorageUsage>("get_storage_usage").then(setStorageUsage).catch(() => {});
           }}
+        />
+      )}
+      {movingEntry && (
+        <MoveFolderModal
+          entry={movingEntry}
+          onConfirm={handleMoveConfirm}
+          onCancel={() => setMovingEntry(null)}
         />
       )}
     </SidebarInset>

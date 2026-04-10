@@ -362,6 +362,7 @@ pub fn run() {
             commands::get_cloud_sync_info,
             commands::toggle_artifact_cloud_sync,
             commands::sync_artifact_now,
+            commands::sync_all_artifacts,
             commands::list_cloud_artifacts,
             commands::get_artifact_acl,
             commands::set_artifact_acl,
