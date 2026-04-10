@@ -435,16 +435,8 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
           {/* Expanded content */}
           {leftOpen && (
             <>
-              {/* Schedule */}
-              <div className="flex-1 overflow-y-auto p-4 min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]">
-                <SchedulePanel />
-              </div>
-
-              {/* Divider */}
-              <div className="h-px bg-iron shrink-0" />
-
               {/* Content Bank — scripture search */}
-              <div className="shrink-0 p-4" style={{ maxHeight: "40%" }}>
+              <div className="shrink-0 p-4 border-b border-iron">
                 <span className="block text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-3">
                   CONTENT BANK
                 </span>
@@ -452,22 +444,27 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
                   <ScriptureSearch />
                 </div>
               </div>
+
+              {/* Schedule */}
+              <div className="flex-1 overflow-y-auto p-4 min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]">
+                <SchedulePanel />
+              </div>
             </>
           )}
 
           {/* Icon rail when collapsed */}
           {!leftOpen && (
             <div className="flex flex-col items-center pt-3 gap-3">
+              {/* Search icon for Content Bank */}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Content Bank">
+                <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.1" />
+                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              </svg>
               {/* Calendar icon for Schedule */}
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Schedule">
                 <rect x="1.5" y="2.5" width="11" height="10" rx="1" stroke="currentColor" strokeWidth="1.1" />
                 <path d="M1.5 5.5h11" stroke="currentColor" strokeWidth="1.1" />
                 <path d="M4.5 1v3M9.5 1v3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
-              </svg>
-              {/* Search icon for Content Bank */}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Content Bank">
-                <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.1" />
-                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
               </svg>
             </div>
           )}

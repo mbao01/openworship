@@ -2,6 +2,45 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "../lib/tauri";
 import type { TranslationInfo, VerseResult } from "../lib/types";
 
+// ─── Bible book list (canonical names matching Rust normalize_book) ────────────
+
+const BIBLE_BOOKS = [
+  "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy",
+  "Joshua", "Judges", "Ruth",
+  "1 Samuel", "2 Samuel", "1 Kings", "2 Kings",
+  "1 Chronicles", "2 Chronicles",
+  "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
+  "Ecclesiastes", "Song of Solomon",
+  "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel",
+  "Hosea", "Joel", "Amos", "Obadiah", "Jonah", "Micah",
+  "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi",
+  "Matthew", "Mark", "Luke", "John", "Acts", "Romans",
+  "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians",
+  "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians",
+  "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews",
+  "James", "1 Peter", "2 Peter", "1 John", "2 John", "3 John",
+  "Jude", "Revelation",
+];
+
+// Extract the book-name portion of a query (text before the first digit)
+function bookPrefix(input: string): string {
+  const m = input.match(/^([^0-9]+)/);
+  return m ? m[1].trim() : "";
+}
+
+// True when the user is still typing a book name (no chapter number yet)
+function isTypingBookName(input: string): boolean {
+  return /^[^0-9]+$/.test(input.trim());
+}
+
+function matchingBooks(prefix: string): string[] {
+  if (!prefix || prefix.length < 1) return [];
+  const lower = prefix.toLowerCase();
+  return BIBLE_BOOKS.filter((b) => b.toLowerCase().startsWith(lower)).slice(0, 7);
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────────
+
 export function ScriptureSearch() {
   const [query, setQuery] = useState("");
   const [translation, setTranslation] = useState("KJV");
@@ -9,7 +48,14 @@ export function ScriptureSearch() {
   const [results, setResults] = useState<VerseResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [pushed, setPushed] = useState<{ reference: string; translation: string } | null>(null);
+
+  // Combobox state
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(0);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     invoke<TranslationInfo[]>("list_translations")
@@ -17,24 +63,45 @@ export function ScriptureSearch() {
       .catch(() => {});
   }, []);
 
-  const runSearch = useCallback(
-    async (q: string, t: string) => {
-      if (!q.trim()) {
-        setResults([]);
-        return;
-      }
-      setIsSearching(true);
-      try {
-        const res = await invoke<VerseResult[]>("search_scriptures", {
-          query: q,
-          translation: t || null,
-        });
-        setResults(res);
-      } catch {
-        setResults([]);
-      } finally {
-        setIsSearching(false);
-      }
+  const runSearch = useCallback(async (q: string, t: string) => {
+    if (!q.trim()) {
+      setResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const res = await invoke<VerseResult[]>("search_scriptures", {
+        query: q,
+        translation: t || null,
+      });
+      setResults(res);
+    } catch {
+      setResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  const scheduleSearch = useCallback(
+    (q: string, t: string) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => runSearch(q, t), 220);
+    },
+    [runSearch]
+  );
+
+  // Derive suggestions from current input
+  const prefix = bookPrefix(query);
+  const suggestions = dropdownOpen && isTypingBookName(query) ? matchingBooks(prefix) : [];
+
+  const selectBook = useCallback(
+    (book: string) => {
+      const next = book + " ";
+      setQuery(next);
+      setDropdownOpen(false);
+      setHighlighted(0);
+      inputRef.current?.focus();
+      // Don't fire a search yet — wait for user to add chapter
     },
     []
   );
@@ -42,8 +109,29 @@ export function ScriptureSearch() {
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(val, translation), 220);
+    setHighlighted(0);
+    // Show dropdown only while typing a book name
+    setDropdownOpen(isTypingBookName(val) && val.trim().length > 0);
+    scheduleSearch(val, translation);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!dropdownOpen || suggestions.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlighted((h) => Math.min(h + 1, suggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlighted((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (suggestions[highlighted]) {
+        e.preventDefault();
+        selectBook(suggestions[highlighted]);
+      }
+    } else if (e.key === "Escape") {
+      setDropdownOpen(false);
+    }
   };
 
   const handleTranslationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -72,20 +160,61 @@ export function ScriptureSearch() {
       <div className="flex gap-3 items-center">
         <div className="flex-1 relative">
           <input
+            ref={inputRef}
             data-qa="scripture-search-input"
             className="w-full bg-transparent border-none border-b border-b-iron/60 outline-none py-2 text-chalk font-sans text-sm tracking-wide transition-colors placeholder:text-smoke focus:border-b-gold focus:[box-shadow:0_2px_0_-1px_rgba(201,168,76,0.15)]"
             type="text"
-            placeholder={'Search \u2014 e.g. John 3:16 or \u201cshepherd\u201d'}
+            placeholder={"Book, chapter:verse or keyword"}
             value={query}
             onChange={handleQueryChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => {
+              if (isTypingBookName(query) && query.trim().length > 0) setDropdownOpen(true);
+            }}
+            onBlur={() => {
+              // Delay so click on suggestion registers first
+              setTimeout(() => setDropdownOpen(false), 150);
+            }}
             autoComplete="off"
             spellCheck={false}
+            aria-autocomplete="list"
+            aria-expanded={dropdownOpen && suggestions.length > 0}
+            aria-haspopup="listbox"
           />
           {isSearching && (
             <span
               className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border border-smoke border-t-gold animate-spin"
               aria-hidden="true"
             />
+          )}
+
+          {/* Book suggestions dropdown */}
+          {dropdownOpen && suggestions.length > 0 && (
+            <ul
+              ref={listRef}
+              role="listbox"
+              className="absolute left-0 right-0 top-full mt-1 z-50 bg-obsidian border border-iron rounded-sm shadow-lg overflow-hidden"
+            >
+              {suggestions.map((book, i) => (
+                <li
+                  key={book}
+                  role="option"
+                  aria-selected={i === highlighted}
+                  className={`px-3 py-1.5 text-sm cursor-pointer transition-colors font-sans tracking-wide ${
+                    i === highlighted
+                      ? "bg-iron text-chalk"
+                      : "text-ash hover:bg-iron/60 hover:text-chalk"
+                  }`}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // prevent blur before click
+                    selectBook(book);
+                  }}
+                  onMouseEnter={() => setHighlighted(i)}
+                >
+                  {book}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
         <select
@@ -106,7 +235,8 @@ export function ScriptureSearch() {
       {results.length > 0 && (
         <ul className="list-none mt-2 p-0 flex flex-col gap-px" role="list">
           {results.map((v, i) => {
-            const isLive = pushed?.reference === v.reference && pushed?.translation === v.translation;
+            const isLive =
+              pushed?.reference === v.reference && pushed?.translation === v.translation;
             return (
               <li
                 key={`${v.translation}-${v.reference}-${i}`}
@@ -117,8 +247,12 @@ export function ScriptureSearch() {
                 onKeyDown={(e) => e.key === "Enter" && handlePush(v)}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-chalk tracking-[0.04em]">{v.reference}</span>
-                  <span className="font-mono text-[10px] text-ash tracking-[0.08em]">{v.translation}</span>
+                  <span className="text-xs font-medium text-chalk tracking-[0.04em]">
+                    {v.reference}
+                  </span>
+                  <span className="font-mono text-[10px] text-ash tracking-[0.08em]">
+                    {v.translation}
+                  </span>
                   {isLive && (
                     <span
                       className="w-2 h-2 rounded-full bg-gold [box-shadow:0_0_4px_var(--color-gold)] ml-auto"
