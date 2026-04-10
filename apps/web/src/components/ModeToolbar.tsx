@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { DetectionMode } from "../lib/types";
+import { toastError } from "../lib/toast";
 
 const MODES: { value: DetectionMode; label: string }[] = [
   { value: "auto",     label: "AUTO" },
@@ -19,14 +20,14 @@ export function ModeToolbar({ onModeChange }: Props) {
   useEffect(() => {
     invoke<DetectionMode>("get_detection_mode")
       .then((m) => { setMode(m); onModeChange?.(m); })
-      .catch(console.error);
+      .catch(toastError("Failed to load detection mode"));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleModeChange(next: DetectionMode) {
     invoke("set_detection_mode", { mode: next })
       .then(() => { setMode(next); onModeChange?.(next); })
-      .catch(console.error);
+      .catch(toastError("Failed to change detection mode"));
   }
 
   return (

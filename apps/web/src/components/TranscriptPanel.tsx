@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { TranscriptEvent } from "../lib/types";
+import { toastError } from "../lib/toast";
 
 // Multipliers for each bar to create a natural equalizer spread
 const BAR_MULTIPLIERS = [0.65, 0.85, 1.0, 0.9, 0.7];
@@ -138,7 +139,7 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
 
   function handleToggle() {
     if (micActive) {
-      invoke("stop_stt").catch(console.error);
+      invoke("stop_stt").catch(toastError("Failed to stop transcription"));
       setMicActive(false);
       setAudioLevel(0);
       setSttWarning(null);
