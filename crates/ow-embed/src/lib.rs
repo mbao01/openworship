@@ -12,6 +12,7 @@
 use anyhow::Result;
 use ow_search::VerseResult;
 use serde::Serialize;
+use std::path::Path;
 
 // ─── Embedder trait ─────────────────────────────────────────────────────────
 
@@ -242,6 +243,26 @@ impl SemanticIndex {
 
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
+    }
+
+    /// Serialize the index to a binary file using bincode.
+    pub fn save(&self, path: &Path) -> Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let encoded = bincode::serde::encode_to_vec(&self.entries, bincode::config::standard())
+            .map_err(|e| anyhow::anyhow!("bincode encode error: {e}"))?;
+        std::fs::write(path, encoded)?;
+        Ok(())
+    }
+
+    /// Deserialize an index from a binary file produced by [`save`].
+    pub fn load(path: &Path) -> Result<Self> {
+        let data = std::fs::read(path)?;
+        let (entries, _): (Vec<(VerseResult, Vec<f32>)>, _) =
+            bincode::serde::decode_from_slice(&data, bincode::config::standard())
+                .map_err(|e| anyhow::anyhow!("bincode decode error: {e}"))?;
+        Ok(Self { entries })
     }
 
     /// Search the index for verses semantically similar to `query_embedding`.

@@ -149,6 +149,36 @@ pub fn list_translations(conn: &Connection) -> Result<Vec<Translation>> {
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
+/// Return all verses for a single translation, identified by its abbreviation (e.g. `"KJV"`).
+///
+/// Returns an empty vec (not an error) if the translation code is not found.
+pub fn get_verses_by_translation(conn: &Connection, translation: &str) -> Result<Vec<Verse>> {
+    let mut stmt = conn.prepare(
+        "SELECT t.abbreviation, v.book, v.book_number, v.chapter, v.verse, v.text
+         FROM verses v JOIN translations t ON v.translation_id = t.id
+         WHERE t.abbreviation = ?1
+         ORDER BY v.book_number, v.chapter, v.verse",
+    )?;
+    let rows = stmt.query_map([translation], |row| {
+        let translation: String = row.get(0)?;
+        let book: String = row.get(1)?;
+        let book_number: u32 = row.get(2)?;
+        let chapter: u32 = row.get(3)?;
+        let verse: u32 = row.get(4)?;
+        let text: String = row.get(5)?;
+        Ok(Verse {
+            reference: format!("{} {}:{}", book, chapter, verse),
+            translation,
+            book,
+            book_number,
+            chapter,
+            verse,
+            text,
+        })
+    })?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
 pub fn get_all_verses(conn: &Connection) -> Result<Vec<Verse>> {
     let mut stmt = conn.prepare(
         "SELECT t.abbreviation, v.book, v.book_number, v.chapter, v.verse, v.text
@@ -277,6 +307,23 @@ mod tests {
             assert!(v.4 > 0);
             assert!(!v.5.is_empty());
         }
+    }
+
+    #[test]
+    fn test_get_verses_by_translation_returns_only_that_translation() {
+        let conn = test_db();
+        let kjv = get_verses_by_translation(&conn, "KJV").unwrap();
+        assert!(!kjv.is_empty());
+        assert!(kjv.iter().all(|v| v.translation == "KJV"));
+        // Should not contain other translations
+        assert!(kjv.iter().all(|v| v.translation != "WEB" && v.translation != "BSB"));
+    }
+
+    #[test]
+    fn test_get_verses_by_translation_unknown_returns_empty() {
+        let conn = test_db();
+        let result = get_verses_by_translation(&conn, "UNKNOWN").unwrap();
+        assert!(result.is_empty());
     }
 
     #[test]
