@@ -66,6 +66,9 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # whisper.cpp/ggml requires macOS 10.15+ for std::filesystem;
+          # Apple Silicon requires 11.0+. Force it here to complement .cargo/config.toml.
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.platform == 'macos-latest' && '11.0' || '' }}
           # macOS code signing (optional — set in repo secrets to enable)
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}

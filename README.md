@@ -162,6 +162,16 @@ pnpm dev
 
 ---
 
+## Minimum OS requirements
+
+The effective minimum OS versions are set by Tauri 2 itself:
+
+- **Windows**: Windows 10+
+- **Linux**: Any distro with WebKitGTK 4.1 (Ubuntu 20.04+, Fedora 33+)
+- **macOS**: 11.0+ (Big Sur) — required for Apple Silicon and `std::filesystem` in whisper.cpp/ggml
+
+---
+
 ## Building for release
 
 Desktop artifacts (.dmg, .exe, .AppImage) are built automatically by the CD workflow when a tag is pushed:

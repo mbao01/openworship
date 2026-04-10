@@ -2,4 +2,11 @@
 # whisper.cpp (via whisper-rs/ggml) uses std::filesystem which requires macOS 10.15+,
 # and arm64 (Apple Silicon) only runs on macOS 11.0+. Set explicitly to avoid
 # build failures from the cc crate's default 10.13 deployment target.
-MACOSX_DEPLOYMENT_TARGET = "11.0"
+#
+# The cmake crate in whisper-rs-sys reads CFLAGS/CXXFLAGS to set compiler flags.
+# We must set MACOSX_DEPLOYMENT_TARGET *and* force it in the cmake env so that
+# ggml's C++ code compiles with -mmacosx-version-min=11.0 instead of 10.13.
+MACOSX_DEPLOYMENT_TARGET = { value = "11.0", force = true }
+
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "link-arg=-mmacosx-version-min=11.0"]
