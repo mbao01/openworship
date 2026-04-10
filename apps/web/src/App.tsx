@@ -9,6 +9,7 @@ import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { SpeakerPage } from "./pages/SpeakerPage";
 import { SplashScreen } from "./components/SplashScreen";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toast";
 import "./styles/global.css";
 
 // Apply "dark" class to <html> based on the effective theme.
@@ -145,6 +146,7 @@ function App() {
   return (
     <TooltipProvider>
       <AppInner />
+      <Toaster />
     </TooltipProvider>
   );
 }

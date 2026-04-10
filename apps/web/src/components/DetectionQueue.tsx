@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { QueueItem } from "../lib/types";
+import { toastError } from "../lib/toast";
 
 export function DetectionQueue() {
   const [items, setItems] = useState<QueueItem[]>([]);
@@ -10,7 +11,7 @@ export function DetectionQueue() {
   useEffect(() => {
     invoke<QueueItem[]>("get_queue")
       .then(setItems)
-      .catch(console.error);
+      .catch(toastError("Failed to load queue"));
 
     let unlisten: UnlistenFn | null = null;
     listen<QueueItem[]>("detection://queue-updated", (event) => {
@@ -25,15 +26,15 @@ export function DetectionQueue() {
   }, []);
 
   function handleApprove(id: string) {
-    invoke("approve_item", { id }).catch(console.error);
+    invoke("approve_item", { id }).catch(toastError("Failed to approve item"));
   }
 
   function handleDismiss(id: string) {
-    invoke("dismiss_item", { id }).catch(console.error);
+    invoke("dismiss_item", { id }).catch(toastError("Failed to dismiss item"));
   }
 
   function handleRejectLive() {
-    invoke("reject_live_item").catch(console.error);
+    invoke("reject_live_item").catch(toastError("Failed to dismiss live item"));
   }
 
   // Show pending + live items; hide dismissed.

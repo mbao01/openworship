@@ -8,6 +8,7 @@ import { SettingsModal } from "../components/SettingsModal";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
 import type { ChurchIdentity, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
+import { toastError } from "../lib/toast";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
@@ -180,7 +181,7 @@ function PreviewPanels() {
   const [items, setItems] = useState<QueueItem[]>([]);
 
   useEffect(() => {
-    invoke<QueueItem[]>("get_queue").then(setItems).catch(console.error);
+    invoke<QueueItem[]>("get_queue").then(setItems).catch(toastError("Failed to load queue"));
     let unlisten: UnlistenFn | null = null;
     listen<QueueItem[]>("detection://queue-updated", (e) => setItems(e.payload)).then(
       (fn) => { unlisten = fn; }
@@ -196,16 +197,16 @@ function PreviewPanels() {
       <MiniDisplay
         label="PREVIEW"
         item={pending}
-        onApprove={() => { if (pending) invoke("approve_item", { itemId: pending.id }).catch(console.error); }}
-        onSkip={() => { if (pending) invoke("skip_item", { itemId: pending.id }).catch(console.error); }}
+        onApprove={() => { if (pending) invoke("approve_item", { itemId: pending.id }).catch(toastError("Failed to approve item")); }}
+        onSkip={() => { if (pending) invoke("skip_item", { itemId: pending.id }).catch(toastError("Failed to skip item")); }}
       />
       <MiniDisplay
         label="LIVE"
         item={live}
         isLive
-        onClear={() => { invoke("clear_live").catch(console.error); }}
-        onPrev={() => { invoke("prev_item").catch(console.error); }}
-        onNext={() => { invoke("next_item").catch(console.error); }}
+        onClear={() => { invoke("clear_live").catch(toastError("Failed to clear live item")); }}
+        onPrev={() => { invoke("prev_item").catch(toastError("Failed to go to previous item")); }}
+        onNext={() => { invoke("next_item").catch(toastError("Failed to go to next item")); }}
       />
     </div>
   );
