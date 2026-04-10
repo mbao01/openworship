@@ -147,6 +147,20 @@ function ImportForm({
   const [text, setText] = useState("");
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileLoad = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const content = ev.target?.result;
+      if (typeof content === "string") setText(content);
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be re-selected if needed.
+    e.target.value = "";
+  };
 
   const handleImport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,6 +181,8 @@ function ImportForm({
       setImporting(false);
     }
   };
+
+  const accept = format === "ccli" ? ".txt,.csv" : ".xml";
 
   return (
     <form className="flex flex-col gap-3" onSubmit={handleImport}>
@@ -191,6 +207,26 @@ function ImportForm({
           />{" "}
           OpenLP XML
         </label>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="font-sans text-[10px] tracking-[0.06em] py-0.5 px-2 border border-iron rounded-[3px] bg-transparent text-ash cursor-pointer transition-colors hover:border-smoke hover:text-chalk disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={importing}
+          title="Load from file"
+        >
+          Load from file
+        </button>
+        <span className="text-[10px] text-iron">or paste below</span>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={handleFileLoad}
+          disabled={importing}
+        />
       </div>
       <textarea
         className="w-full box-border bg-void border border-iron rounded-[3px] text-chalk font-mono text-[10px] py-2 px-3 outline-none resize-y transition-colors placeholder:text-iron focus:border-smoke disabled:opacity-50"

@@ -2421,6 +2421,113 @@ pub async fn sync_artifact_now(
     }
 }
 
+/// Sync all cloud-enabled artifacts in parallel. Returns a summary of how many
+/// succeeded and how many failed. The frontend can call `list_cloud_artifacts`
+/// or `get_cloud_sync_info` after this to get updated statuses.
+#[tauri::command]
+pub async fn sync_all_artifacts(
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    let config = {
+        let guard = state.cloud_config.read().map_err(|e| e.to_string())?;
+        guard.clone().ok_or_else(|| "cloud not configured".to_string())?
+    };
+
+    // Collect all sync-enabled entries up-front so we can release the locks.
+    let entries: Vec<(CloudSyncInfo, std::path::PathBuf, Option<String>)> = {
+        let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+        let af_db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        sync_db
+            .list_enabled()
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .filter_map(|info| {
+                let entry = af_db.get_by_id(&info.artifact_id).ok()??;
+                let abs = af_db.abs_path(&entry.path);
+                Some((info, abs, entry.mime_type))
+            })
+            .collect()
+    };
+
+    let total = entries.len();
+    let mut succeeded: u32 = 0;
+    let mut failed: u32 = 0;
+
+    let client = reqwest::Client::new();
+    for (mut info, local_path, mime) in entries {
+        let artifact_id = info.artifact_id.clone();
+        let cloud_key = match info.cloud_key.clone() {
+            Some(k) => k,
+            None => { failed += 1; continue; }
+        };
+        let last_etag = info.last_etag.clone();
+
+        // Mark as syncing.
+        {
+            let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+            info.status = SyncStatus::Syncing;
+            sync_db.upsert_sync_info(&info).map_err(|e| e.to_string())?;
+        }
+
+        match crate::cloud_sync::upload_artifact(
+            &client,
+            &config,
+            last_etag.as_deref(),
+            &local_path,
+            &cloud_key,
+            mime.as_deref(),
+        )
+        .await
+        {
+            Ok(etag) => {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis() as i64;
+                let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+                let mut updated = sync_db
+                    .get_sync_info(&artifact_id)
+                    .map_err(|e| e.to_string())?
+                    .unwrap_or_else(|| info.clone());
+                updated.status = SyncStatus::Synced;
+                updated.last_etag = Some(etag);
+                updated.last_synced_ms = Some(now);
+                updated.sync_error = None;
+                sync_db.upsert_sync_info(&updated).map_err(|e| e.to_string())?;
+                succeeded += 1;
+            }
+            Err(e) => {
+                let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+                let mut updated = sync_db
+                    .get_sync_info(&artifact_id)
+                    .map_err(|err| err.to_string())?
+                    .unwrap_or_else(|| info.clone());
+                updated.status = SyncStatus::Error;
+                updated.sync_error = Some(e.to_string());
+                sync_db.upsert_sync_info(&updated).map_err(|err| err.to_string())?;
+                failed += 1;
+            }
+        }
+    }
+
+    // Recalculate aggregate storage usage.
+    {
+        let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+        let af_db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        let synced = sync_db.list_enabled().map_err(|e| e.to_string())?;
+        let used: i64 = synced
+            .iter()
+            .filter_map(|s| af_db.get_by_id(&s.artifact_id).ok().flatten())
+            .filter_map(|e| e.size_bytes)
+            .sum();
+        sync_db
+            .update_storage_usage(used, synced.len() as u32)
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(serde_json::json!({ "total": total, "succeeded": succeeded, "failed": failed }))
+}
+
 /// List cloud-synced artifacts in the given section ("branch" or "shared").
 #[tauri::command]
 pub fn list_cloud_artifacts(
