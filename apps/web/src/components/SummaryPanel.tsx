@@ -187,8 +187,6 @@ export function SummaryPanel() {
     }
   };
 
-  if (summaries.length === 0) return null;
-
   return (
     <>
       {viewing && (
@@ -214,17 +212,23 @@ export function SummaryPanel() {
             {error && (
               <p className="text-[11px] text-ember px-3 pb-2 m-0">{error}</p>
             )}
-            <ul className="list-none m-0 px-2 pb-2 flex flex-col gap-0.5">
-              {summaries.map((s) => (
-                <SummaryRow
-                  key={s.id}
-                  summary={s}
-                  onView={setViewing}
-                  onSendEmail={sendingId ? () => {} : handleSendEmail}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </ul>
+            {summaries.length === 0 ? (
+              <p className="text-[11px] text-smoke px-3 pb-2 m-0 leading-[1.5]">
+                No service summaries yet. Close a service to generate one.
+              </p>
+            ) : (
+              <ul className="list-none m-0 px-2 pb-2 flex flex-col gap-0.5">
+                {summaries.map((s) => (
+                  <SummaryRow
+                    key={s.id}
+                    summary={s}
+                    onView={setViewing}
+                    onSendEmail={sendingId ? () => {} : handleSendEmail}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </ul>
+            )}
           </>
         )}
       </div>

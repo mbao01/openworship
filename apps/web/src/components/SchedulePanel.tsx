@@ -583,17 +583,21 @@ export function SchedulePanel() {
       ) : null}
 
       {/* Past projects */}
-      {pastProjects.length > 0 && (
-        <div className="shrink-0 mt-3 border-t border-iron pt-3">
-          <button
-            className="w-full flex items-center justify-between bg-transparent border-none text-smoke font-sans text-[10px] font-medium tracking-[0.1em] uppercase cursor-pointer p-0 mb-2 transition-colors hover:text-ash"
-            onClick={() => setShowPastProjects((v) => !v)}
-            aria-expanded={showPastProjects}
-          >
-            <span>PAST SERVICES ({pastProjects.length})</span>
-            <span aria-hidden="true">{showPastProjects ? "▲" : "▼"}</span>
-          </button>
-          {showPastProjects && (
+      <div className="shrink-0 mt-3 border-t border-iron pt-3">
+        <button
+          className="w-full flex items-center justify-between bg-transparent border-none text-smoke font-sans text-[10px] font-medium tracking-[0.1em] uppercase cursor-pointer p-0 mb-2 transition-colors hover:text-ash"
+          onClick={() => setShowPastProjects((v) => !v)}
+          aria-expanded={showPastProjects}
+        >
+          <span>PAST SERVICES {pastProjects.length > 0 ? `(${pastProjects.length})` : ""}</span>
+          <span aria-hidden="true">{showPastProjects ? "▲" : "▼"}</span>
+        </button>
+        {showPastProjects && (
+          pastProjects.length === 0 ? (
+            <p className="text-[11px] text-smoke m-0 leading-[1.5]">
+              No past services. Close an active service to archive it here.
+            </p>
+          ) : (
             <ul
               className="list-none m-0 p-0 flex flex-col gap-px max-h-[120px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]"
               role="list"
@@ -617,9 +621,9 @@ export function SchedulePanel() {
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-      )}
+          )
+        )}
+      </div>
 
       {/* Content Bank */}
       <ContentBankSection liveReference={liveReference} />
