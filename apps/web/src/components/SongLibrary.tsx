@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "../lib/tauri";
-import type { Song } from "../lib/types";
+import type { Song, SongSemanticStatus } from "../lib/types";
 
 // Shared input/textarea classes
 const inputCls = "w-full box-border bg-void border border-iron rounded-[3px] text-chalk font-sans text-xs py-2 px-3 outline-none transition-colors placeholder:text-iron focus:border-smoke disabled:opacity-50";
@@ -338,7 +338,33 @@ export function SongLibrary() {
   const [mode, setMode] = useState<"list" | "add" | "edit" | "import">("list");
   const [editTarget, setEditTarget] = useState<Song | null>(null);
   const [pushed, setPushed] = useState<number | null>(null);
+  const [semanticStatus, setSemanticStatus] = useState<SongSemanticStatus | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Poll semantic index status until it is ready, then stop.
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const status = await invoke<SongSemanticStatus>("get_song_semantic_status");
+        if (cancelled) return;
+        setSemanticStatus(status);
+        if (status.ready && pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+      } catch {
+        // ignore — semantic index is optional
+      }
+    };
+    void check();
+    pollRef.current = setInterval(check, 3000);
+    return () => {
+      cancelled = true;
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const loadSongs = useCallback(async (q = "") => {
     try {
@@ -405,7 +431,23 @@ export function SongLibrary() {
     <div className="flex flex-col gap-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-medium tracking-[0.12em] text-ash uppercase">SONGS</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium tracking-[0.12em] text-ash uppercase">SONGS</span>
+          {semanticStatus && (
+            <span
+              className={`text-[9px] font-medium tracking-[0.08em] uppercase ${
+                semanticStatus.ready ? "text-gold/70" : "text-smoke"
+              }`}
+              title={
+                semanticStatus.ready
+                  ? `Semantic matching active — ${semanticStatus.song_count} song${semanticStatus.song_count !== 1 ? "s" : ""} indexed`
+                  : "Building semantic index…"
+              }
+            >
+              {semanticStatus.ready ? `~${semanticStatus.song_count}` : "…"}
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
           <button
             data-qa="song-library-import-btn"
@@ -428,6 +470,7 @@ export function SongLibrary() {
           </button>
         </div>
       </div>
+
 
       {mode === "add" && (
         <SongForm
