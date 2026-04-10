@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "../lib/tauri";
+import { toastError } from "../lib/toast";
 import type {
   ContentBankEntry,
   ProjectItem,
@@ -105,8 +106,8 @@ function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void 
     try {
       const project = await invoke<ServiceProject>("create_service_project", { name: trimmed });
       onCreated(project);
-    } catch {
-      // ignore
+    } catch (e) {
+      toastError("Failed to create service")(e);
     } finally {
       setSaving(false);
     }
@@ -151,7 +152,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
   useEffect(() => {
     invoke<TranslationInfo[]>("list_translations")
       .then(setTranslations)
-      .catch(() => {});
+      .catch(toastError("Failed to load translations"));
   }, []);
 
   // Load bank on open
@@ -159,7 +160,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
     if (open) {
       invoke<ContentBankEntry[]>("search_content_bank", { query: "" })
         .then(setBankResults)
-        .catch(() => {});
+        .catch(toastError("Failed to load content bank"));
     }
   }, [open]);
 
@@ -170,7 +171,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
         setSongResults([]);
         invoke<ContentBankEntry[]>("search_content_bank", { query: "" })
           .then(setBankResults)
-          .catch(() => {});
+          .catch(toastError("Failed to load content bank"));
         return;
       }
       setIsSearching(true);
@@ -183,7 +184,8 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
         setSearchResults(scripture);
         setBankResults(bank);
         setSongResults(songs);
-      } catch {
+      } catch (e) {
+        toastError("Search failed")(e);
         setSearchResults([]);
         setBankResults([]);
         setSongResults([]);
@@ -206,8 +208,8 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
       await invoke("push_to_display", { reference, text, translation: tr });
       setPushed(reference);
       setTimeout(() => setPushed(null), 2000);
-    } catch {
-      // ignore
+    } catch (e) {
+      toastError("Failed to push to display")(e);
     }
   };
 
@@ -216,8 +218,8 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
       await invoke("push_song_to_display", { id: song.id });
       setPushed(`song:${song.id}`);
       setTimeout(() => setPushed(null), 2000);
-    } catch {
-      // ignore
+    } catch (e) {
+      toastError("Failed to push song to display")(e);
     }
   };
 
@@ -431,8 +433,8 @@ export function SchedulePanel() {
         translation: item.translation,
       });
       setLiveReference(item.reference);
-    } catch {
-      // ignore
+    } catch (e) {
+      toastError("Failed to push to display")(e);
     }
   };
 
@@ -440,8 +442,8 @@ export function SchedulePanel() {
     try {
       const updated = await invoke<ServiceProject>("remove_item_from_active_project", { itemId });
       setActiveProject(updated);
-    } catch {
-      // ignore
+    } catch (e) {
+      toastError("Failed to remove item from schedule")(e);
     }
   };
 
@@ -461,8 +463,8 @@ export function SchedulePanel() {
     try {
       const updated = await invoke<ServiceProject>("reorder_active_project_items", { itemIds: ids });
       setActiveProject(updated);
-    } catch {
-      // ignore
+    } catch (e) {
+      toastError("Failed to reorder schedule items")(e);
     }
   };
 
@@ -478,8 +480,8 @@ export function SchedulePanel() {
           console.error("[summary] generation failed:", e);
         });
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      toastError("Failed to close service")(e);
     }
   };
 
@@ -488,8 +490,8 @@ export function SchedulePanel() {
       const project = await invoke<ServiceProject>("open_service_project", { id });
       setActiveProject(project.closed_at_ms === null ? project : null);
       loadProjects();
-    } catch {
-      // ignore
+    } catch (e) {
+      toastError("Failed to open service")(e);
     }
   };
 
