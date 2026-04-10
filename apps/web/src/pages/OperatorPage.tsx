@@ -7,7 +7,7 @@ import { SchedulePanel } from "../components/SchedulePanel";
 import { SettingsModal } from "../components/SettingsModal";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
-import type { ChurchIdentity, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
+import type { ChurchIdentity, DetectionMode, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
 import { toastError } from "../lib/toast";
 
 interface OperatorPageProps {
@@ -280,11 +280,33 @@ const THEME_CYCLE: ThemeMode[] = ["system", "dark", "light"];
 
 // ─── OperatorPage ─────────────────────────────────────────────────────────────
 
+const MODE_LABEL: Record<DetectionMode, string> = {
+  auto: "AUTO",
+  copilot: "COPILOT",
+  airplane: "AIRPLANE",
+  offline: "OFFLINE",
+};
+
+const MODE_COLOR: Record<DetectionMode, string> = {
+  auto: "text-gold border-gold/40",
+  copilot: "text-chalk border-iron",
+  airplane: "text-ember border-ember/40",
+  offline: "text-ash border-smoke/40",
+};
+
+const MODE_DESCRIPTION: Record<DetectionMode, string> = {
+  auto: "Auto — detections go live immediately",
+  copilot: "Copilot — detections queue for approval",
+  airplane: "Airplane — detection disabled",
+  offline: "Offline — local detection only",
+};
+
 export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSetTheme }: OperatorPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [displayView, setDisplayView] = useState<"audience" | "stage">("audience");
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
+  const [activeMode, setActiveMode] = useState<DetectionMode>("copilot");
 
   return (
     <div data-qa="operator-root" className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden">
@@ -297,6 +319,13 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
           <span data-qa="operator-branch" className="font-mono text-[11px] text-ash tracking-[0.04em]">{identity.branch_name}</span>
         </div>
         <div className="flex items-center gap-3">
+          <span
+            data-qa="active-mode-badge"
+            className={`font-sans text-[10px] font-medium tracking-[0.1em] uppercase px-2 py-0.5 rounded-sm border ${MODE_COLOR[activeMode]}`}
+            title={MODE_DESCRIPTION[activeMode]}
+          >
+            {MODE_LABEL[activeMode]}
+          </span>
           <TranslationSwitcher />
 
           {/* AUDIENCE / STAGE toggle */}
@@ -399,7 +428,7 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
       )}
 
       {/* ── Mode toolbar ─────────────────────────────────────────────────── */}
-      <ModeToolbar />
+      <ModeToolbar onModeChange={setActiveMode} />
 
       {/* ── Full-width preview panels ─────────────────────────────────────── */}
       <PreviewPanels />
