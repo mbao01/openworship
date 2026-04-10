@@ -2230,6 +2230,26 @@ pub fn set_artifacts_base_path(path: String, state: State<'_, AppState>) -> Resu
 }
 
 #[tauri::command]
+pub fn read_text_file(
+    id: String,
+    max_bytes: Option<usize>,
+    state: State<'_, AppState>,
+) -> Result<(String, bool), String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = db
+        .get_by_id(&id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("artifact not found: {id}"))?;
+    let abs = db.abs_path(&entry.path);
+    let limit = max_bytes.unwrap_or(65536);
+    let raw = std::fs::read(&abs).map_err(|e| e.to_string())?;
+    let truncated = raw.len() > limit;
+    let slice = if truncated { &raw[..limit] } else { &raw };
+    let text = String::from_utf8_lossy(slice).into_owned();
+    Ok((text, truncated))
+}
+
+#[tauri::command]
 pub fn open_artifact(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
     let entry = db.get_by_id(&id).map_err(|e| e.to_string())?

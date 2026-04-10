@@ -381,6 +381,7 @@ pub fn run() {
             commands::star_artifact,
             commands::get_artifacts_settings,
             commands::set_artifacts_base_path,
+            commands::read_text_file,
             commands::open_artifact,
             // ── Phase 14: Summaries + email ────────────────────────────────
             commands::generate_service_summary,
