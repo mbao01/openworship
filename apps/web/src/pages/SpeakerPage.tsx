@@ -7,9 +7,13 @@
  * `sermon_note` and `sermon_note_advance` events. This page is opened
  * on a secondary monitor or the preacher's laptop.
  *
- * The operator controls which slide is shown via the Operator Page.
+ * Navigation: prev/next buttons + keyboard shortcuts (ArrowLeft/ArrowRight/Space).
+ * The speaker can advance or rewind slides locally via Tauri commands, which
+ * also push the updated slide to the main display.
  */
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "../lib/tauri";
+import { toastError } from "../lib/toast";
 
 const WS_URL = "ws://127.0.0.1:9000";
 const RECONNECT_DELAY_MS = 2000;
@@ -81,6 +85,33 @@ export function SpeakerPage() {
     };
   }, []);
 
+  const handleNext = useCallback(() => {
+    invoke("advance_sermon_note").catch(toastError("Failed to advance slide"));
+  }, []);
+
+  const handlePrev = useCallback(() => {
+    invoke("rewind_sermon_note").catch(toastError("Failed to go to previous slide"));
+  }, []);
+
+  // Keyboard shortcuts: ArrowRight / Space → next, ArrowLeft → prev.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!slide) return;
+      if (e.key === "ArrowRight" || e.key === " ") {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrev();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [slide, handleNext, handlePrev]);
+
+  const isFirst = slide ? slide.slideIndex === 0 : true;
+  const isLast = slide ? slide.slideIndex + 1 >= slide.totalSlides : true;
+
   return (
     <div className="fixed inset-0 bg-void font-sans flex flex-col text-chalk">
       <header className="flex items-center justify-between px-6 py-3 bg-obsidian border-b border-iron shrink-0">
@@ -109,11 +140,29 @@ export function SpeakerPage() {
           <div className="flex-1 text-[clamp(2rem,4vw,4.5rem)] font-normal leading-[1.4] text-chalk whitespace-pre-wrap overflow-auto">
             {slide.text}
           </div>
-          {slide.slideIndex + 1 < slide.totalSlides && (
-            <div className="text-[0.75rem] font-normal tracking-[0.1em] text-smoke text-right">
-              Press ▶ on the operator panel to advance
-            </div>
-          )}
+          <div className="flex items-center justify-between shrink-0">
+            <button
+              onClick={handlePrev}
+              disabled={isFirst}
+              aria-label="Previous slide"
+              title="Previous slide (←)"
+              className="font-sans text-[0.75rem] font-medium tracking-[0.1em] text-chalk bg-transparent border border-iron rounded-sm px-5 py-2 cursor-pointer transition-all uppercase hover:border-ash disabled:opacity-30 disabled:cursor-default"
+            >
+              ← PREV
+            </button>
+            <span className="text-[0.7rem] tracking-[0.08em] text-smoke">
+              ← → or Space to navigate
+            </span>
+            <button
+              onClick={handleNext}
+              disabled={isLast}
+              aria-label="Next slide"
+              title="Next slide (→ or Space)"
+              className="font-sans text-[0.75rem] font-medium tracking-[0.1em] text-chalk bg-transparent border border-iron rounded-sm px-5 py-2 cursor-pointer transition-all uppercase hover:border-ash disabled:opacity-30 disabled:cursor-default"
+            >
+              NEXT →
+            </button>
+          </div>
         </main>
       ) : (
         <main className="flex-1 flex flex-col items-center justify-center gap-3 text-ash text-[1.1rem]">

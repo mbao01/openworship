@@ -1826,6 +1826,42 @@ pub fn advance_sermon_note(app: AppHandle, state: State<'_, AppState>) -> Result
     Ok(())
 }
 
+/// Rewind the currently active sermon note to the previous slide.
+/// Returns an error if no sermon note is active or already at the first slide.
+#[tauri::command]
+pub fn rewind_sermon_note(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let (note, prev_index) = {
+        let mut active = state.active_sermon_note.write().map_err(|e| e.to_string())?;
+        let (note_id, current) = active
+            .as_ref()
+            .cloned()
+            .ok_or("no active sermon note")?;
+        if current == 0 {
+            return Err("already at first slide".into());
+        }
+        let guard = state.sermon_notes.read().map_err(|e| e.to_string())?;
+        let note = guard
+            .iter()
+            .find(|n| n.id == note_id)
+            .cloned()
+            .ok_or("active sermon note not found")?;
+        let prev = current - 1;
+        *active = Some((note_id, prev));
+        (note, prev)
+    };
+
+    let total = note.slides.len() as u32;
+    let ev = ContentEvent::sermon_note(
+        note.title.clone(),
+        note.slides[prev_index as usize].clone(),
+        prev_index,
+        total,
+    );
+    let _ = state.display_tx.send(ev);
+    let _ = app.emit("speaker://note-changed", ());
+    Ok(())
+}
+
 /// Return the currently active sermon note and its current slide index.
 #[tauri::command]
 pub fn get_active_sermon_note(
