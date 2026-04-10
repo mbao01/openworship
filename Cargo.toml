@@ -8,6 +8,7 @@ members = [
     "crates/ow-db",
     "crates/ow-embed",
     "tests/integration",
+    "tools/ow-embed-builder",
 ]
 resolver = "2"
 

@@ -15,3 +15,4 @@ anyhow = { workspace = true }
 reqwest = { workspace = true, features = ["json"], optional = true }
 fastembed = "4"
 ow-search = { path = "../ow-search" }
+bincode = { version = "2", features = ["serde"] }

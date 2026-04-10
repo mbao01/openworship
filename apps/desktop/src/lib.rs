@@ -18,6 +18,7 @@ mod summaries;
 use ow_audio::SttEngine;
 use ow_core::{DetectionMode, QueueItem, SongRef};
 use ow_embed::SemanticIndex;
+use tauri::Manager;
 use settings::{AudioSettings, DisplaySettings};
 use songs::SongsDb;
 use state::AppState;
@@ -175,6 +176,7 @@ pub fn run() {
     let embed_index = Arc::clone(&semantic_index);
     let embed_embedder = Arc::clone(&embedder);
     let embed_settings = Arc::clone(&audio_settings);
+    let embed_translation = Arc::clone(&active_translation);
     let song_embed_db = Arc::clone(&songs_db);
     let song_embed_index = Arc::clone(&song_semantic_index);
     let song_embed_embedder = Arc::clone(&embedder);
@@ -235,7 +237,23 @@ pub fn run() {
                 detect_announcements,
             ));
 
-            // Background: embed all scripture verses.
+            // Resolve the bundled pre-built index path for the active translation.
+            // Indices are named scripture_index_<TRANSLATION>.bin (e.g. scripture_index_KJV.bin).
+            // Only valid in packaged builds; absent in dev mode.
+            let active_translation_code = embed_translation
+                .read()
+                .map(|t| t.clone())
+                .unwrap_or_else(|_| "KJV".to_string());
+            let bundled_index_path = app
+                .path()
+                .resource_dir()
+                .ok()
+                .map(|dir: std::path::PathBuf| {
+                    dir.join("resources")
+                        .join(format!("scripture_index_{active_translation_code}.bin"))
+                });
+
+            // Background: load bundled embedding index or build on-device.
             tauri::async_runtime::spawn(async move {
                 let enabled = embed_settings
                     .read()
@@ -245,6 +263,25 @@ pub fn run() {
                     eprintln!("[embed] semantic search disabled by settings");
                     return;
                 }
+
+                // Try loading the pre-built index bundled with the app.
+                if let Some(path) = bundled_index_path {
+                    let load_result = tokio::task::spawn_blocking(move || {
+                        ow_embed::SemanticIndex::load(&path)
+                    })
+                    .await;
+                    if let Ok(Ok(index)) = load_result {
+                        let count = index.len();
+                        if let Ok(mut guard) = embed_index.write() {
+                            *guard = Some(index);
+                        }
+                        eprintln!("[embed] loaded bundled pre-built index ({count} verses)");
+                        return;
+                    }
+                    eprintln!("[embed] bundled index not available, building on-device…");
+                }
+
+                // Fall back to on-device build (dev mode, or missing/corrupt bundle).
                 let result = tokio::task::spawn_blocking(move || {
                     ow_embed::build_index(&*embed_embedder, &verse_results)
                 })
