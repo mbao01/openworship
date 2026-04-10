@@ -5,6 +5,7 @@ import type {
   AclEntry,
   ArtifactEntry,
   BranchPermission,
+  ChurchIdentity,
   CloudSyncInfo,
 } from "../lib/types";
 
@@ -105,6 +106,13 @@ export function ShareDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [identity, setIdentity] = useState<ChurchIdentity | null>(null);
+
+  useEffect(() => {
+    invoke<ChurchIdentity | null>("get_identity")
+      .then((id) => setIdentity(id))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     invoke<[AclEntry[], AccessLevel]>("get_artifact_acl", { artifactId: artifact.id })
@@ -174,8 +182,7 @@ export function ShareDialog({
     }
   };
 
-  // Derive "current branch" from identity (we hardcode as "You" for now)
-  const currentBranchName = "Downtown Branch";
+  const currentBranchName = identity?.branch_name ?? "This Branch";
   const isPublic = accessLevel === "all_branches";
 
   return (
