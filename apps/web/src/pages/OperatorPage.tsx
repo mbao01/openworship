@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { DetectionQueue } from "../components/DetectionQueue";
 import { ModeToolbar } from "../components/ModeToolbar";
@@ -7,68 +7,20 @@ import { SchedulePanel } from "../components/SchedulePanel";
 import { SettingsModal } from "../components/SettingsModal";
 import { TranscriptPanel } from "../components/TranscriptPanel";
 import { invoke } from "../lib/tauri";
-import type { ChurchIdentity, DetectionMode, QueueItem, ThemeMode, TranslationInfo } from "../lib/types";
+import type {
+  ChurchIdentity,
+  DetectionMode,
+  QueueItem,
+  ThemeMode,
+} from "../lib/types";
 import { toastError } from "../lib/toast";
+import { TitleBar } from "@/components/TitleBar";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
   onOpenArtifacts?: () => void;
   theme?: ThemeMode;
   onSetTheme?: (mode: ThemeMode) => void;
-}
-
-// ─── Translation Switcher ────────────────────────────────────────────────────
-
-function TranslationSwitcher() {
-  const [translations, setTranslations] = useState<TranslationInfo[]>([]);
-  const [active, setActive] = useState("KJV");
-
-  const load = useCallback(async () => {
-    try {
-      const [list, current] = await Promise.all([
-        invoke<TranslationInfo[]>("list_translations"),
-        invoke<string>("get_active_translation"),
-      ]);
-      setTranslations(list);
-      setActive(current);
-    } catch {
-      // Backend not ready yet
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const translation = e.target.value;
-    setActive(translation);
-    try {
-      await invoke("switch_live_translation", { translation });
-    } catch {
-      load();
-    }
-  };
-
-  if (translations.length === 0) return null;
-
-  return (
-    <div className="flex items-center gap-2">
-      <label className="text-[10px] text-smoke tracking-[0.06em] uppercase" htmlFor="translation-select">
-        Translation
-      </label>
-      <select
-        data-qa="translation-select"
-        id="translation-select"
-        className="appearance-none bg-iron text-chalk border border-steel rounded-[3px] text-[11px] font-mono pt-[2px] pb-[2px] pl-[6px] pr-5 cursor-pointer min-w-[52px] transition-colors focus:outline focus:outline-1 focus:outline-gold focus:outline-offset-[1px]"
-        value={active}
-        onChange={handleChange}
-        title="Switch Bible translation"
-      >
-        {translations.map((t) => (
-          <option key={t.id} value={t.id}>{t.abbreviation}</option>
-        ))}
-      </select>
-    </div>
-  );
 }
 
 // ─── Mini Preview Panel ───────────────────────────────────────────────────────
@@ -84,13 +36,24 @@ interface MiniDisplayProps {
   onNext?: () => void;
 }
 
-function MiniDisplay({ label, item, isLive, onApprove, onSkip, onClear, onPrev, onNext }: MiniDisplayProps) {
+function MiniDisplay({
+  label,
+  item,
+  isLive,
+  onApprove,
+  onSkip,
+  onClear,
+  onPrev,
+  onNext,
+}: MiniDisplayProps) {
   const isSong = item?.kind === "song";
   return (
     <div className="flex-1 flex flex-col min-w-0">
       {/* Panel label row */}
       <div className="flex items-center gap-2 mb-1.5 px-0.5">
-        <span className="text-[9px] font-semibold tracking-[0.16em] text-smoke uppercase">{label}</span>
+        <span className="text-[9px] font-semibold tracking-[0.16em] text-smoke uppercase">
+          {label}
+        </span>
         {isLive && item && (
           <span className="w-1.5 h-1.5 rounded-full bg-gold [box-shadow:0_0_6px_var(--color-gold)] shrink-0" />
         )}
@@ -107,7 +70,9 @@ function MiniDisplay({ label, item, isLive, onApprove, onSkip, onClear, onPrev, 
         {item ? (
           <div className="flex flex-col items-center justify-center text-center max-w-[85%]">
             {/* Body text — centered */}
-            <p className={`m-0 leading-[1.6] text-chalk ${isSong ? "font-serif text-[15px] italic" : "font-serif text-[14px]"}`}>
+            <p
+              className={`m-0 leading-[1.6] text-chalk ${isSong ? "font-serif text-[15px] italic" : "font-serif text-[14px]"}`}
+            >
               {isSong ? item.reference : item.text}
             </p>
             {/* Reference — below text, centered */}
@@ -132,14 +97,14 @@ function MiniDisplay({ label, item, isLive, onApprove, onSkip, onClear, onPrev, 
       {label === "PREVIEW" && (
         <div className="flex gap-2 mt-2 px-0.5">
           <button
-            className="text-[10px] font-medium tracking-[0.1em] uppercase px-3 py-1 rounded-[3px] border border-gold text-gold bg-transparent cursor-pointer transition-colors hover:bg-gold/10 disabled:opacity-30 disabled:cursor-default"
+            className="text-[10px] font-medium tracking-widest uppercase px-3 py-1 rounded-[3px] border border-gold text-gold bg-transparent cursor-pointer transition-colors hover:bg-gold/10 disabled:opacity-30 disabled:cursor-default"
             onClick={onApprove}
             disabled={!item}
           >
             APPROVE
           </button>
           <button
-            className="text-[10px] font-medium tracking-[0.1em] uppercase px-3 py-1 rounded-[3px] border border-iron text-smoke bg-transparent cursor-pointer transition-colors hover:border-ash hover:text-chalk disabled:opacity-30 disabled:cursor-default"
+            className="text-[10px] font-medium tracking-widest uppercase px-3 py-1 rounded-[3px] border border-iron text-smoke bg-transparent cursor-pointer transition-colors hover:border-ash hover:text-chalk disabled:opacity-30 disabled:cursor-default"
             onClick={onSkip}
             disabled={!item}
           >
@@ -154,10 +119,18 @@ function MiniDisplay({ label, item, isLive, onApprove, onSkip, onClear, onPrev, 
             onClick={onPrev}
             aria-label="Previous"
           >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6 2L3 5l3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path
+                d="M6 2L3 5l3 3"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
           <button
-            className="text-[10px] font-medium tracking-[0.1em] uppercase px-3 py-1 rounded-[3px] border border-iron text-smoke bg-transparent cursor-pointer transition-colors hover:border-ash hover:text-chalk"
+            className="text-[10px] font-medium tracking-widest uppercase px-3 py-1 rounded-[3px] border border-iron text-smoke bg-transparent cursor-pointer transition-colors hover:border-ash hover:text-chalk"
             onClick={onClear}
           >
             CLEAR CONTENT
@@ -167,7 +140,15 @@ function MiniDisplay({ label, item, isLive, onApprove, onSkip, onClear, onPrev, 
             onClick={onNext}
             aria-label="Next"
           >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M4 2l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path
+                d="M4 2l3 3-3 3"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         </div>
       )}
@@ -181,12 +162,18 @@ function PreviewPanels() {
   const [items, setItems] = useState<QueueItem[]>([]);
 
   useEffect(() => {
-    invoke<QueueItem[]>("get_queue").then(setItems).catch(toastError("Failed to load queue"));
+    invoke<QueueItem[]>("get_queue")
+      .then(setItems)
+      .catch(toastError("Failed to load queue"));
     let unlisten: UnlistenFn | null = null;
-    listen<QueueItem[]>("detection://queue-updated", (e) => setItems(e.payload)).then(
-      (fn) => { unlisten = fn; }
-    );
-    return () => { unlisten?.(); };
+    listen<QueueItem[]>("detection://queue-updated", (e) =>
+      setItems(e.payload),
+    ).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      unlisten?.();
+    };
   }, []);
 
   const pending = items.find((i) => i.status === "pending") ?? null;
@@ -197,16 +184,34 @@ function PreviewPanels() {
       <MiniDisplay
         label="PREVIEW"
         item={pending}
-        onApprove={() => { if (pending) invoke("approve_item", { itemId: pending.id }).catch(toastError("Failed to approve item")); }}
-        onSkip={() => { if (pending) invoke("skip_item", { itemId: pending.id }).catch(toastError("Failed to skip item")); }}
+        onApprove={() => {
+          if (pending)
+            invoke("approve_item", { itemId: pending.id }).catch(
+              toastError("Failed to approve item"),
+            );
+        }}
+        onSkip={() => {
+          if (pending)
+            invoke("skip_item", { itemId: pending.id }).catch(
+              toastError("Failed to skip item"),
+            );
+        }}
       />
       <MiniDisplay
         label="LIVE"
         item={live}
         isLive
-        onClear={() => { invoke("clear_live").catch(toastError("Failed to clear live item")); }}
-        onPrev={() => { invoke("prev_item").catch(toastError("Failed to go to previous item")); }}
-        onNext={() => { invoke("next_item").catch(toastError("Failed to go to next item")); }}
+        onClear={() => {
+          invoke("clear_live").catch(toastError("Failed to clear live item"));
+        }}
+        onPrev={() => {
+          invoke("prev_item").catch(
+            toastError("Failed to go to previous item"),
+          );
+        }}
+        onNext={() => {
+          invoke("next_item").catch(toastError("Failed to go to next item"));
+        }}
       />
     </div>
   );
@@ -243,8 +248,12 @@ function DetectionLog() {
           return [...prev.slice(-19), entry];
         });
       }
-    }).then((fn) => { unlisten = fn; });
-    return () => { unlisten?.(); };
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      unlisten?.();
+    };
   }, []);
 
   const fmt = (ts: number) => {
@@ -263,9 +272,13 @@ function DetectionLog() {
         ) : (
           entries.map((e) => (
             <div key={e.id} className="flex items-baseline gap-2">
-              <span className="font-mono text-[9px] text-smoke shrink-0">{fmt(e.ts)}</span>
+              <span className="font-mono text-[9px] text-smoke shrink-0">
+                {fmt(e.ts)}
+              </span>
               <span className="text-[10px] text-ash shrink-0">{e.label}</span>
-              <span className="text-[10px] text-gold truncate">{e.reference}</span>
+              <span className="text-[10px] text-gold truncate">
+                {e.reference}
+              </span>
             </div>
           ))
         )}
@@ -274,149 +287,30 @@ function DetectionLog() {
   );
 }
 
-// ─── Theme cycle ──────────────────────────────────────────────────────────────
-
-const THEME_CYCLE: ThemeMode[] = ["system", "dark", "light"];
-
-// ─── OperatorPage ─────────────────────────────────────────────────────────────
-
-const MODE_LABEL: Record<DetectionMode, string> = {
-  auto: "AUTO",
-  copilot: "COPILOT",
-  airplane: "AIRPLANE",
-  offline: "OFFLINE",
-};
-
-const MODE_COLOR: Record<DetectionMode, string> = {
-  auto: "text-gold border-gold/40",
-  copilot: "text-chalk border-iron",
-  airplane: "text-ember border-ember/40",
-  offline: "text-ash border-smoke/40",
-};
-
-const MODE_DESCRIPTION: Record<DetectionMode, string> = {
-  auto: "Auto — detections go live immediately",
-  copilot: "Copilot — detections queue for approval",
-  airplane: "Airplane — detection disabled",
-  offline: "Offline — local detection only",
-};
-
-export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSetTheme }: OperatorPageProps) {
+export function OperatorPage({
+  identity,
+  onOpenArtifacts,
+  theme = "system",
+  onSetTheme,
+}: OperatorPageProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [displayView, setDisplayView] = useState<"audience" | "stage">("audience");
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [activeMode, setActiveMode] = useState<DetectionMode>("copilot");
 
   return (
-    <div data-qa="operator-root" className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden">
-
-      {/* ── Title bar ────────────────────────────────────────────────────── */}
-      <header data-qa="operator-titlebar" className="h-9 bg-void flex items-center justify-between px-4 border-b border-iron shrink-0">
-        <div className="flex items-center gap-2">
-          <span data-qa="operator-appname" className="text-xs text-ash tracking-[0.08em] font-normal">openworship</span>
-          <span className="text-[11px] text-smoke" aria-hidden="true">/</span>
-          <span data-qa="operator-branch" className="font-mono text-[11px] text-ash tracking-[0.04em]">{identity.branch_name}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span
-            data-qa="active-mode-badge"
-            className={`font-sans text-[10px] font-medium tracking-[0.1em] uppercase px-2 py-0.5 rounded-sm border ${MODE_COLOR[activeMode]}`}
-            title={MODE_DESCRIPTION[activeMode]}
-          >
-            {MODE_LABEL[activeMode]}
-          </span>
-          <TranslationSwitcher />
-
-          {/* AUDIENCE / STAGE toggle */}
-          <div className="flex items-stretch h-5 rounded-sm overflow-hidden border border-iron">
-            {(["audience", "stage"] as const).map((v) => (
-              <button
-                key={v}
-                className={`font-sans text-[10px] font-medium tracking-[0.1em] px-3 border-none cursor-pointer transition-colors uppercase ${
-                  displayView === v
-                    ? "bg-gold text-void"
-                    : "bg-transparent text-ash hover:text-chalk"
-                }`}
-                onClick={() => setDisplayView(v)}
-                aria-pressed={displayView === v}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-
-          {onOpenArtifacts && (
-            <button
-              data-qa="open-artifacts-btn"
-              className="bg-transparent border-none text-ash cursor-pointer p-1 flex items-center justify-center transition-colors hover:text-chalk hover:bg-white/[0.06]"
-              onClick={onOpenArtifacts}
-              title="Artifacts"
-              aria-label="Open artifacts"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-              </svg>
-            </button>
-          )}
-          {onSetTheme && (
-            <button
-              data-qa="toggle-theme-btn"
-              className="bg-transparent border-none text-ash cursor-pointer p-1 flex items-center justify-center transition-colors hover:text-chalk hover:bg-white/[0.06]"
-              onClick={() => {
-                const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length];
-                onSetTheme(next);
-              }}
-              title={`Theme: ${theme} — click to cycle`}
-              aria-label="Cycle theme"
-            >
-              {theme === "light" ? (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.2" />
-                  <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="2.9" y1="2.9" x2="4.3" y2="4.3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="11.7" y1="11.7" x2="13.1" y2="13.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="11.7" y1="4.3" x2="13.1" y2="2.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="2.9" y1="13.1" x2="4.3" y2="11.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                </svg>
-              ) : theme === "dark" ? (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <rect x="1.5" y="2" width="13" height="9" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                  <line x1="5" y1="14" x2="11" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="8" y1="11" x2="8" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                </svg>
-              )}
-            </button>
-          )}
-          <button
-            data-qa="open-settings-btn"
-            className="bg-transparent border-none text-ash cursor-pointer p-1 flex items-center justify-center transition-colors hover:text-chalk hover:bg-white/[0.06]"
-            onClick={() => setSettingsOpen(true)}
-            title="Settings"
-            aria-label="Open settings"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path
-                d="M6.5 1h3l.5 1.5a5.5 5.5 0 0 1 1.2.7l1.5-.5 1.5 2.6-1.2 1a5.6 5.6 0 0 1 0 1.4l1.2 1-1.5 2.6-1.5-.5a5.5 5.5 0 0 1-1.2.7L9.5 15h-3l-.5-1.5a5.5 5.5 0 0 1-1.2-.7l-1.5.5L1.8 10.8l1.2-1a5.6 5.6 0 0 1 0-1.4l-1.2-1 1.5-2.6 1.5.5A5.5 5.5 0 0 1 6 2.5L6.5 1Z"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinejoin="round"
-              />
-              <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2" />
-            </svg>
-          </button>
-        </div>
-      </header>
+    <div
+      data-qa="operator-root"
+      className="flex flex-col h-screen bg-void-100 text-chalk font-sans overflow-hidden"
+    >
+      <TitleBar
+        identity={identity}
+        activeMode={activeMode}
+        onOpenArtifacts={onOpenArtifacts}
+        theme={theme}
+        onSetTheme={onSetTheme}
+        setSettingsOpen={setSettingsOpen}
+      />
 
       {settingsOpen && (
         <SettingsModal
@@ -435,7 +329,6 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
 
       {/* ── Main three-column layout ──────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-
         {/* Left — Schedule + Content Bank ─────────────────────────────── */}
         <aside
           data-qa="operator-col-left"
@@ -450,14 +343,36 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
           <button
             className="h-8 shrink-0 flex items-center justify-center text-smoke hover:text-chalk border-b border-iron transition-colors bg-transparent cursor-pointer"
             onClick={() => setLeftOpen((v) => !v)}
-            title={leftOpen ? "Collapse schedule panel" : "Expand schedule panel"}
-            aria-label={leftOpen ? "Collapse schedule panel" : "Expand schedule panel"}
+            title={
+              leftOpen ? "Collapse schedule panel" : "Expand schedule panel"
+            }
+            aria-label={
+              leftOpen ? "Collapse schedule panel" : "Expand schedule panel"
+            }
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+            >
               {leftOpen ? (
-                <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M9 3L5 7l4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               ) : (
-                <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M5 3l4 4-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               )}
             </svg>
           </button>
@@ -470,7 +385,10 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
                 <span className="block text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-3">
                   CONTENT BANK
                 </span>
-                <div className="overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]" style={{ maxHeight: "200px" }}>
+                <div
+                  className="overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]"
+                  style={{ maxHeight: "200px" }}
+                >
                   <ScriptureSearch />
                 </div>
               </div>
@@ -486,22 +404,63 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
           {!leftOpen && (
             <div className="flex flex-col items-center pt-3 gap-3">
               {/* Search icon for Content Bank */}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Content Bank">
-                <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.1" />
-                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                className="text-smoke shrink-0"
+                aria-label="Content Bank"
+              >
+                <circle
+                  cx="6"
+                  cy="6"
+                  r="4"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                />
+                <path
+                  d="M9.5 9.5L12.5 12.5"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                />
               </svg>
               {/* Calendar icon for Schedule */}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Schedule">
-                <rect x="1.5" y="2.5" width="11" height="10" rx="1" stroke="currentColor" strokeWidth="1.1" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                className="text-smoke shrink-0"
+                aria-label="Schedule"
+              >
+                <rect
+                  x="1.5"
+                  y="2.5"
+                  width="11"
+                  height="10"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                />
                 <path d="M1.5 5.5h11" stroke="currentColor" strokeWidth="1.1" />
-                <path d="M4.5 1v3M9.5 1v3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                <path
+                  d="M4.5 1v3M9.5 1v3"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
           )}
         </aside>
 
         {/* Center — Transcript ─────────────────────────────────────────── */}
-        <main data-qa="operator-col-center" className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void">
+        <main
+          data-qa="operator-col-center"
+          className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void"
+        >
           <div className="flex-1 overflow-hidden min-h-0">
             <TranscriptPanel />
           </div>
@@ -522,13 +481,33 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
             className="h-8 shrink-0 flex items-center justify-center text-smoke hover:text-chalk border-b border-iron transition-colors bg-transparent cursor-pointer"
             onClick={() => setRightOpen((v) => !v)}
             title={rightOpen ? "Collapse queue panel" : "Expand queue panel"}
-            aria-label={rightOpen ? "Collapse queue panel" : "Expand queue panel"}
+            aria-label={
+              rightOpen ? "Collapse queue panel" : "Expand queue panel"
+            }
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+            >
               {rightOpen ? (
-                <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M5 3l4 4-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               ) : (
-                <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M9 3L5 7l4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               )}
             </svg>
           </button>
@@ -545,7 +524,10 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
               <div className="h-px bg-iron shrink-0" />
 
               {/* Detection Log (bottom ~35%) */}
-              <div className="shrink-0 overflow-hidden flex flex-col px-4 pb-4" style={{ height: "35%" }}>
+              <div
+                className="shrink-0 overflow-hidden flex flex-col px-4 pb-4"
+                style={{ height: "35%" }}
+              >
                 <DetectionLog />
               </div>
             </>
@@ -555,13 +537,45 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
           {!rightOpen && (
             <div className="flex flex-col items-center pt-3 gap-3">
               {/* Queue icon */}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Queue">
-                <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                className="text-smoke shrink-0"
+                aria-label="Queue"
+              >
+                <path
+                  d="M2 4h10M2 7h10M2 10h6"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                />
               </svg>
               {/* Log icon */}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Detection Log">
-                <rect x="1.5" y="1.5" width="11" height="11" rx="1" stroke="currentColor" strokeWidth="1.1" />
-                <path d="M4 5h6M4 7.5h4M4 10h2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                className="text-smoke shrink-0"
+                aria-label="Detection Log"
+              >
+                <rect
+                  x="1.5"
+                  y="1.5"
+                  width="11"
+                  height="11"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                />
+                <path
+                  d="M4 5h6M4 7.5h4M4 10h2"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
           )}
