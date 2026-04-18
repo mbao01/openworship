@@ -1,82 +1,169 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
 
-/* ── Class-based dark mode variant for Tailwind v4 ────────────────────────── */
-@custom-variant dark (&:is(.dark, .dark *));
+/* ── Theme switching uses data-app-theme attribute, NOT .dark class ─────── */
+@custom-variant light (&:is([data-app-theme="light"], [data-app-theme="light"] *));
 
-/* ── Sacred Monochrome design tokens ──────────────────────────────────────── */
+/* ── Design tokens (warm parchment — from ~/Downloads/openworship/app/app.css) */
 @theme {
-  /* Colors — dark palette (canonical Sacred Monochrome) */
-  --color-void: #0a0a0a;
-  --color-obsidian: #141414;
-  --color-slate: #1e1e1e;
-  --color-chalk: #efefef;
-  --color-ash: #808080;
-  --color-smoke: #4a4a4a;
-  --color-gold: #c9a84c;
-  --color-gold-muted: #8a7535;
-  --color-iron: #2a2a2a;
-  --color-ember: #c44c4c;
+  /* Background hierarchy */
+  --color-bg:   #0E0D0B;
+  --color-bg-1: #131210;
+  --color-bg-2: #1A1814;
+  --color-bg-3: #211E19;
+  --color-bg-4: #2A2620;
+
+  /* Lines */
+  --color-line:        rgba(232,223,207,0.08);
+  --color-line-strong: rgba(232,223,207,0.16);
+
+  /* Text */
+  --color-ink:   #F2EDE2;
+  --color-ink-2: #CFC7B6;
+  --color-ink-3: #8A8175;
+  --color-muted: #5E574D;
+
+  /* Accent — default copper; overridden at runtime via CSS var */
+  --color-accent:       #C9A76A;
+  --color-accent-soft:  rgba(201,167,106,0.12);
+  --color-accent-hover: #D9B879;
+
+  /* Semantic */
+  --color-danger:  #D26060;
+  --color-success: #8AB67B;
+  --color-live:    #E05454;
 
   /* Typography */
-  --font-serif: "Cormorant Garamond", Georgia, serif;
-  --font-sans: "Geist", system-ui, sans-serif;
-  --font-mono: "Geist Mono", monospace;
-
-  /* Spacing (4px base unit) */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-16: 64px;
+  --font-serif: 'Crimson Pro', Georgia, serif;
+  --font-sans:  'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* Border radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-
-  /* Extended palette */
-  --color-steel: #383838;
-  --color-surface: #1a1a1a;
+  --radius:    4px;
+  --radius-sm: 2px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 }
 
-/* ── Light-mode palette overrides ─────────────────────────────────────────── */
+/* ── Light mode overrides ─────────────────────────────────────────────────── */
+html[data-app-theme="light"] {
+  --color-bg:          #F5F1E8;
+  --color-bg-1:        #EFE9DB;
+  --color-bg-2:        #E8E2D2;
+  --color-bg-3:        #DDD4BF;
+  --color-bg-4:        #CFC3A8;
+  --color-line:        rgba(26,23,20,0.10);
+  --color-line-strong: rgba(26,23,20,0.22);
+  --color-ink:         #1A1714;
+  --color-ink-2:       #3A332C;
+  --color-ink-3:       #6B6259;
+  --color-muted:       #8F8578;
+  --color-accent:      #6B4423;
+  --color-accent-soft: rgba(107,68,35,0.10);
+  --color-accent-hover: #8A5A32;
+}
+
+/* ── Density scaling ─────────────────────────────────────────────────────── */
+html[data-density="compact"] {
+  --dens: 0.78;
+}
+
+/* ── shadcn/ui CSS variable bridge ────────────────────────────────────────── */
 /*
- * Sacred Monochrome light palette. Inverted tonal scale: near-white ground,
- * near-black text. Gold and Ember are unchanged — they anchor both modes.
- * Applied when the `.dark` class is NOT present on <html>.
+ * Maps OW tokens onto shadcn semantic names. Keep in sync with @theme above.
+ * Note: --color-accent is NOT overridden here — OW's accent IS copper gold.
+ * shadcn components that use hover:bg-accent get the copper gold, which is
+ * intentional for this app. Ghost hover states use bg-bg-3 directly.
  */
-html:not(.dark) {
-  --color-void: #f5f5f5;       /* app background (near-white) */
-  --color-obsidian: #ebebeb;   /* panels, sidebars */
-  --color-slate: #dedede;      /* elevated cards, modals */
-  --color-chalk: #141414;      /* primary text (near-black) */
-  --color-ash: #5a5a5a;        /* secondary labels */
-  --color-smoke: #9a9a9a;      /* disabled, ghost text */
-  --color-iron: #c8c8c8;       /* borders, dividers */
-  --color-steel: #d4d4d4;      /* extended border/separator */
-  --color-surface: #f0f0f0;    /* surface variant */
-  /* gold and ember intentionally unchanged */
+@theme inline {
+  --color-background:         var(--color-bg);
+  --color-foreground:         var(--color-ink);
+  --color-muted:              var(--color-bg-2);
+  --color-muted-foreground:   var(--color-ink-3);
+  --color-border:             var(--color-line-strong);
+  --color-input:              var(--color-line-strong);
+  --color-ring:               var(--color-accent);
+  /* primary = copper gold accent, used for CTA buttons */
+  --color-primary:            var(--color-accent);
+  --color-primary-foreground: #1A0D00;
+  --color-secondary:          var(--color-bg-3);
+  --color-secondary-foreground: var(--color-ink);
+  --color-accent-foreground:  #1A0D00;
+  --color-destructive:        var(--color-danger);
+  --color-card:               var(--color-bg-2);
+  --color-card-foreground:    var(--color-ink);
+  --color-popover:            var(--color-bg-3);
+  --color-popover-foreground: var(--color-ink);
+  --color-sidebar:            var(--color-bg-1);
+  --color-sidebar-foreground: var(--color-ink);
+  --color-sidebar-primary:    var(--color-accent);
+  --color-sidebar-primary-foreground: #1A0D00;
+  --color-sidebar-accent:     var(--color-bg-3);
+  --color-sidebar-accent-foreground: var(--color-ink);
+  --color-sidebar-border:     var(--color-line);
+  --color-sidebar-ring:       var(--color-accent);
 }
 
-/* ── Base reset ───────────────────────────────────────────────────────────── */
-@layer base {
-  /* Spacing tokens: @theme does not emit --space-* as CSS custom properties
-     in Tailwind v4, so we define them explicitly for var() usage in component CSS. */
-  :root {
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-6: 24px;
-    --space-8: 32px;
-    --space-10: 40px;
-    --space-16: 64px;
-  }
+/* ── Legacy HSL vars for shadcn internal usage ────────────────────────────── */
+:root {
+  --background:           22 6% 6%;
+  --foreground:           30 33% 95%;
+  --muted:                24 6% 10%;
+  --muted-foreground:     29 10% 62%;
+  --border:               28 17% 14%;
+  --input:                28 17% 14%;
+  --ring:                 36 52% 60%;
+  --primary:              36 52% 60%;
+  --primary-foreground:   28 100% 8%;
+  --secondary:            23 9% 13%;
+  --secondary-foreground: 30 33% 95%;
+  --accent:               23 9% 13%;
+  --accent-foreground:    30 33% 95%;
+  --destructive:          0 50% 58%;
+  --card:                 24 6% 10%;
+  --card-foreground:      30 33% 95%;
+  --popover:              21 7% 12%;
+  --popover-foreground:   30 33% 95%;
+  --sidebar-background:   24 6% 10%;
+  --sidebar-foreground:   30 33% 95%;
+  --sidebar-primary:      36 52% 60%;
+  --sidebar-primary-foreground: 28 100% 8%;
+  --sidebar-accent:       23 9% 13%;
+  --sidebar-accent-foreground: 30 33% 95%;
+  --sidebar-border:       28 17% 14%;
+  --sidebar-ring:         36 52% 60%;
+  --radius:               4px;
+  --sidebar:              24 6% 10%;
+}
 
+html[data-app-theme="light"] {
+  --background:           40 33% 94%;
+  --foreground:           22 10% 9%;
+  --muted:                38 24% 91%;
+  --muted-foreground:     27 8% 40%;
+  --border:               32 18% 75%;
+  --input:                32 18% 75%;
+  --ring:                 23 50% 30%;
+  --primary:              23 50% 30%;
+  --primary-foreground:   40 33% 94%;
+  --secondary:            36 24% 82%;
+  --secondary-foreground: 22 10% 9%;
+  --accent:               36 24% 82%;
+  --accent-foreground:    22 10% 9%;
+  --card:                 38 24% 91%;
+  --card-foreground:      22 10% 9%;
+  --popover:              38 29% 88%;
+  --popover-foreground:   22 10% 9%;
+  --sidebar-background:   40 30% 92%;
+  --sidebar-foreground:   22 10% 9%;
+  --sidebar-accent:       36 24% 82%;
+  --sidebar-accent-foreground: 22 10% 9%;
+  --sidebar-border:       32 18% 75%;
+  --sidebar:              40 30% 92%;
+}
+
+/* ── Base reset ──────────────────────────────────────────────────────────── */
+@layer base {
   *,
   *::before,
   *::after {
@@ -89,85 +176,48 @@ html:not(.dark) {
   body,
   #root {
     height: 100%;
-    background: var(--color-void);
-    color: var(--color-chalk);
+    background-color: var(--color-bg);
+    color: var(--color-ink);
     font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.4;
     -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  button {
+    font-family: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  button:focus-visible {
+    outline: 1px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+
+  input,
+  textarea {
+    font-family: inherit;
+    color: inherit;
+  }
+
+  input:focus {
+    outline: none;
   }
 }
 
-/* ── shadcn/ui CSS variable bridge (maps to Sacred Monochrome tokens) ─────── */
-/* These variables are consumed by shadcn components (Sidebar, etc.)          */
-@theme inline {
-  /* Core semantic tokens */
-  --color-background: var(--color-void);
-  --color-foreground: var(--color-chalk);
-  --color-muted: var(--color-obsidian);
-  --color-muted-foreground: var(--color-ash);
-  --color-border: var(--color-iron);
-  --color-input: var(--color-iron);
-  --color-ring: var(--color-gold);
-  --color-primary: var(--color-gold);
-  --color-primary-foreground: var(--color-void);
-  --color-secondary: var(--color-slate);
-  --color-secondary-foreground: var(--color-chalk);
-  --color-accent: var(--color-slate);
-  --color-accent-foreground: var(--color-chalk);
-  --color-destructive: var(--color-ember);
-  --color-card: var(--color-obsidian);
-  --color-card-foreground: var(--color-chalk);
-  --color-popover: var(--color-slate);
-  --color-popover-foreground: var(--color-chalk);
-  /* Sidebar-specific tokens (shadcn Sidebar component) */
-  --color-sidebar: var(--color-obsidian);
-  --color-sidebar-foreground: var(--color-chalk);
-  --color-sidebar-primary: var(--color-gold);
-  --color-sidebar-primary-foreground: var(--color-void);
-  --color-sidebar-accent: var(--color-slate);
-  --color-sidebar-accent-foreground: var(--color-chalk);
-  --color-sidebar-border: var(--color-iron);
-  --color-sidebar-ring: var(--color-gold);
-  /* Radius */
-  --radius: 4px;
+/* ── Keyframe animations ─────────────────────────────────────────────────── */
+@keyframes blink {
+  0%,  70% { box-shadow: 0 0 0 0 rgba(224,84,84,0); }
+  35%      { box-shadow: 0 0 0 8px rgba(224,84,84,0); background: #FF7070; }
 }
 
-/* Expose the same as bare CSS vars for shadcn internal usage */
-:root {
-  --background: 0 0% 4%;         /* --color-void */
-  --foreground: 0 0% 94%;        /* --color-chalk */
-  --muted: 0 0% 8%;
-  --muted-foreground: 0 0% 50%;
-  --border: 0 0% 16%;
-  --input: 0 0% 16%;
-  --ring: 42 50% 55%;
-  --primary: 42 50% 55%;
-  --primary-foreground: 0 0% 4%;
-  --secondary: 0 0% 12%;
-  --secondary-foreground: 0 0% 94%;
-  --accent: 0 0% 12%;
-  --accent-foreground: 0 0% 94%;
-  --destructive: 0 52% 53%;
-  --card: 0 0% 8%;
-  --card-foreground: 0 0% 94%;
-  --popover: 0 0% 12%;
-  --popover-foreground: 0 0% 94%;
-  --sidebar-background: 0 0% 8%;
-  --sidebar-foreground: 0 0% 94%;
-  --sidebar-primary: 42 50% 55%;
-  --sidebar-primary-foreground: 0 0% 4%;
-  --sidebar-accent: 0 0% 12%;
-  --sidebar-accent-foreground: 0 0% 94%;
-  --sidebar-border: 0 0% 16%;
-  --sidebar-ring: 42 50% 55%;
-  --radius: 4px;
-  /* Sacred Monochrome — sidebar override (dark-first app, always dark) */
-  --sidebar: 0 0% 8%;            /* obsidian #141414 */
-}
-
-/* ── Shared keyframe animations ───────────────────────────────────────────── */
-@keyframes transcript-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-accent-soft); }
+  50%      { box-shadow: 0 0 0 4px transparent; }
 }
 
 @keyframes transcript-line-in {
@@ -175,14 +225,7 @@ html:not(.dark) {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Dark mode: identical — this is a dark-first app, tokens don't change */
-.dark {
-  --sidebar: 0 0% 8%;
-  --sidebar-foreground: 0 0% 94%;
-  --sidebar-primary: 42 50% 55%;
-  --sidebar-primary-foreground: 0 0% 4%;
-  --sidebar-accent: 0 0% 12%;
-  --sidebar-accent-foreground: 0 0% 94%;
-  --sidebar-border: 0 0% 16%;
-  --sidebar-ring: 42 50% 55%;
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
