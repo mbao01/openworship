@@ -22,7 +22,7 @@ function PermSelect({
 }) {
   return (
     <select
-      className="appearance-none bg-obsidian border border-iron text-chalk font-sans text-[11px] px-[8px] py-[4px] pr-[22px] rounded-[3px] cursor-pointer outline-none focus:border-gold transition-colors disabled:opacity-50 disabled:cursor-default"
+      className="appearance-none bg-bg-1 border border-line text-ink font-sans text-[11px] px-[8px] py-[4px] pr-[22px] rounded-[3px] cursor-pointer outline-none focus:border-accent transition-colors disabled:opacity-50 disabled:cursor-default"
       style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234a4a4a' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
         backgroundRepeat: "no-repeat",
@@ -76,7 +76,7 @@ function BranchAvatar({ name }: { name: string }) {
 
   return (
     <div
-      className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-chalk shrink-0"
+      className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-ink shrink-0"
       style={{ background: `hsl(${hue}, 30%, 28%)`, border: `1px solid hsl(${hue}, 30%, 35%)` }}
     >
       {initials}
@@ -210,24 +210,24 @@ export function ShareDialog({
     >
       <div
         data-qa="share-dialog"
-        className="bg-slate border border-iron rounded-[8px] w-[480px] max-h-[85vh] overflow-y-auto flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
+        className="bg-bg-2 border border-line rounded-[8px] w-[480px] max-h-[85vh] overflow-y-auto flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ───────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between px-5 pt-5 pb-4">
           <div className="flex flex-col gap-[6px]">
-            <h2 className="text-[15px] font-semibold text-chalk m-0">Share</h2>
+            <h2 className="text-[15px] font-semibold text-ink m-0">Share</h2>
             <div className="flex items-center gap-[7px]">
-              <span className="text-smoke">
+              <span className="text-muted">
                 <FileIcon />
               </span>
-              <span className="text-[12px] text-ash font-mono overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
+              <span className="text-[12px] text-ink-3 font-mono overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
                 {artifact.name}
               </span>
             </div>
           </div>
           <button
-            className="bg-transparent border-none text-smoke cursor-pointer text-[13px] p-1 rounded transition-colors hover:text-chalk mt-[2px]"
+            className="bg-transparent border-none text-muted cursor-pointer text-[13px] p-1 rounded transition-colors hover:text-ink mt-[2px]"
             onClick={onClose}
             aria-label="Close"
           >
@@ -237,12 +237,12 @@ export function ShareDialog({
 
         {/* ── Cloud sync prompt (if not synced) ───────────────────────────── */}
         {!syncInfo?.sync_enabled && (
-          <div className="mx-5 mb-4 px-3 py-3 rounded-[5px] bg-obsidian border border-iron flex items-center justify-between gap-3">
-            <span className="text-[11px] text-ash">
+          <div className="mx-5 mb-4 px-3 py-3 rounded-[5px] bg-bg-1 border border-line flex items-center justify-between gap-3">
+            <span className="text-[11px] text-ink-3">
               Enable cloud sync to share with other branches
             </span>
             <button
-              className="shrink-0 bg-gold text-void font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
+              className="shrink-0 bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
               onClick={handleSyncToggle}
             >
               Enable Sync
@@ -252,13 +252,13 @@ export function ShareDialog({
 
         {/* ── Add people / branches ────────────────────────────────────────── */}
         <div className="px-5 pb-4">
-          <p className="text-[9px] font-semibold tracking-[0.14em] uppercase text-smoke m-0 mb-[8px]">
+          <p className="text-[9px] font-semibold tracking-[0.14em] uppercase text-muted m-0 mb-[8px]">
             Add People or Branches
           </p>
           <div className="flex items-center gap-[6px]">
             <input
               data-qa="share-search-input"
-              className="flex-1 bg-obsidian border border-iron rounded-[4px] text-chalk font-sans text-[12px] px-[10px] py-[6px] outline-none transition-colors focus:border-gold/60 placeholder:text-smoke"
+              className="flex-1 bg-bg-1 border border-line rounded-[4px] text-ink font-sans text-[12px] px-[10px] py-[6px] outline-none transition-colors focus:border-accent/60 placeholder:text-muted"
               placeholder="Search branches or enter email…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -269,7 +269,7 @@ export function ShareDialog({
             <PermSelect value={newPerm} onChange={setNewPerm} />
             <button
               data-qa="share-add-btn"
-              className="bg-gold text-void font-sans text-[11px] font-semibold px-4 py-[6px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default whitespace-nowrap shrink-0"
+              className="bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-4 py-[6px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default whitespace-nowrap shrink-0"
               onClick={handleShare}
               disabled={!searchQuery.trim()}
             >
@@ -278,11 +278,11 @@ export function ShareDialog({
           </div>
         </div>
 
-        <div className="h-px bg-iron mx-0" />
+        <div className="h-px bg-line mx-0" />
 
         {/* ── Who has access ───────────────────────────────────────────────── */}
         <div className="px-5 py-4">
-          <p className="text-[9px] font-semibold tracking-[0.14em] uppercase text-smoke m-0 mb-[12px]">
+          <p className="text-[9px] font-semibold tracking-[0.14em] uppercase text-muted m-0 mb-[12px]">
             Who Has Access
           </p>
 
@@ -291,12 +291,12 @@ export function ShareDialog({
             <li className="flex items-center gap-3 py-[6px]">
               <BranchAvatar name={currentBranchName} />
               <div className="flex-1 min-w-0">
-                <span className="block text-[12px] text-chalk font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+                <span className="block text-[12px] text-ink font-medium overflow-hidden text-ellipsis whitespace-nowrap">
                   {currentBranchName}
-                  <span className="text-smoke font-normal"> (You)</span>
+                  <span className="text-muted font-normal"> (You)</span>
                 </span>
               </div>
-              <span className="shrink-0 px-[8px] py-[3px] rounded-[3px] text-[10px] font-semibold tracking-[0.06em] uppercase bg-gold/10 text-gold border border-gold/20">
+              <span className="shrink-0 px-[8px] py-[3px] rounded-[3px] text-[10px] font-semibold tracking-[0.06em] uppercase bg-accent-soft text-accent border border-accent/20">
                 Owner
               </span>
             </li>
@@ -304,18 +304,18 @@ export function ShareDialog({
             {/* Public access row */}
             {isPublic && (
               <li className="flex items-center gap-3 py-[6px]">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-smoke/20 border border-iron shrink-0">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/20 border border-line shrink-0">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.1" className="text-smoke" />
-                    <path d="M7 4.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 4.5c-2 0-3.5.9-3.5 2h7c0-1.1-1.5-2-3.5-2z" fill="currentColor" className="text-smoke" />
+                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.1" className="text-muted" />
+                    <path d="M7 4.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 4.5c-2 0-3.5.9-3.5 2h7c0-1.1-1.5-2-3.5-2z" fill="currentColor" className="text-muted" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="block text-[12px] text-chalk overflow-hidden text-ellipsis whitespace-nowrap">
+                  <span className="block text-[12px] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
                     Church Shared (Public)
                   </span>
                 </div>
-                <span className="text-[11px] text-ash">Can view</span>
+                <span className="text-[11px] text-ink-3">Can view</span>
               </li>
             )}
 
@@ -324,7 +324,7 @@ export function ShareDialog({
               <li key={entry.branch_id} className="flex items-center gap-3 py-[6px]">
                 <BranchAvatar name={entry.branch_name} />
                 <div className="flex-1 min-w-0">
-                  <span className="block text-[12px] text-chalk overflow-hidden text-ellipsis whitespace-nowrap">
+                  <span className="block text-[12px] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
                     {entry.branch_name}
                   </span>
                 </div>
@@ -334,7 +334,7 @@ export function ShareDialog({
                     onChange={(p) => updatePerm(entry.branch_id, p)}
                   />
                   <button
-                    className="bg-transparent border-none text-smoke cursor-pointer p-[3px] rounded transition-colors hover:text-ember text-[12px]"
+                    className="bg-transparent border-none text-muted cursor-pointer p-[3px] rounded transition-colors hover:text-danger text-[12px]"
                     onClick={() => removeBranch(entry.branch_id)}
                     aria-label="Remove"
                   >
@@ -352,7 +352,7 @@ export function ShareDialog({
             <div
               className={[
                 "relative w-9 h-5 rounded-full transition-colors",
-                isPublic ? "bg-gold/80" : "bg-iron",
+                isPublic ? "bg-accent/80" : "bg-line",
               ].join(" ")}
               onClick={() =>
                 setAccessLevel((prev) =>
@@ -362,31 +362,31 @@ export function ShareDialog({
             >
               <div
                 className={[
-                  "absolute top-[3px] w-[14px] h-[14px] rounded-full bg-chalk transition-[left] duration-200",
+                  "absolute top-[3px] w-[14px] h-[14px] rounded-full bg-ink transition-[left] duration-200",
                   isPublic ? "left-[19px]" : "left-[3px]",
                 ].join(" ")}
               />
             </div>
-            <span className="text-[12px] text-ash group-hover:text-chalk transition-colors">
+            <span className="text-[12px] text-ink-3 group-hover:text-ink transition-colors">
               Anyone in the church can view
             </span>
           </label>
         </div>
 
         {syncConfirmPending && (
-          <div className="mx-5 mb-4 px-3 py-3 rounded-[5px] bg-obsidian border border-gold/40 flex items-center justify-between gap-3">
-            <span className="text-[11px] text-ash">
+          <div className="mx-5 mb-4 px-3 py-3 rounded-[5px] bg-bg-1 border border-accent/40 flex items-center justify-between gap-3">
+            <span className="text-[11px] text-ink-3">
               Sharing requires cloud sync. Enable sync now?
             </span>
             <div className="flex items-center gap-2 shrink-0">
               <button
-                className="bg-transparent border border-iron text-ash font-sans text-[11px] px-3 py-[5px] rounded-[3px] cursor-pointer hover:text-chalk hover:border-ash transition-colors"
+                className="bg-transparent border border-line text-ink-3 font-sans text-[11px] px-3 py-[5px] rounded-[3px] cursor-pointer hover:text-ink hover:border-line-strong transition-colors"
                 onClick={() => setSyncConfirmPending(false)}
               >
                 Cancel
               </button>
               <button
-                className="bg-gold text-void font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
+                className="bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
                 onClick={handleConfirmSyncAndCopy}
               >
                 Enable &amp; Copy
@@ -396,16 +396,16 @@ export function ShareDialog({
         )}
 
         {error && (
-          <p className="text-[11px] text-ember px-5 pb-2 m-0">{error}</p>
+          <p className="text-[11px] text-danger px-5 pb-2 m-0">{error}</p>
         )}
 
-        <div className="h-px bg-iron" />
+        <div className="h-px bg-line" />
 
         {/* ── Footer ───────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-5 py-4">
           <button
             data-qa="share-copy-link-btn"
-            className="flex items-center gap-[7px] bg-transparent border border-iron text-ash font-sans text-[11px] px-[12px] py-[6px] rounded-[4px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+            className="flex items-center gap-[7px] bg-transparent border border-line text-ink-3 font-sans text-[11px] px-[12px] py-[6px] rounded-[4px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
             onClick={handleCopyLink}
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
@@ -417,7 +417,7 @@ export function ShareDialog({
 
           <button
             data-qa="share-done-btn"
-            className="bg-gold text-void border-none rounded-[4px] font-sans text-[12px] font-semibold px-5 py-[7px] cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default"
+            className="bg-accent text-[#1A0D00] border-none rounded-[4px] font-sans text-[12px] font-semibold px-5 py-[7px] cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default"
             onClick={handleSave}
             disabled={saving}
           >

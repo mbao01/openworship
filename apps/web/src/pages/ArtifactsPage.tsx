@@ -206,7 +206,7 @@ function IconGrid() {
 
 function fileIcon(e: ArtifactEntry) {
   if (e.is_dir)
-    return <span className="text-gold/80"><IconFolder /></span>;
+    return <span className="text-accent/80"><IconFolder /></span>;
   const cat = mimeCategory(e.mime_type);
   const colorCls =
     cat === "image" ? "text-[#7ba6d4]" :
@@ -214,7 +214,7 @@ function fileIcon(e: ArtifactEntry) {
     cat === "audio" ? "text-[#7dd4a0]" :
     cat === "document" ? "text-[#d4a07d]" :
     cat === "slide" ? "text-[#d47d7d]" :
-    "text-ash";
+    "text-ink-3";
   return (
     <span className={colorCls}>
       {cat === "image" ? <IconImage /> :
@@ -240,23 +240,23 @@ type Nav =
 // ─── Sync badge + progress ────────────────────────────────────────────────────
 
 function SyncCell({ info }: { info: CloudSyncInfo | undefined }) {
-  if (!info || !info.sync_enabled) return <span className="text-smoke text-[11px]">—</span>;
+  if (!info || !info.sync_enabled) return <span className="text-muted text-[11px]">—</span>;
 
   if (info.status === "syncing" && info.progress !== null) {
     const pct = Math.round(info.progress * 100);
     return (
       <div className="flex items-center gap-[6px]">
-        <div className="w-[48px] h-[3px] rounded-full bg-iron overflow-hidden">
-          <div className="h-full bg-gold transition-[width] duration-300" style={{ width: `${pct}%` }} />
+        <div className="w-[48px] h-[3px] rounded-full bg-line overflow-hidden">
+          <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${pct}%` }} />
         </div>
-        <span className="text-[10px] font-mono text-ash">{pct}%</span>
+        <span className="text-[10px] font-mono text-ink-3">{pct}%</span>
       </div>
     );
   }
 
   if (info.status === "synced") {
     return (
-      <span className="text-gold" title="Synced to cloud">
+      <span className="text-accent" title="Synced to cloud">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
           <path d="M2 7l3 3 6-6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -264,29 +264,29 @@ function SyncCell({ info }: { info: CloudSyncInfo | undefined }) {
     );
   }
 
-  if (info.status === "queued") return <span className="text-smoke text-[10px]" title="Queued">···</span>;
+  if (info.status === "queued") return <span className="text-muted text-[10px]" title="Queued">···</span>;
   if (info.status === "conflict") return <span className="text-[#e89a00] text-[10px]" title="Conflict">⚠</span>;
-  if (info.status === "error") return <span className="text-ember text-[10px]" title={info.sync_error ?? "Error"}>✕</span>;
+  if (info.status === "error") return <span className="text-danger text-[10px]" title={info.sync_error ?? "Error"}>✕</span>;
 
-  return <span className="text-smoke text-[11px]">—</span>;
+  return <span className="text-muted text-[11px]">—</span>;
 }
 
 // ─── Shared cell ──────────────────────────────────────────────────────────────
 
 function SharedCell({ info }: { info: CloudSyncInfo | undefined }) {
-  if (!info || !info.sync_enabled) return <span className="text-smoke text-[11px]">—</span>;
+  if (!info || !info.sync_enabled) return <span className="text-muted text-[11px]">—</span>;
 
   // We infer sharing state from cloud_key for now;
   // full ACL count would require a per-file query
   if (info.cloud_key?.includes("public")) {
     return (
-      <span className="inline-flex items-center px-[6px] py-[2px] rounded-[3px] text-[10px] font-medium bg-gold/10 text-gold border border-gold/25">
+      <span className="inline-flex items-center px-[6px] py-[2px] rounded-[3px] text-[10px] font-medium bg-accent-soft text-accent border border-accent/25">
         Public
       </span>
     );
   }
 
-  return <span className="text-smoke text-[11px]">—</span>;
+  return <span className="text-muted text-[11px]">—</span>;
 }
 
 // ─── Artifacts Sidebar (shadcn Sidebar, collapsible="icon") ───────────────────
@@ -529,14 +529,14 @@ function ContextMenu({
   }, [onClose]);
 
   const btnCls =
-    "block w-full text-left bg-transparent border-none font-sans text-[12px] text-chalk px-[14px] py-[6px] cursor-pointer transition-colors hover:bg-white/[0.06] whitespace-nowrap";
-  const sep = <div className="h-px bg-iron my-[3px] mx-2" />;
+    "block w-full text-left bg-transparent border-none font-sans text-[12px] text-ink px-[14px] py-[6px] cursor-pointer transition-colors hover:bg-white/[0.06] whitespace-nowrap";
+  const sep = <div className="h-px bg-line my-[3px] mx-2" />;
 
   return (
     <div
       ref={ref}
       data-qa="artifacts-ctx-menu"
-      className="fixed z-[1000] bg-slate border border-iron rounded-[5px] py-1 min-w-[160px] shadow-[0_8px_32px_rgba(0,0,0,0.7)]"
+      className="fixed z-[1000] bg-bg-2 border border-line rounded-[5px] py-1 min-w-[160px] shadow-[0_8px_32px_rgba(0,0,0,0.7)]"
       style={{ top: menu.y, left: menu.x }}
     >
       {!menu.entry.is_dir && (
@@ -571,7 +571,7 @@ function ContextMenu({
       </button>
       {sep}
       <button
-        className={`${btnCls} text-ember`}
+        className={`${btnCls} text-danger`}
         onClick={() => { onDelete(menu.entry); onClose(); }}
       >
         Delete
@@ -598,12 +598,12 @@ function RenameModal({
       onClick={onCancel}
     >
       <div
-        className="bg-slate border border-iron rounded-[6px] p-5 w-[320px] flex flex-col gap-3"
+        className="bg-bg-2 border border-line rounded-[6px] p-5 w-[320px] flex flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[13px] font-semibold text-chalk m-0">Rename</p>
+        <p className="text-[13px] font-semibold text-ink m-0">Rename</p>
         <input
-          className="bg-obsidian border border-iron rounded-[3px] text-chalk font-sans text-[13px] px-[10px] py-[6px] outline-none transition-colors focus:border-gold"
+          className="bg-bg-1 border border-line rounded-[3px] text-ink font-sans text-[13px] px-[10px] py-[6px] outline-none transition-colors focus:border-accent"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -614,13 +614,13 @@ function RenameModal({
         />
         <div className="flex justify-end gap-2">
           <button
-            className="bg-transparent text-ash border border-iron rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+            className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="bg-gold text-void border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
+            className="bg-accent text-[#1A0D00] border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
             onClick={() => onConfirm(name.trim())}
             disabled={!name.trim() || name.trim() === entry.name}
           >
@@ -646,12 +646,12 @@ function NewFolderModal({
       onClick={onCancel}
     >
       <div
-        className="bg-slate border border-iron rounded-[6px] p-5 w-[320px] flex flex-col gap-3"
+        className="bg-bg-2 border border-line rounded-[6px] p-5 w-[320px] flex flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[13px] font-semibold text-chalk m-0">New Folder</p>
+        <p className="text-[13px] font-semibold text-ink m-0">New Folder</p>
         <input
-          className="bg-obsidian border border-iron rounded-[3px] text-chalk font-sans text-[13px] px-[10px] py-[6px] outline-none transition-colors focus:border-gold"
+          className="bg-bg-1 border border-line rounded-[3px] text-ink font-sans text-[13px] px-[10px] py-[6px] outline-none transition-colors focus:border-accent"
           placeholder="Folder name"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -663,13 +663,13 @@ function NewFolderModal({
         />
         <div className="flex justify-end gap-2">
           <button
-            className="bg-transparent text-ash border border-iron rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+            className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="bg-gold text-void border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
+            className="bg-accent text-[#1A0D00] border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
             onClick={() => onConfirm(name.trim())}
             disabled={!name.trim()}
           >
@@ -731,21 +731,21 @@ function MoveFolderModal({
       onClick={onCancel}
     >
       <div
-        className="bg-slate border border-iron rounded-[6px] p-5 w-[360px] flex flex-col gap-3"
+        className="bg-bg-2 border border-line rounded-[6px] p-5 w-[360px] flex flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[13px] font-semibold text-chalk m-0">Move to Folder</p>
+        <p className="text-[13px] font-semibold text-ink m-0">Move to Folder</p>
 
         {/* Breadcrumb */}
-        <div className="flex items-center gap-1 text-[11px] text-ash flex-wrap">
-          <button className="text-ash hover:text-chalk transition-colors" onClick={handleRoot}>
+        <div className="flex items-center gap-1 text-[11px] text-ink-3 flex-wrap">
+          <button className="text-ink-3 hover:text-ink transition-colors" onClick={handleRoot}>
             Root
           </button>
           {crumbs.map((c, i) => (
             <span key={i} className="flex items-center gap-1">
-              <span className="text-iron">/</span>
+              <span className="text-line">/</span>
               <button
-                className="text-ash hover:text-chalk transition-colors"
+                className="text-ink-3 hover:text-ink transition-colors"
                 onClick={() => handleCrumb(i)}
               >
                 {c.label}
@@ -754,30 +754,30 @@ function MoveFolderModal({
           ))}
           {browsePath && (
             <span className="flex items-center gap-1">
-              <span className="text-iron">/</span>
-              <span className="text-chalk">{crumbs.length > 0 ? browsePath.split("/").pop() : browsePath}</span>
+              <span className="text-line">/</span>
+              <span className="text-ink">{crumbs.length > 0 ? browsePath.split("/").pop() : browsePath}</span>
             </span>
           )}
         </div>
 
         {/* Folder list */}
-        <div className="bg-obsidian border border-iron rounded-[3px] min-h-[120px] max-h-[200px] overflow-y-auto">
+        <div className="bg-bg-1 border border-line rounded-[3px] min-h-[120px] max-h-[200px] overflow-y-auto">
           {folders.length === 0 ? (
-            <p className="text-[11px] text-iron px-3 py-2 m-0">No sub-folders here.</p>
+            <p className="text-[11px] text-line px-3 py-2 m-0">No sub-folders here.</p>
           ) : (
             folders.map((f) => (
               <div
                 key={f.id}
-                className={`flex items-center justify-between px-3 py-[6px] cursor-pointer text-[12px] transition-colors hover:bg-white/5 ${selected === f.path ? "text-gold bg-white/5" : "text-chalk"}`}
+                className={`flex items-center justify-between px-3 py-[6px] cursor-pointer text-[12px] transition-colors hover:bg-white/5 ${selected === f.path ? "text-accent bg-white/5" : "text-ink"}`}
                 onClick={() => setSelected(f.path)}
                 onDoubleClick={() => handleOpen(f)}
               >
                 <span className="flex items-center gap-2">
-                  <span className="text-ash">📁</span>
+                  <span className="text-ink-3">📁</span>
                   {f.name}
                 </span>
                 <button
-                  className="text-[10px] text-iron hover:text-chalk transition-colors ml-2"
+                  className="text-[10px] text-line hover:text-ink transition-colors ml-2"
                   onClick={(e) => { e.stopPropagation(); handleOpen(f); }}
                   title="Open folder"
                 >
@@ -788,20 +788,20 @@ function MoveFolderModal({
           )}
         </div>
 
-        <p className="text-[10px] text-ash m-0">
-          Moving <span className="text-chalk">{entry.name}</span> to:{" "}
-          <span className="text-gold font-mono">{destinationPath}</span>
+        <p className="text-[10px] text-ink-3 m-0">
+          Moving <span className="text-ink">{entry.name}</span> to:{" "}
+          <span className="text-accent font-mono">{destinationPath}</span>
         </p>
 
         <div className="flex justify-end gap-2">
           <button
-            className="bg-transparent text-ash border border-iron rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+            className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="bg-gold text-void border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12]"
+            className="bg-accent text-[#1A0D00] border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12]"
             onClick={() => onConfirm(destinationPath)}
           >
             Move Here
@@ -866,12 +866,12 @@ function PreviewPanel({
   const ext = entry.name.split(".").pop()?.toUpperCase() ?? "—";
 
   return (
-    <div className="w-[260px] shrink-0 bg-obsidian border-l border-iron flex flex-col overflow-hidden">
+    <div className="w-[260px] shrink-0 bg-bg-1 border-l border-line flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
-        <span className="text-[9px] font-semibold tracking-[0.12em] uppercase text-smoke">Preview</span>
+        <span className="text-[9px] font-semibold tracking-[0.12em] uppercase text-muted">Preview</span>
         <button
-          className="bg-transparent border-none text-smoke cursor-pointer text-[12px] px-1 py-[2px] rounded hover:text-ash transition-colors"
+          className="bg-transparent border-none text-muted cursor-pointer text-[12px] px-1 py-[2px] rounded hover:text-ink-3 transition-colors"
           onClick={onClose}
           aria-label="Close preview"
         >
@@ -880,7 +880,7 @@ function PreviewPanel({
       </div>
 
       {/* Render area — fills remaining vertical space */}
-      <div className="mx-3 mb-2 rounded-[4px] overflow-hidden bg-void border border-iron flex-1 flex items-center justify-center min-h-0">
+      <div className="mx-3 mb-2 rounded-[4px] overflow-hidden bg-bg border border-line flex-1 flex items-center justify-center min-h-0">
         {isImage && fileSrc ? (
           <img
             src={fileSrc}
@@ -908,25 +908,25 @@ function PreviewPanel({
         ) : isText ? (
           <div className="w-full h-full overflow-auto p-2">
             {textLoading ? (
-              <span className="text-[10px] text-smoke">Loading…</span>
+              <span className="text-[10px] text-muted">Loading…</span>
             ) : textContent !== null ? (
               <>
-                <pre className="text-[10px] font-mono text-ash m-0 whitespace-pre-wrap break-words leading-[1.5]">
+                <pre className="text-[10px] font-mono text-ink-3 m-0 whitespace-pre-wrap break-words leading-[1.5]">
                   {textContent}
                 </pre>
                 {textTruncated && (
-                  <p className="text-[9px] text-smoke mt-2 m-0 italic">— truncated at 64 KB —</p>
+                  <p className="text-[9px] text-muted mt-2 m-0 italic">— truncated at 64 KB —</p>
                 )}
               </>
             ) : (
-              <div className="flex flex-col items-center gap-2 text-smoke h-full justify-center">
+              <div className="flex flex-col items-center gap-2 text-muted h-full justify-center">
                 <span className="text-[28px]">{fileIconChar(entry)}</span>
                 <span className="text-[10px] font-mono">{ext}</span>
               </div>
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 text-smoke">
+          <div className="flex flex-col items-center gap-2 text-muted">
             <span className="text-[28px]">{fileIconChar(entry)}</span>
             <span className="text-[10px] font-mono">{ext}</span>
           </div>
@@ -935,23 +935,23 @@ function PreviewPanel({
 
       {/* Compact metadata footer */}
       <div className="px-3 pb-3 shrink-0 flex flex-col gap-[6px]">
-        <p className="text-[11px] font-medium text-chalk m-0 break-words leading-[1.3] truncate" title={entry.name}>
+        <p className="text-[11px] font-medium text-ink m-0 break-words leading-[1.3] truncate" title={entry.name}>
           {entry.name}
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           {entry.mime_type && (
-            <span className="text-[10px] font-mono text-smoke">{ext}</span>
+            <span className="text-[10px] font-mono text-muted">{ext}</span>
           )}
           {!entry.is_dir && entry.size_bytes > 0 && (
-            <span className="text-[10px] font-mono text-smoke">{formatBytes(entry.size_bytes)}</span>
+            <span className="text-[10px] font-mono text-muted">{formatBytes(entry.size_bytes)}</span>
           )}
-          <span className="text-[10px] font-mono text-smoke">{formatDate(entry.modified_at_ms)}</span>
+          <span className="text-[10px] font-mono text-muted">{formatDate(entry.modified_at_ms)}</span>
           {syncInfo?.sync_enabled && (
-            <span className="text-[10px] font-mono text-smoke capitalize">{syncInfo.status.replace("_", " ")}</span>
+            <span className="text-[10px] font-mono text-muted capitalize">{syncInfo.status.replace("_", " ")}</span>
           )}
         </div>
         <button
-          className="w-full bg-transparent border border-iron rounded-[3px] text-ash font-sans text-[11px] py-[6px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+          className="w-full bg-transparent border border-line rounded-[3px] text-ink-3 font-sans text-[11px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
           onClick={() => onShare(entry)}
         >
           Share…
@@ -997,12 +997,12 @@ function NewMenu({
   }, [onClose]);
 
   const btnCls =
-    "block w-full text-left bg-transparent border-none font-sans text-[12px] text-chalk px-[12px] py-[7px] cursor-pointer transition-colors hover:bg-white/[0.06] whitespace-nowrap";
+    "block w-full text-left bg-transparent border-none font-sans text-[12px] text-ink px-[12px] py-[7px] cursor-pointer transition-colors hover:bg-white/[0.06] whitespace-nowrap";
 
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-[3px] z-[200] bg-slate border border-iron rounded-[5px] py-1 min-w-[140px] shadow-[0_8px_32px_rgba(0,0,0,0.7)]"
+      className="absolute right-0 top-full mt-[3px] z-[200] bg-bg-2 border border-line rounded-[5px] py-1 min-w-[140px] shadow-[0_8px_32px_rgba(0,0,0,0.7)]"
     >
       <button className={btnCls} onClick={() => { onNewFolder(); onClose(); }}>
         New Folder
@@ -1284,13 +1284,13 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
     (e) => filter === "all" || (!e.is_dir && mimeCategory(e.mime_type) === filter)
   );
 
-  const metaCls = "text-smoke font-mono text-[11px] whitespace-nowrap";
+  const metaCls = "text-muted font-mono text-[11px] whitespace-nowrap";
 
   const viewBtnCls = (active: boolean) =>
     [
-      "bg-transparent border border-iron text-ash w-7 h-[26px] rounded-[3px] cursor-pointer",
-      "flex items-center justify-center transition-colors hover:text-chalk",
-      active ? "border-gold/60 text-gold" : "",
+      "bg-transparent border border-line text-ink-3 w-7 h-[26px] rounded-[3px] cursor-pointer",
+      "flex items-center justify-center transition-colors hover:text-ink",
+      active ? "border-accent/60 text-accent" : "",
     ].join(" ");
 
   const lastSyncMs = storageUsage?.last_updated_ms;
@@ -1315,19 +1315,19 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
     />
     <SidebarInset
       data-qa="artifacts-root"
-      className="flex flex-col h-screen overflow-hidden bg-void text-chalk font-sans"
+      className="flex flex-col h-screen overflow-hidden bg-bg text-ink font-sans"
     >
       {/* ── Topbar ─────────────────────────────────────────────────────────── */}
       <header
         data-qa="artifacts-topbar"
-        className="flex items-center gap-2 px-4 h-11 border-b border-iron shrink-0"
+        className="flex items-center gap-2 px-4 h-11 border-b border-line shrink-0"
       >
         {/* Sidebar toggle */}
-        <SidebarTrigger className="h-7 w-7 text-ash hover:text-chalk shrink-0" />
+        <SidebarTrigger className="h-7 w-7 text-ink-3 hover:text-ink shrink-0" />
         {/* Back button + Breadcrumb */}
         <button
           data-qa="artifacts-back-btn"
-          className="flex items-center gap-[5px] bg-transparent border-none text-ash cursor-pointer font-sans text-[12px] p-0 pr-2 transition-colors hover:text-chalk shrink-0 border-r border-iron mr-2"
+          className="flex items-center gap-[5px] bg-transparent border-none text-ink-3 cursor-pointer font-sans text-[12px] p-0 pr-2 transition-colors hover:text-ink shrink-0 border-r border-line mr-2"
           onClick={onBack}
           title="Back to Operator"
         >
@@ -1337,12 +1337,12 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           Operator
         </button>
         <div className="flex items-center gap-[3px] text-[12px] flex-1 min-w-0 overflow-hidden">
-          <span className="text-ash shrink-0">Artifacts</span>
+          <span className="text-ink-3 shrink-0">Artifacts</span>
           {nav.kind === "service" && (
             <>
-              <span className="text-smoke mx-[2px]">/</span>
+              <span className="text-muted mx-[2px]">/</span>
               <button
-                className="bg-transparent border-none text-ash cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-chalk whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px]"
+                className="bg-transparent border-none text-ink-3 cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-ink whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px]"
                 onClick={() => handleCrumb(-1)}
               >
                 {nav.name}
@@ -1351,9 +1351,9 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           )}
           {crumbs.map((c, i) => (
             <span key={i} className="flex items-center gap-[3px] shrink-0">
-              <span className="text-smoke">/</span>
+              <span className="text-muted">/</span>
               <button
-                className="bg-transparent border-none text-chalk cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-chalk whitespace-nowrap"
+                className="bg-transparent border-none text-ink cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-ink whitespace-nowrap"
                 onClick={() => handleCrumb(i)}
               >
                 {c.label}
@@ -1367,7 +1367,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           {showSearch && (
             <input
               data-qa="artifacts-search"
-              className="bg-obsidian border border-iron rounded-[3px] text-chalk font-sans text-[11px] px-[8px] py-[4px] w-[160px] outline-none transition-colors focus:border-gold placeholder:text-smoke"
+              className="bg-bg-1 border border-line rounded-[3px] text-ink font-sans text-[11px] px-[8px] py-[4px] w-[160px] outline-none transition-colors focus:border-accent placeholder:text-muted"
               type="search"
               placeholder="Search files…"
               value={query}
@@ -1377,7 +1377,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
             />
           )}
           <button
-            className="bg-transparent border-none text-ash cursor-pointer transition-colors hover:text-chalk p-1 rounded"
+            className="bg-transparent border-none text-ink-3 cursor-pointer transition-colors hover:text-ink p-1 rounded"
             onClick={() => setShowSearch((v) => !v)}
             title="Search"
           >
@@ -1387,8 +1387,8 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
             className={[
               "flex items-center gap-[5px] font-sans text-[11px] px-[10px] py-[5px] rounded-[3px] border cursor-pointer transition-colors",
               syncing
-                ? "text-gold border-gold/40 bg-gold/[0.05]"
-                : "text-ash border-iron hover:text-chalk hover:border-ash",
+                ? "text-accent border-accent/40 bg-accent-soft"
+                : "text-ink-3 border-line hover:text-ink hover:border-line-strong",
             ].join(" ")}
             onClick={handleSyncAll}
             disabled={syncing}
@@ -1420,15 +1420,15 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 flex flex-col overflow-hidden bg-void min-w-0">
+        <main className="flex-1 flex flex-col overflow-hidden bg-bg min-w-0">
           {/* Section header */}
-          <div className="flex items-center justify-between px-5 py-[10px] border-b border-iron shrink-0">
+          <div className="flex items-center justify-between px-5 py-[10px] border-b border-line shrink-0">
             <div className="flex flex-col min-w-0">
-              <h1 className="text-[14px] font-semibold text-chalk m-0 leading-[1.3] overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
+              <h1 className="text-[14px] font-semibold text-ink m-0 leading-[1.3] overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
                 {sectionTitle}
               </h1>
               {entries.length > 0 && (
-                <span className="text-[11px] text-smoke font-mono mt-[1px]">
+                <span className="text-[11px] text-muted font-mono mt-[1px]">
                   {entries.length} artifact{entries.length !== 1 ? "s" : ""}
                   {totalSize > 0 ? ` · ${formatStorageBytes(totalSize)}` : ""}
                 </span>
@@ -1437,15 +1437,15 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
 
             <div className="flex items-center gap-[6px] shrink-0">
               <div className="relative">
-                <div className="flex rounded-[3px] overflow-hidden border border-iron">
+                <div className="flex rounded-[3px] overflow-hidden border border-line">
                   <button
-                    className="flex items-center gap-[5px] bg-gold text-void font-sans text-[11px] font-semibold px-[10px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1] border-r border-gold/50"
+                    className="flex items-center gap-[5px] bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-[10px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1] border-r border-accent/50"
                     onClick={() => setNewFolder(true)}
                   >
                     + New
                   </button>
                   <button
-                    className="bg-gold/90 text-void px-[6px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1]"
+                    className="bg-accent/90 text-[#1A0D00] px-[6px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1]"
                     onClick={() => setShowNewMenu((v) => !v)}
                     title="More options"
                   >
@@ -1460,7 +1460,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                 )}
               </div>
               <button
-                className="flex items-center gap-[5px] bg-transparent border border-iron text-ash font-sans text-[11px] px-[10px] py-[5px] rounded-[3px] cursor-pointer transition-colors hover:text-chalk hover:border-ash"
+                className="flex items-center gap-[5px] bg-transparent border border-line text-ink-3 font-sans text-[11px] px-[10px] py-[5px] rounded-[3px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
                 onClick={handleUpload}
                 title="Upload files"
               >
@@ -1478,7 +1478,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           </div>
 
           {/* Filter pills */}
-          <div className="flex gap-[5px] px-5 py-[8px] border-b border-iron shrink-0 overflow-x-auto scrollbar-none">
+          <div className="flex gap-[5px] px-5 py-[8px] border-b border-line shrink-0 overflow-x-auto scrollbar-none">
             {FILTERS.map((f) => (
               <button
                 key={f.value}
@@ -1486,8 +1486,8 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                 className={[
                   "font-sans text-[10px] font-medium tracking-[0.04em] uppercase rounded-full py-[3px] px-[10px] cursor-pointer transition-colors whitespace-nowrap shrink-0",
                   filter === f.value
-                    ? "text-void bg-gold border border-gold"
-                    : "bg-transparent border border-iron text-ash hover:text-chalk hover:border-ash",
+                    ? "text-[#1A0D00] bg-accent border border-accent"
+                    : "bg-transparent border border-line text-ink-3 hover:text-ink hover:border-line-strong",
                 ].join(" ")}
                 onClick={() => setFilter(f.value)}
               >
@@ -1497,7 +1497,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           </div>
 
           {error && (
-            <p className="text-[11px] text-ember px-5 py-[6px] m-0 border-b border-ember/20 shrink-0">
+            <p className="text-[11px] text-danger px-5 py-[6px] m-0 border-b border-danger/20 shrink-0">
               {error}
             </p>
           )}
@@ -1510,30 +1510,30 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
               {(nav.kind === "cloud_branch" || nav.kind === "cloud_shared") && (
                 <div className="flex-1 overflow-y-auto py-2">
                   {cloudEntries.length === 0 ? (
-                    <p className="text-center text-smoke text-xs py-12">
+                    <p className="text-center text-muted text-xs py-12">
                       No synced files in this section.
                     </p>
                   ) : (
                     cloudEntries.map((info) => (
                       <div
                         key={info.artifact_id}
-                        className="flex items-center gap-[10px] px-5 py-[8px] border-b border-iron/50 text-[12px] hover:bg-white/[0.02] transition-colors"
+                        className="flex items-center gap-[10px] px-5 py-[8px] border-b border-line/50 text-[12px] hover:bg-white/[0.02] transition-colors"
                       >
                         <SyncCell info={info} />
                         <span
-                          className="flex-1 text-chalk overflow-hidden text-ellipsis whitespace-nowrap"
+                          className="flex-1 text-ink overflow-hidden text-ellipsis whitespace-nowrap"
                           title={info.cloud_key ?? ""}
                         >
                           {info.cloud_key?.split("/").pop() ?? info.artifact_id}
                         </span>
-                        <span className="text-[11px] text-ash font-mono shrink-0">
+                        <span className="text-[11px] text-ink-3 font-mono shrink-0">
                           {info.last_synced_ms
                             ? `Synced ${formatDate(info.last_synced_ms)}`
                             : "Not yet synced"}
                         </span>
                         {info.sync_error && (
                           <span
-                            className="text-[11px] text-ember shrink-0"
+                            className="text-[11px] text-danger shrink-0"
                             title={info.sync_error}
                           >
                             ⚠ {info.sync_error.slice(0, 40)}
@@ -1551,22 +1551,22 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                   <table className="w-full border-collapse text-xs">
                     <thead>
                       <tr>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-smoke px-5 py-[7px] border-b border-iron sticky top-0 bg-void w-full">
+                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-5 py-[7px] border-b border-line sticky top-0 bg-bg w-full">
                           Name
                         </th>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-smoke px-4 py-[7px] border-b border-iron sticky top-0 bg-void whitespace-nowrap">
+                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg whitespace-nowrap">
                           Type
                         </th>
-                        <th className="text-right text-[9px] font-semibold tracking-[0.1em] uppercase text-smoke px-4 py-[7px] border-b border-iron sticky top-0 bg-void whitespace-nowrap">
+                        <th className="text-right text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg whitespace-nowrap">
                           Size
                         </th>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-smoke px-4 py-[7px] border-b border-iron sticky top-0 bg-void whitespace-nowrap">
+                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg whitespace-nowrap">
                           Modified
                         </th>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-smoke px-4 py-[7px] border-b border-iron sticky top-0 bg-void whitespace-nowrap">
+                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg whitespace-nowrap">
                           Sync
                         </th>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-smoke px-4 py-[7px] border-b border-iron sticky top-0 bg-void whitespace-nowrap">
+                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg whitespace-nowrap">
                           Shared
                         </th>
                       </tr>
@@ -1576,7 +1576,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                         <tr>
                           <td
                             colSpan={6}
-                            className="text-center text-smoke text-xs py-16"
+                            className="text-center text-muted text-xs py-16"
                           >
                             {query ? "No results." : "No files here yet."}
                           </td>
@@ -1590,9 +1590,9 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                               key={e.id}
                               data-qa="artifacts-row"
                               className={[
-                                "cursor-default border-b border-iron/40 transition-colors",
+                                "cursor-default border-b border-line/40 transition-colors",
                                 isSelected
-                                  ? "bg-gold/[0.05]"
+                                  ? "bg-accent-soft"
                                   : "hover:bg-white/[0.025]",
                               ].join(" ")}
                               onClick={() => setSelected(isSelected ? null : e)}
@@ -1602,11 +1602,11 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                               <td className="px-5 py-[7px] align-middle">
                                 <div className="flex items-center gap-[8px] min-w-0">
                                   <span className="shrink-0">{fileIcon(e)}</span>
-                                  <span className="text-chalk text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
+                                  <span className="text-ink text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
                                     {e.name}
                                   </span>
                                   {e.starred && (
-                                    <span className="text-gold text-[10px] shrink-0">★</span>
+                                    <span className="text-accent text-[10px] shrink-0">★</span>
                                   )}
                                 </div>
                               </td>
@@ -1640,7 +1640,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
               {nav.kind !== "cloud_branch" && nav.kind !== "cloud_shared" && viewMode === "grid" && (
                 <div className="flex-1 flex flex-wrap content-start gap-3 p-5 overflow-y-auto">
                   {visible.length === 0 ? (
-                    <p className="w-full text-center text-smoke text-xs py-16">
+                    <p className="w-full text-center text-muted text-xs py-16">
                       {query ? "No results." : "No files here yet."}
                     </p>
                   ) : (
@@ -1654,8 +1654,8 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                           className={[
                             "relative w-[88px] flex flex-col items-center gap-[6px] px-2 py-3 rounded-[4px] border cursor-default transition-colors",
                             isSelected
-                              ? "border-gold/40 bg-gold/[0.05]"
-                              : "border-transparent hover:bg-white/[0.04] hover:border-iron",
+                              ? "border-accent/40 bg-accent-soft"
+                              : "border-transparent hover:bg-white/[0.04] hover:border-line",
                           ].join(" ")}
                           onClick={() => setSelected(isSelected ? null : e)}
                           onContextMenu={(ev) => handleCtx(ev, e)}
@@ -1665,13 +1665,13 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                             {fileIcon(e)}
                           </div>
                           <span
-                            className="text-[11px] text-chalk text-center max-w-[72px] overflow-hidden text-ellipsis whitespace-nowrap w-full"
+                            className="text-[11px] text-ink text-center max-w-[72px] overflow-hidden text-ellipsis whitespace-nowrap w-full"
                             title={e.name}
                           >
                             {e.name}
                           </span>
                           {e.starred && (
-                            <span className="absolute top-[5px] right-[6px] text-gold text-[10px]">★</span>
+                            <span className="absolute top-[5px] right-[6px] text-accent text-[10px]">★</span>
                           )}
                           {sync?.sync_enabled && (
                             <span className="absolute top-[5px] left-[6px]">
@@ -1701,10 +1701,10 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* ── Full-width footer ───────────────────────────────────────────────── */}
-      <footer className="flex items-center justify-between px-4 h-[26px] border-t border-iron bg-obsidian shrink-0 gap-4">
+      <footer className="flex items-center justify-between px-4 h-[26px] border-t border-line bg-bg-1 shrink-0 gap-4">
         {/* Left: path */}
-        <span className="flex items-center gap-[6px] font-mono text-[10px] text-smoke min-w-0 overflow-hidden">
-          <span className="w-[5px] h-[5px] rounded-full bg-smoke/60 shrink-0" />
+        <span className="flex items-center gap-[6px] font-mono text-[10px] text-muted min-w-0 overflow-hidden">
+          <span className="w-[5px] h-[5px] rounded-full bg-muted/60 shrink-0" />
           {settings ? (
             <span className="overflow-hidden text-ellipsis whitespace-nowrap" title={settings.base_path}>
               {settings.base_path}
@@ -1712,7 +1712,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
               {crumbs.map((c) => `/${c.label}`).join("")}
             </span>
           ) : (
-            <span className="text-smoke/50">
+            <span className="text-muted/50">
               {nav.kind === "cloud_branch" || nav.kind === "cloud_shared"
                 ? `${cloudEntries.length} synced item${cloudEntries.length !== 1 ? "s" : ""}`
                 : `${visible.length} item${visible.length !== 1 ? "s" : ""}`}
@@ -1723,13 +1723,13 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
         {/* Right: sync status + branch */}
         <div className="flex items-center gap-3 shrink-0">
           {lastSyncLabel && (
-            <span className="flex items-center gap-[4px] text-[10px] text-smoke font-mono">
+            <span className="flex items-center gap-[4px] text-[10px] text-muted font-mono">
               <IconSync />
               {lastSyncLabel}
             </span>
           )}
-          <span className="flex items-center gap-[5px] text-[10px] text-smoke font-mono">
-            <span className="w-[5px] h-[5px] rounded-full bg-gold/60 shrink-0" />
+          <span className="flex items-center gap-[5px] text-[10px] text-muted font-mono">
+            <span className="w-[5px] h-[5px] rounded-full bg-accent/60 shrink-0" />
             Downtown Branch
           </span>
         </div>

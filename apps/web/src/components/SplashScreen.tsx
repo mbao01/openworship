@@ -70,7 +70,7 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center select-none"
       style={{
-        background: "#0a0a0a",
+        background: "var(--color-bg)",
         transition: "opacity 500ms ease",
         opacity: fading ? 0 : 1,
       }}
@@ -86,7 +86,7 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
         />
 
         <h1
-          className="text-chalk text-lg tracking-[0.3em] font-light"
+          className="text-ink text-lg tracking-[0.3em] font-light"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           openworship
@@ -96,13 +96,13 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
         <div className="w-56">
           <div className="flex items-center justify-between mb-[6px]">
             <span
-              className="text-ash text-[11px] tracking-widest uppercase truncate max-w-[9rem]"
+              className="text-ink-3 text-[11px] tracking-widest uppercase truncate max-w-[9rem]"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               {label}
             </span>
             <span
-              className="text-gold text-[11px] ml-2 tabular-nums"
+              className="text-accent text-[11px] ml-2 tabular-nums"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               {progress}%
@@ -110,11 +110,11 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
           </div>
 
           {/* Track */}
-          <div className="h-px w-full overflow-hidden" style={{ background: "#2a2a2a" }}>
+          <div className="h-px w-full overflow-hidden" style={{ background: "var(--color-line-strong)" }}>
             <div
               className="h-px"
               style={{
-                background: "#c9a84c",
+                background: "var(--color-accent)",
                 width: `${progress}%`,
                 transition: "width 650ms ease-in-out",
               }}
@@ -129,14 +129,14 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
         style={{ fontFamily: "var(--font-mono)" }}
       >
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] tracking-wider uppercase" style={{ color: "#4a4a4a" }}>
+          <p className="text-[10px] tracking-wider uppercase" style={{ color: "var(--color-muted)" }}>
             {isDone ? "Initialization complete" : "Initializing…"}
           </p>
-          <p className="text-[10px]" style={{ color: "#4a4a4a" }}>
+          <p className="text-[10px]" style={{ color: "var(--color-muted)" }}>
             © 2026 OpenWorship
           </p>
         </div>
-        <p className="text-[10px]" style={{ color: "#4a4a4a" }}>
+        <p className="text-[10px]" style={{ color: "var(--color-muted)" }}>
           Version {version}
         </p>
       </div>

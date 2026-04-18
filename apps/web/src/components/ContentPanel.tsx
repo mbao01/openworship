@@ -11,11 +11,11 @@ import { toastError } from "../lib/toast";
 import type { AnnouncementItem, SermonNote } from "../lib/types";
 
 // Shared classes
-const inputCls = "w-full bg-void border-none border-b border-b-[rgba(42,42,42,0.8)] text-chalk font-sans text-xs py-2 px-0 outline-none transition-colors focus:border-b-gold";
-const textareaCls = "w-full box-sizing-border bg-void border border-[rgba(42,42,42,0.8)] rounded-[3px] text-chalk font-sans text-xs p-2 resize-y outline-none transition-colors focus:border-gold";
-const btnBaseCls = "bg-none border border-[rgba(42,42,42,0.8)] text-ash rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:text-chalk hover:not-disabled:border-ash";
-const btnPrimaryCls = "bg-none border border-gold text-gold rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-gold hover:not-disabled:text-void";
-const sectionTitleCls = "text-[10px] font-semibold tracking-[0.14em] uppercase text-ash";
+const inputCls = "w-full bg-bg border-none border-b border-b-line text-ink font-sans text-xs py-2 px-0 outline-none transition-colors focus:border-b-accent";
+const textareaCls = "w-full box-sizing-border bg-bg border border-line rounded-[3px] text-ink font-sans text-xs p-2 resize-y outline-none transition-colors focus:border-accent";
+const btnBaseCls = "bg-none border border-line text-ink-3 rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:text-ink hover:not-disabled:border-line-strong";
+const btnPrimaryCls = "bg-none border border-accent text-accent rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-accent hover:not-disabled:text-[#1A0D00]";
+const sectionTitleCls = "text-[10px] font-semibold tracking-[0.14em] uppercase text-ink-3";
 
 type AnnForm = { title: string; body: string; image_url: string; keyword_cue: string };
 const emptyForm = (): AnnForm => ({ title: "", body: "", image_url: "", keyword_cue: "" });
@@ -109,7 +109,7 @@ function AnnouncementLibrary() {
       <div className="flex items-center justify-between mb-2">
         <span className={sectionTitleCls}>Announcements</span>
         <button
-          className="bg-none border border-[rgba(42,42,42,0.8)] text-ash rounded-[3px] w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 hover:text-chalk hover:border-ash"
+          className="bg-none border border-line text-ink-3 rounded-[3px] w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 hover:text-ink hover:border-line-strong"
           onClick={() => { setCreating((v) => !v); setEditingId(null); }}
           title={creating ? "Cancel" : "New announcement"}
         >
@@ -136,12 +136,12 @@ function AnnouncementLibrary() {
       )}
 
       {items.length === 0 && !creating && (
-        <p className="text-[11px] text-smoke my-2 mx-0">No announcements yet</p>
+        <p className="text-[11px] text-muted my-2 mx-0">No announcements yet</p>
       )}
 
       <ul className="list-none m-0 p-0 flex flex-col gap-1">
         {items.map((item) => (
-          <li key={item.id} className="flex flex-col rounded-[3px] bg-void">
+          <li key={item.id} className="flex flex-col rounded-[3px] bg-bg">
             {editingId === item.id ? (
               <div className="flex flex-col gap-2 p-2">
                 <input className={inputCls} placeholder="Title *" value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} />
@@ -161,28 +161,28 @@ function AnnouncementLibrary() {
             ) : (
               <div className="flex items-center gap-2 py-2 px-2">
                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className="text-xs text-chalk whitespace-nowrap overflow-hidden text-ellipsis">{item.title}</span>
+                  <span className="text-xs text-ink whitespace-nowrap overflow-hidden text-ellipsis">{item.title}</span>
                   {item.keyword_cue ? (
-                    <span className="text-[10px] text-gold/70" title="Auto-triggers when this phrase is spoken">⌨ {item.keyword_cue}</span>
+                    <span className="text-[10px] text-accent/70" title="Auto-triggers when this phrase is spoken">⌨ {item.keyword_cue}</span>
                   ) : null}
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <button
-                    className="bg-none border-none border-transparent text-ash px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-gold"
+                    className="bg-none border-none border-transparent text-ink-3 px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-accent"
                     onClick={() => void handlePush(item.id)}
                     title="Push to display"
                   >
                     ▶
                   </button>
                   <button
-                    className="bg-none border-none border-transparent text-ash px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-chalk"
+                    className="bg-none border-none border-transparent text-ink-3 px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-ink"
                     onClick={() => startEdit(item)}
                     title="Edit"
                   >
                     ✎
                   </button>
                   <button
-                    className="bg-none border-none border-transparent text-smoke px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-ember"
+                    className="bg-none border-none border-transparent text-muted px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-danger"
                     onClick={() => void handleDelete(item.id)}
                     title="Delete"
                   >
@@ -276,7 +276,7 @@ function CountdownPanel() {
           onChange={(e) => setTitle(e.target.value)}
         />
         <input
-          className="w-[44px] bg-void border-none border-b border-b-[rgba(42,42,42,0.8)] text-chalk font-sans text-xs py-2 px-0 outline-none text-center transition-colors focus:border-b-gold"
+          className="w-[44px] bg-bg border-none border-b border-b-line text-ink font-sans text-xs py-2 px-0 outline-none text-center transition-colors focus:border-b-accent"
           type="number"
           min={1}
           max={60}
@@ -287,7 +287,7 @@ function CountdownPanel() {
           }}
           title="Minutes"
         />
-        <span className="text-[11px] text-ash">min</span>
+        <span className="text-[11px] text-ink-3">min</span>
         <button className={btnPrimaryCls} onClick={handleStart} disabled={busy}>▶</button>
       </div>
     </div>
@@ -381,7 +381,7 @@ function SermonNotesPanel() {
       <div className="flex items-center justify-between mb-2">
         <span className={sectionTitleCls}>Sermon Notes</span>
         <button
-          className="bg-none border border-[rgba(42,42,42,0.8)] text-ash rounded-[3px] w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 hover:text-chalk hover:border-ash"
+          className="bg-none border border-line text-ink-3 rounded-[3px] w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 hover:text-ink hover:border-line-strong"
           onClick={() => setCreating((v) => !v)}
           title={creating ? "Cancel" : "New sermon note deck"}
         >
@@ -390,12 +390,12 @@ function SermonNotesPanel() {
       </div>
 
       {activeNoteId && (
-        <div className="flex items-center justify-between py-2 px-3 bg-[rgba(201,168,76,0.08)] border border-[rgba(201,168,76,0.25)] rounded-[3px] mb-3">
-          <span className="font-mono text-[11px] text-gold">
+        <div className="flex items-center justify-between py-2 px-3 bg-accent-soft border border-accent/25 rounded-[3px] mb-3">
+          <span className="font-mono text-[11px] text-accent">
             Slide {activeSlide + 1} / {totalSlides}
           </span>
           <button
-            className="bg-none border border-gold text-gold rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-gold hover:not-disabled:text-void"
+            className="bg-none border border-accent text-accent rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-accent hover:not-disabled:text-[#1A0D00]"
             onClick={handleAdvance}
             disabled={activeSlide + 1 >= totalSlides}
             title="Advance to next slide"
@@ -415,7 +415,7 @@ function SermonNotesPanel() {
             value={slidesText}
             onChange={(e) => setSlidesText(e.target.value)}
           />
-          <p className="text-[10px] text-smoke m-0">Separate slides with a line containing only ---</p>
+          <p className="text-[10px] text-muted m-0">Separate slides with a line containing only ---</p>
           <div className="flex gap-2">
             <button className={btnPrimaryCls} onClick={handleCreate} disabled={!noteTitle.trim() || !slidesText.trim()}>Save</button>
             <button className={btnBaseCls} onClick={() => setCreating(false)}>Cancel</button>
@@ -424,31 +424,31 @@ function SermonNotesPanel() {
       )}
 
       {notes.length === 0 && !creating && (
-        <p className="text-[11px] text-smoke my-2 mx-0">No sermon notes yet</p>
+        <p className="text-[11px] text-muted my-2 mx-0">No sermon notes yet</p>
       )}
 
       <ul className="list-none m-0 p-0 flex flex-col gap-1">
         {notes.map((note) => (
           <li
             key={note.id}
-            className={`flex items-center gap-2 py-2 px-2 rounded-[3px] bg-void${activeNoteId === note.id ? " border-l-2 border-l-gold pl-[calc(0.5rem-2px)]" : ""}`}
+            className={`flex items-center gap-2 py-2 px-2 rounded-[3px] bg-bg${activeNoteId === note.id ? " border-l-2 border-l-accent pl-[calc(0.5rem-2px)]" : ""}`}
           >
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-xs text-chalk whitespace-nowrap overflow-hidden text-ellipsis">{note.title}</span>
-              <span className="text-[10px] text-smoke">
+              <span className="text-xs text-ink whitespace-nowrap overflow-hidden text-ellipsis">{note.title}</span>
+              <span className="text-[10px] text-muted">
                 {note.slides.length} slide{note.slides.length !== 1 ? "s" : ""}
               </span>
             </div>
             <div className="flex gap-1 shrink-0">
               <button
-                className="bg-none border-none border-transparent text-ash px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-gold"
+                className="bg-none border-none border-transparent text-ink-3 px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-accent"
                 onClick={() => void handlePush(note.id)}
                 title="Push to speaker display"
               >
                 ▶
               </button>
               <button
-                className="bg-none border-none border-transparent text-smoke px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-ember"
+                className="bg-none border-none border-transparent text-muted px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-danger"
                 onClick={() => void handleDelete(note.id)}
                 title="Delete"
               >
@@ -468,27 +468,27 @@ export function ContentPanel() {
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <div className="bg-obsidian border border-iron/40 rounded overflow-hidden shrink-0">
+    <div className="bg-bg-1 border border-line/40 rounded overflow-hidden shrink-0">
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-3 cursor-pointer select-none border-b border-iron/40 hover:bg-slate"
+        className="flex items-center justify-between px-4 py-3 cursor-pointer select-none border-b border-line/40 hover:bg-bg-2"
         onClick={() => setExpanded((v) => !v)}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && setExpanded((v) => !v)}
       >
-        <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-ash">Content</span>
-        <span className="text-[9px] text-smoke">{expanded ? "▲" : "▼"}</span>
+        <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-ink-3">Content</span>
+        <span className="text-[9px] text-muted">{expanded ? "▲" : "▼"}</span>
       </div>
 
       {expanded && (
         <div className="flex flex-col max-h-[480px] overflow-y-auto">
           <AnnouncementLibrary />
-          <div className="h-px bg-[rgba(42,42,42,0.6)] mx-4" />
+          <div className="h-px bg-line mx-4" />
           <CustomSlidePanel />
-          <div className="h-px bg-[rgba(42,42,42,0.6)] mx-4" />
+          <div className="h-px bg-line mx-4" />
           <CountdownPanel />
-          <div className="h-px bg-[rgba(42,42,42,0.6)] mx-4" />
+          <div className="h-px bg-line mx-4" />
           <SermonNotesPanel />
         </div>
       )}

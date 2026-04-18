@@ -162,7 +162,7 @@ export function ScriptureSearch() {
           <input
             ref={inputRef}
             data-qa="scripture-search-input"
-            className="w-full bg-transparent border-none border-b border-b-iron/60 outline-none py-2 text-chalk font-sans text-sm tracking-wide transition-colors placeholder:text-smoke focus:border-b-gold focus:[box-shadow:0_2px_0_-1px_rgba(201,168,76,0.15)]"
+            className="w-full bg-transparent border-none border-b border-b-line/60 outline-none py-2 text-ink font-sans text-sm tracking-wide transition-colors placeholder:text-muted focus:border-b-accent focus:[box-shadow:0_2px_0_-1px_rgba(201,168,76,0.15)]"
             type="text"
             placeholder={"Book, chapter:verse or keyword"}
             value={query}
@@ -183,7 +183,7 @@ export function ScriptureSearch() {
           />
           {isSearching && (
             <span
-              className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border border-smoke border-t-gold animate-spin"
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border border-muted border-t-accent animate-spin"
               aria-hidden="true"
             />
           )}
@@ -193,7 +193,7 @@ export function ScriptureSearch() {
             <ul
               ref={listRef}
               role="listbox"
-              className="absolute left-0 right-0 top-full mt-1 z-50 bg-obsidian border border-iron rounded-sm shadow-lg overflow-hidden"
+              className="absolute left-0 right-0 top-full mt-1 z-50 bg-bg-1 border border-line rounded-sm shadow-lg overflow-hidden"
             >
               {suggestions.map((book, i) => (
                 <li
@@ -202,8 +202,8 @@ export function ScriptureSearch() {
                   aria-selected={i === highlighted}
                   className={`px-3 py-1.5 text-sm cursor-pointer transition-colors font-sans tracking-wide ${
                     i === highlighted
-                      ? "bg-iron text-chalk"
-                      : "text-ash hover:bg-iron/60 hover:text-chalk"
+                      ? "bg-line text-ink"
+                      : "text-ink-3 hover:bg-line/60 hover:text-ink"
                   }`}
                   onMouseDown={(e) => {
                     e.preventDefault(); // prevent blur before click
@@ -219,7 +219,7 @@ export function ScriptureSearch() {
         </div>
         <select
           data-qa="scripture-search-translation"
-          className="bg-obsidian border-none border-b border-b-iron/60 text-ash font-mono text-[11px] tracking-[0.06em] py-2 px-1 outline-none cursor-pointer min-w-[52px] transition-colors focus:border-b-gold focus:text-chalk"
+          className="bg-bg-1 border-none border-b border-b-line/60 text-ink-3 font-mono text-[11px] tracking-[0.06em] py-2 px-1 outline-none cursor-pointer min-w-[52px] transition-colors focus:border-b-accent focus:text-ink"
           value={translation}
           onChange={handleTranslationChange}
         >
@@ -240,27 +240,27 @@ export function ScriptureSearch() {
             return (
               <li
                 key={`${v.translation}-${v.reference}-${i}`}
-                className={`bg-obsidian border rounded-sm px-4 py-3 cursor-pointer outline-none transition-all hover:bg-slate hover:border-smoke focus:bg-slate focus:border-smoke${isLive ? " border-gold-muted bg-slate" : " border-iron/40"}`}
+                className={`bg-bg-1 border rounded-sm px-4 py-3 cursor-pointer outline-none transition-all hover:bg-bg-2 hover:border-line-strong focus:bg-bg-2 focus:border-line-strong${isLive ? " border-accent/60 bg-bg-2" : " border-line/40"}`}
                 onClick={() => handlePush(v)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === "Enter" && handlePush(v)}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-chalk tracking-[0.04em]">
+                  <span className="text-xs font-medium text-ink tracking-[0.04em]">
                     {v.reference}
                   </span>
-                  <span className="font-mono text-[10px] text-ash tracking-[0.08em]">
+                  <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">
                     {v.translation}
                   </span>
                   {isLive && (
                     <span
-                      className="w-2 h-2 rounded-full bg-gold [box-shadow:0_0_4px_var(--color-gold)] ml-auto"
+                      className="w-2 h-2 rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
                       aria-label="Live"
                     />
                   )}
                 </div>
-                <p className="m-0 text-[13px] leading-[1.55] text-ash">{v.text}</p>
+                <p className="m-0 text-[13px] leading-[1.55] text-ink-3">{v.text}</p>
               </li>
             );
           })}
@@ -269,7 +269,7 @@ export function ScriptureSearch() {
 
       {/* Empty state */}
       {query.trim() && !isSearching && results.length === 0 && (
-        <p className="text-xs text-smoke py-4 m-0">No results for "{query}"</p>
+        <p className="text-xs text-muted py-4 m-0">No results for "{query}"</p>
       )}
     </div>
   );

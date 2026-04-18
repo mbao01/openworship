@@ -22,13 +22,13 @@ function SummaryRow({
   });
 
   return (
-    <li className="flex items-center justify-between gap-2 py-[5px] px-2 rounded-sm bg-obsidian">
+    <li className="flex items-center justify-between gap-2 py-[5px] px-2 rounded-sm bg-bg-1">
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-        <span className="text-[11px] font-medium text-chalk whitespace-nowrap overflow-hidden text-ellipsis">
+        <span className="text-[11px] font-medium text-ink whitespace-nowrap overflow-hidden text-ellipsis">
           {summary.service_name}
         </span>
         <div className="flex items-center gap-1">
-          <span className="text-[10px] text-smoke font-mono">{date}</span>
+          <span className="text-[10px] text-muted font-mono">{date}</span>
           {summary.email_sent && (
             <span
               className="inline-block text-[9px] px-[5px] py-px rounded-[2px] font-semibold uppercase tracking-[0.06em] bg-[rgba(100,200,120,0.15)] text-[#64c878]"
@@ -42,7 +42,7 @@ function SummaryRow({
       <div className="flex items-center gap-1 shrink-0">
         <button
           data-qa={`summary-view-btn-${summary.id}`}
-          className="text-[10px] font-sans rounded-sm px-[7px] py-0.5 cursor-pointer border border-iron bg-transparent text-ash transition-all hover:brightness-125"
+          className="text-[10px] font-sans rounded-sm px-[7px] py-0.5 cursor-pointer border border-line bg-transparent text-ink-3 transition-all hover:brightness-125"
           onClick={() => onView(summary)}
           title="View summary"
         >
@@ -51,7 +51,7 @@ function SummaryRow({
         {!summary.email_sent && (
           <button
             data-qa={`summary-send-btn-${summary.id}`}
-            className="text-[10px] font-sans rounded-sm px-[7px] py-0.5 cursor-pointer border border-gold text-gold bg-transparent transition-all hover:brightness-125"
+            className="text-[10px] font-sans rounded-sm px-[7px] py-0.5 cursor-pointer border border-accent text-accent bg-transparent transition-all hover:brightness-125"
             onClick={() => onSendEmail(summary.id)}
             title="Send to email subscribers"
           >
@@ -60,7 +60,7 @@ function SummaryRow({
         )}
         <button
           data-qa={`summary-delete-btn-${summary.id}`}
-          className="text-[10px] font-sans rounded-sm px-[7px] py-0.5 cursor-pointer border border-transparent text-smoke bg-transparent transition-all hover:brightness-125"
+          className="text-[10px] font-sans rounded-sm px-[7px] py-0.5 cursor-pointer border border-transparent text-muted bg-transparent transition-all hover:brightness-125"
           onClick={() => onDelete(summary.id)}
           title="Delete summary"
         >
@@ -91,14 +91,14 @@ function SummaryDetailModal({
       aria-label="Service summary"
     >
       <div
-        className="bg-surface border border-iron rounded-md w-[min(640px,90vw)] max-h-[80vh] flex flex-col overflow-hidden"
+        className="bg-bg-2 border border-line rounded-md w-[min(640px,90vw)] max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-iron">
-          <span className="font-sans text-[13px] font-semibold text-chalk">{summary.service_name}</span>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+          <span className="font-sans text-[13px] font-semibold text-ink">{summary.service_name}</span>
           <button
             data-qa="summary-detail-close"
-            className="bg-transparent border-none text-base text-smoke cursor-pointer leading-none px-1 py-0"
+            className="bg-transparent border-none text-base text-muted cursor-pointer leading-none px-1 py-0"
             onClick={onClose}
             aria-label="Close"
           >
@@ -111,24 +111,24 @@ function SummaryDetailModal({
             if (!trimmed) return <br key={i} />;
             if (trimmed.startsWith("## "))
               return (
-                <h3 key={i} className="font-sans text-[13px] font-bold text-chalk uppercase tracking-[0.06em] mt-2 mb-0">
+                <h3 key={i} className="font-sans text-[13px] font-bold text-ink uppercase tracking-[0.06em] mt-2 mb-0">
                   {trimmed.slice(3)}
                 </h3>
               );
             if (trimmed.startsWith("# "))
               return (
-                <h2 key={i} className="font-serif text-base font-bold text-chalk mt-2 mb-0">
+                <h2 key={i} className="font-serif text-base font-bold text-ink mt-2 mb-0">
                   {trimmed.slice(2)}
                 </h2>
               );
             if (trimmed.startsWith("- "))
               return (
-                <li key={i} className="text-xs text-ash leading-[1.5] ml-3">
+                <li key={i} className="text-xs text-ink-3 leading-[1.5] ml-3">
                   {trimmed.slice(2)}
                 </li>
               );
             return (
-              <p key={i} className="text-xs text-ash leading-relaxed m-0">
+              <p key={i} className="text-xs text-ink-3 leading-relaxed m-0">
                 {trimmed}
               </p>
             );
@@ -199,10 +199,10 @@ export function SummaryPanel() {
           className="flex items-center justify-between py-2 px-3 cursor-pointer select-none"
           onClick={() => setCollapsed((v) => !v)}
         >
-          <span className="font-sans text-[9px] font-semibold tracking-[0.12em] text-smoke uppercase">
+          <span className="font-sans text-[9px] font-semibold tracking-[0.12em] text-muted uppercase">
             SUMMARIES
           </span>
-          <span className="text-[10px] text-smoke" aria-hidden="true">
+          <span className="text-[10px] text-muted" aria-hidden="true">
             {collapsed ? "▸" : "▾"}
           </span>
         </div>
@@ -210,10 +210,10 @@ export function SummaryPanel() {
         {!collapsed && (
           <>
             {error && (
-              <p className="text-[11px] text-ember px-3 pb-2 m-0">{error}</p>
+              <p className="text-[11px] text-danger px-3 pb-2 m-0">{error}</p>
             )}
             {summaries.length === 0 ? (
-              <p className="text-[11px] text-smoke px-3 pb-2 m-0 leading-[1.5]">
+              <p className="text-[11px] text-muted px-3 pb-2 m-0 leading-[1.5]">
                 No service summaries yet. Close a service to generate one.
               </p>
             ) : (
