@@ -309,14 +309,31 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
   const [activeMode, setActiveMode] = useState<DetectionMode>("copilot");
 
   return (
-    <div data-qa="operator-root" className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden">
-
+    <div
+      data-qa="operator-root"
+      className="flex flex-col h-screen bg-void text-chalk font-sans overflow-hidden"
+    >
       {/* ── Title bar ────────────────────────────────────────────────────── */}
-      <header data-qa="operator-titlebar" className="h-9 bg-void flex items-center justify-between px-4 border-b border-iron shrink-0">
+      <header
+        data-qa="operator-titlebar"
+        className="h-9 bg-void flex items-center justify-between px-4 border-b border-iron shrink-0"
+      >
         <div className="flex items-center gap-2">
-          <span data-qa="operator-appname" className="text-xs text-ash tracking-[0.08em] font-normal">openworship</span>
-          <span className="text-[11px] text-smoke" aria-hidden="true">/</span>
-          <span data-qa="operator-branch" className="font-mono text-[11px] text-ash tracking-[0.04em]">{identity.branch_name}</span>
+          <span
+            data-qa="operator-appname"
+            className="text-xs text-ash tracking-[0.08em] font-normal"
+          >
+            openworship
+          </span>
+          <span className="text-[11px] text-smoke" aria-hidden="true">
+            /
+          </span>
+          <span
+            data-qa="operator-branch"
+            className="font-mono text-[11px] text-ash tracking-[0.04em]"
+          >
+            {identity.branch_name}
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <span
@@ -354,11 +371,49 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
               title="Artifacts"
               aria-label="Open artifacts"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x="2"
+                  y="2"
+                  width="5"
+                  height="5"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                />
+                <rect
+                  x="9"
+                  y="2"
+                  width="5"
+                  height="5"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                />
+                <rect
+                  x="2"
+                  y="9"
+                  width="5"
+                  height="5"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                />
+                <rect
+                  x="9"
+                  y="9"
+                  width="5"
+                  height="5"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                />
               </svg>
             </button>
           )}
@@ -367,33 +422,153 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
               data-qa="toggle-theme-btn"
               className="bg-transparent border-none text-ash cursor-pointer p-1 flex items-center justify-center transition-colors hover:text-chalk hover:bg-white/[0.06]"
               onClick={() => {
-                const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length];
+                const next =
+                  THEME_CYCLE[
+                    (THEME_CYCLE.indexOf(theme) + 1) % THEME_CYCLE.length
+                  ];
                 onSetTheme(next);
               }}
               title={`Theme: ${theme} — click to cycle`}
               aria-label="Cycle theme"
             >
               {theme === "light" ? (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.2" />
-                  <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="2.9" y1="2.9" x2="4.3" y2="4.3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="11.7" y1="11.7" x2="13.1" y2="13.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="11.7" y1="4.3" x2="13.1" y2="2.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="2.9" y1="13.1" x2="4.3" y2="11.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="8"
+                    cy="8"
+                    r="3"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
+                  <line
+                    x1="8"
+                    y1="1"
+                    x2="8"
+                    y2="3"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="8"
+                    y1="13"
+                    x2="8"
+                    y2="15"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="1"
+                    y1="8"
+                    x2="3"
+                    y2="8"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="13"
+                    y1="8"
+                    x2="15"
+                    y2="8"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="2.9"
+                    y1="2.9"
+                    x2="4.3"
+                    y2="4.3"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="11.7"
+                    y1="11.7"
+                    x2="13.1"
+                    y2="13.1"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="11.7"
+                    y1="4.3"
+                    x2="13.1"
+                    y2="2.9"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="2.9"
+                    y1="13.1"
+                    x2="4.3"
+                    y2="11.7"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               ) : theme === "dark" ? (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5Z"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               ) : (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <rect x="1.5" y="2" width="13" height="9" rx="1" stroke="currentColor" strokeWidth="1.2" />
-                  <line x1="5" y1="14" x2="11" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="8" y1="11" x2="8" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <rect
+                    x="1.5"
+                    y="2"
+                    width="13"
+                    height="9"
+                    rx="1"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
+                  <line
+                    x1="5"
+                    y1="14"
+                    x2="11"
+                    y2="14"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="8"
+                    y1="11"
+                    x2="8"
+                    y2="14"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               )}
             </button>
@@ -405,14 +580,26 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
             title="Settings"
             aria-label="Open settings"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
               <path
                 d="M6.5 1h3l.5 1.5a5.5 5.5 0 0 1 1.2.7l1.5-.5 1.5 2.6-1.2 1a5.6 5.6 0 0 1 0 1.4l1.2 1-1.5 2.6-1.5-.5a5.5 5.5 0 0 1-1.2.7L9.5 15h-3l-.5-1.5a5.5 5.5 0 0 1-1.2-.7l-1.5.5L1.8 10.8l1.2-1a5.6 5.6 0 0 1 0-1.4l-1.2-1 1.5-2.6 1.5.5A5.5 5.5 0 0 1 6 2.5L6.5 1Z"
                 stroke="currentColor"
                 strokeWidth="1.2"
                 strokeLinejoin="round"
               />
-              <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2" />
+              <circle
+                cx="8"
+                cy="8"
+                r="2"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
             </svg>
           </button>
         </div>
@@ -435,7 +622,6 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
 
       {/* ── Main three-column layout ──────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-
         {/* Left — Schedule + Content Bank ─────────────────────────────── */}
         <aside
           data-qa="operator-col-left"
@@ -450,14 +636,36 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
           <button
             className="h-8 shrink-0 flex items-center justify-center text-smoke hover:text-chalk border-b border-iron transition-colors bg-transparent cursor-pointer"
             onClick={() => setLeftOpen((v) => !v)}
-            title={leftOpen ? "Collapse schedule panel" : "Expand schedule panel"}
-            aria-label={leftOpen ? "Collapse schedule panel" : "Expand schedule panel"}
+            title={
+              leftOpen ? "Collapse schedule panel" : "Expand schedule panel"
+            }
+            aria-label={
+              leftOpen ? "Collapse schedule panel" : "Expand schedule panel"
+            }
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+            >
               {leftOpen ? (
-                <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M9 3L5 7l4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               ) : (
-                <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M5 3l4 4-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               )}
             </svg>
           </button>
@@ -470,7 +678,7 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
                 <span className="block text-[10px] font-medium tracking-[0.14em] text-smoke uppercase mb-3">
                   CONTENT BANK
                 </span>
-                <div className="overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]" style={{ maxHeight: "200px" }}>
+                <div className="overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent] max-h-[200px]">
                   <ScriptureSearch />
                 </div>
               </div>
@@ -486,22 +694,63 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
           {!leftOpen && (
             <div className="flex flex-col items-center pt-3 gap-3">
               {/* Search icon for Content Bank */}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Content Bank">
-                <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.1" />
-                <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                className="text-smoke shrink-0"
+                aria-label="Content Bank"
+              >
+                <circle
+                  cx="6"
+                  cy="6"
+                  r="4"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                />
+                <path
+                  d="M9.5 9.5L12.5 12.5"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                />
               </svg>
               {/* Calendar icon for Schedule */}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Schedule">
-                <rect x="1.5" y="2.5" width="11" height="10" rx="1" stroke="currentColor" strokeWidth="1.1" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                className="text-smoke shrink-0"
+                aria-label="Schedule"
+              >
+                <rect
+                  x="1.5"
+                  y="2.5"
+                  width="11"
+                  height="10"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                />
                 <path d="M1.5 5.5h11" stroke="currentColor" strokeWidth="1.1" />
-                <path d="M4.5 1v3M9.5 1v3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                <path
+                  d="M4.5 1v3M9.5 1v3"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
           )}
         </aside>
 
         {/* Center — Transcript ─────────────────────────────────────────── */}
-        <main data-qa="operator-col-center" className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void">
+        <main
+          data-qa="operator-col-center"
+          className="flex flex-col flex-1 overflow-hidden min-h-0 bg-void"
+        >
           <div className="flex-1 overflow-hidden min-h-0">
             <TranscriptPanel />
           </div>
@@ -522,13 +771,33 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
             className="h-8 shrink-0 flex items-center justify-center text-smoke hover:text-chalk border-b border-iron transition-colors bg-transparent cursor-pointer"
             onClick={() => setRightOpen((v) => !v)}
             title={rightOpen ? "Collapse queue panel" : "Expand queue panel"}
-            aria-label={rightOpen ? "Collapse queue panel" : "Expand queue panel"}
+            aria-label={
+              rightOpen ? "Collapse queue panel" : "Expand queue panel"
+            }
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+            >
               {rightOpen ? (
-                <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M5 3l4 4-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               ) : (
-                <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M9 3L5 7l4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               )}
             </svg>
           </button>
@@ -545,7 +814,7 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
               <div className="h-px bg-iron shrink-0" />
 
               {/* Detection Log (bottom ~35%) */}
-              <div className="shrink-0 overflow-hidden flex flex-col px-4 pb-4" style={{ height: "35%" }}>
+              <div className="shrink-0 overflow-hidden flex flex-col px-4 pb-4 h-[35%]">
                 <DetectionLog />
               </div>
             </>
@@ -555,13 +824,45 @@ export function OperatorPage({ identity, onOpenArtifacts, theme = "system", onSe
           {!rightOpen && (
             <div className="flex flex-col items-center pt-3 gap-3">
               {/* Queue icon */}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Queue">
-                <path d="M2 4h10M2 7h10M2 10h6" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                className="text-smoke shrink-0"
+                aria-label="Queue"
+              >
+                <path
+                  d="M2 4h10M2 7h10M2 10h6"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                />
               </svg>
               {/* Log icon */}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-smoke shrink-0" aria-label="Detection Log">
-                <rect x="1.5" y="1.5" width="11" height="11" rx="1" stroke="currentColor" strokeWidth="1.1" />
-                <path d="M4 5h6M4 7.5h4M4 10h2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                className="text-smoke shrink-0"
+                aria-label="Detection Log"
+              >
+                <rect
+                  x="1.5"
+                  y="1.5"
+                  width="11"
+                  height="11"
+                  rx="1"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                />
+                <path
+                  d="M4 5h6M4 7.5h4M4 10h2"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
           )}

@@ -25,41 +25,15 @@ export default function HomePage() {
         <ConsoleSection />
         <NumbersSection />
         <AudiencesSection />
-        <section
-          style={{
-            textAlign: "center",
-            padding: "clamp(80px, 12vw, 160px) 0",
-          }}
-        >
+        <section className="text-center p-[clamp(80px,12vw,160px)_0]">
           <div className="container">
-            <blockquote
-              style={{
-                fontFamily: "var(--serif)",
-                fontSize: "clamp(32px, 5vw, 64px)",
-                lineHeight: 1.1,
-                letterSpacing: "-0.025em",
-                maxWidth: "22ch",
-                margin: "0 auto",
-                fontWeight: 400,
-              }}
-            >
+            <blockquote className="font-serif text-[clamp(32px,5vw,64px)] leading-[1.1] tracking-[-0.025em] max-w-[22ch] m-auto my-0 font-normal">
               Not a replacement for a media operator.
               <br />
               What makes the absence of one{" "}
-              <em style={{ color: "var(--accent)", fontStyle: "italic" }}>
-                not a problem.
-              </em>
+              <em className="text-accent font-italic">not a problem.</em>
             </blockquote>
-            <div
-              style={{
-                marginTop: "32px",
-                fontFamily: "var(--mono)",
-                fontSize: "11px",
-                color: "var(--muted)",
-                textTransform: "uppercase",
-                letterSpacing: "0.12em",
-              }}
-            >
+            <div className="font-mono text-[11px] text-muted uppercase tracking-[0.12em] mt-8">
               openworship · PRD v2
             </div>
           </div>

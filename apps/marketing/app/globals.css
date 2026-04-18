@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@plugin "@tailwindcss/container-queries";
+
 /* ── Design Tokens (Editorial Light) ── */
 :root {
   --bg: #F5F1E8;
@@ -37,7 +39,6 @@
   --font-mono: var(--mono);
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   background: var(--bg);

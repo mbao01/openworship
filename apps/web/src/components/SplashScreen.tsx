@@ -85,36 +85,26 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
           draggable={false}
         />
 
-        <h1
-          className="text-chalk text-lg tracking-[0.3em] font-light"
-          style={{ fontFamily: "var(--font-sans)" }}
-        >
+        <h1 className="text-chalk text-lg tracking-[0.3em] font-light font-sans">
           openworship
         </h1>
 
         {/* Progress bar */}
         <div className="w-56">
           <div className="flex items-center justify-between mb-[6px]">
-            <span
-              className="text-ash text-[11px] tracking-widest uppercase truncate max-w-[9rem]"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
+            <span className="text-ash text-[11px] tracking-widest uppercase truncate max-w-36 font-mono">
               {label}
             </span>
-            <span
-              className="text-gold text-[11px] ml-2 tabular-nums"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
+            <span className="text-gold text-[11px] ml-2 tabular-nums font-mono">
               {progress}%
             </span>
           </div>
 
           {/* Track */}
-          <div className="h-px w-full overflow-hidden" style={{ background: "#2a2a2a" }}>
+          <div className="h-px w-full overflow-hidden bg-[#2a2a2a]">
             <div
-              className="h-px"
+              className="h-px bg-[#c9a84c]"
               style={{
-                background: "#c9a84c",
                 width: `${progress}%`,
                 transition: "width 650ms ease-in-out",
               }}
@@ -124,21 +114,14 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
       </div>
 
       {/* ── Bottom corners ── */}
-      <div
-        className="absolute bottom-7 left-8 right-8 flex items-end justify-between"
-        style={{ fontFamily: "var(--font-mono)" }}
-      >
+      <div className="absolute bottom-7 left-8 right-8 flex items-end justify-between font-mono">
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] tracking-wider uppercase" style={{ color: "#4a4a4a" }}>
+          <p className="text-[10px] tracking-wider uppercase text-smoke">
             {isDone ? "Initialization complete" : "Initializing…"}
           </p>
-          <p className="text-[10px]" style={{ color: "#4a4a4a" }}>
-            © 2026 OpenWorship
-          </p>
+          <p className="text-[10px] text-smoke">© 2026 OpenWorship</p>
         </div>
-        <p className="text-[10px]" style={{ color: "#4a4a4a" }}>
-          Version {version}
-        </p>
+        <p className="text-[10px] text-smoke">Version {version}</p>
       </div>
     </div>
   );
