@@ -28,29 +28,29 @@ export function Toaster() {
           duration={item.variant === "error" ? 6000 : 4000}
           className={cn(
             "flex items-start gap-3 rounded-md border px-4 py-3 shadow-lg",
-            "bg-obsidian font-sans",
-            item.variant === "error" && "border-ember/50",
-            item.variant === "success" && "border-gold/50",
-            item.variant === "info" && "border-iron",
+            "bg-bg-1 font-sans",
+            item.variant === "error" && "border-danger/50",
+            item.variant === "success" && "border-accent/50",
+            item.variant === "info" && "border-line",
           )}
         >
           <div className="flex-1 min-w-0">
             <ToastPrimitive.Title
               className={cn(
                 "text-[10px] font-medium tracking-[0.12em] uppercase",
-                item.variant === "error" && "text-ember",
-                item.variant === "success" && "text-gold",
-                item.variant === "info" && "text-ash",
+                item.variant === "error" && "text-danger",
+                item.variant === "success" && "text-accent",
+                item.variant === "info" && "text-ink-3",
               )}
             >
               {item.variant === "error" ? "Error" : item.variant === "success" ? "Done" : "Info"}
             </ToastPrimitive.Title>
-            <ToastPrimitive.Description className="mt-0.5 text-xs text-chalk leading-relaxed">
+            <ToastPrimitive.Description className="mt-0.5 text-xs text-ink leading-relaxed">
               {item.message}
             </ToastPrimitive.Description>
           </div>
           <ToastPrimitive.Close
-            className="shrink-0 text-ash hover:text-chalk transition-colors text-xs mt-0.5 cursor-pointer"
+            className="shrink-0 text-ink-3 hover:text-ink transition-colors text-xs mt-0.5 cursor-pointer"
             aria-label="Dismiss"
           >
             ✕

@@ -200,14 +200,14 @@ export function DisplayPage() {
   };
 
   return (
-    <div data-qa="display-root" className="fixed inset-0 bg-void overflow-hidden font-sans">
+    <div data-qa="display-root" className="fixed inset-0 bg-bg overflow-hidden font-sans">
       {content ? (
         <>
           {isSong ? (
             <>
               {/* Song title header — fixed at top-left per reference */}
               <div className="absolute top-[8vh] left-[10%]">
-                <span className="block font-sans text-sm font-medium tracking-[0.2em] text-gold uppercase">
+                <span className="block font-sans text-sm font-medium tracking-[0.2em] text-accent uppercase">
                   {content.reference}
                 </span>
               </div>
@@ -224,7 +224,7 @@ export function DisplayPage() {
               >
                 {/* Previous context line — 30% opacity */}
                 {prevContextLine && (
-                  <p className="m-0 font-serif text-[2.4rem] leading-[1.2] text-chalk text-left opacity-30 select-none">
+                  <p className="m-0 font-serif text-[2.4rem] leading-[1.2] text-ink text-left opacity-30 select-none">
                     {prevContextLine}
                   </p>
                 )}
@@ -237,11 +237,11 @@ export function DisplayPage() {
                       line.trim()
                     );
                   return isHeader ? (
-                    <p key={i} className="m-0 font-sans text-[0.85rem] font-medium tracking-[0.18em] uppercase text-smoke">
+                    <p key={i} className="m-0 font-sans text-[0.85rem] font-medium tracking-[0.18em] uppercase text-muted">
                       {line || "\u00A0"}
                     </p>
                   ) : (
-                    <p key={i} className="m-0 font-serif text-[clamp(2.8rem,5vw,5rem)] font-semibold leading-[1.2] text-chalk text-left">
+                    <p key={i} className="m-0 font-serif text-[clamp(2.8rem,5vw,5rem)] font-semibold leading-[1.2] text-ink text-left">
                       {line || "\u00A0"}
                     </p>
                   );
@@ -249,7 +249,7 @@ export function DisplayPage() {
 
                 {/* Next context line — 50% opacity */}
                 {nextContextLine && (
-                  <p className="m-0 font-serif text-[2.4rem] leading-[1.2] text-chalk text-left opacity-50 select-none">
+                  <p className="m-0 font-serif text-[2.4rem] leading-[1.2] text-ink text-left opacity-50 select-none">
                     {nextContextLine}
                   </p>
                 )}
@@ -258,7 +258,7 @@ export function DisplayPage() {
               {/* Progress indicator */}
               {lyricChunks.length > 1 && (
                 <span
-                  className="absolute bottom-6 right-[10%] font-sans text-[0.7rem] tracking-[0.12em] text-smoke opacity-60"
+                  className="absolute bottom-6 right-[10%] font-sans text-[0.7rem] tracking-[0.12em] text-muted opacity-60"
                   aria-hidden="true"
                 >
                   {chunkIndex + 1} / {lyricChunks.length}
@@ -270,13 +270,13 @@ export function DisplayPage() {
           {isCountdown ? (
             <div className="flex flex-col items-start gap-4">
               {content.reference && (
-                <span className="font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-gold">
+                <span className="font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-accent">
                   {content.reference}
                 </span>
               )}
               <span
                 className={`font-mono text-[clamp(6rem,14vw,14rem)] font-semibold leading-none tracking-[0.05em] transition-colors duration-500 ${
-                  (countdownSecs ?? 0) <= 10 ? "text-ember" : "text-chalk"
+                  (countdownSecs ?? 0) <= 10 ? "text-danger" : "text-ink"
                 }`}
               >
                 {fmtCountdown(countdownSecs ?? 0)}
@@ -291,11 +291,11 @@ export function DisplayPage() {
                   alt=""
                 />
               )}
-              <span className="font-sans text-[clamp(1.5rem,3vw,3rem)] font-semibold tracking-[0.08em] text-gold">
+              <span className="font-sans text-[clamp(1.5rem,3vw,3rem)] font-semibold tracking-[0.08em] text-accent">
                 {content.reference}
               </span>
               {content.text && (
-                <p className="m-0 font-sans text-[clamp(1.8rem,3.5vw,4rem)] font-normal leading-[1.3] text-chalk">
+                <p className="m-0 font-sans text-[clamp(1.8rem,3.5vw,4rem)] font-normal leading-[1.3] text-ink">
                   {content.text}
                 </p>
               )}
@@ -303,16 +303,16 @@ export function DisplayPage() {
           ) : (
             <>
               <div className="mb-8">
-                <span className="block font-sans text-sm font-medium tracking-[0.2em] text-gold uppercase">
+                <span className="block font-sans text-sm font-medium tracking-[0.2em] text-accent uppercase">
                   {content.reference}
                 </span>
                 {content.translation && (
-                  <span className="block font-sans text-xs tracking-[0.16em] text-ash/70 font-normal mt-1 uppercase">
+                  <span className="block font-sans text-xs tracking-[0.16em] text-ink-3/70 font-normal mt-1 uppercase">
                     {content.translation}
                   </span>
                 )}
               </div>
-              <p className="m-0 font-serif text-[clamp(3rem,5.5vw,5.5rem)] font-semibold leading-[1.18] text-chalk text-left">
+              <p className="m-0 font-serif text-[clamp(3rem,5.5vw,5.5rem)] font-semibold leading-[1.18] text-ink text-left">
                 {content.text}
               </p>
             </>
@@ -323,7 +323,7 @@ export function DisplayPage() {
       ) : (
         <div data-qa="display-idle" className="hidden" aria-hidden={connected} />
       )}
-      <span data-qa="display-watermark" className="absolute bottom-6 left-[10%] font-sans text-xs tracking-[0.2em] text-smoke lowercase select-none">
+      <span data-qa="display-watermark" className="absolute bottom-6 left-[10%] font-sans text-xs tracking-[0.2em] text-muted lowercase select-none">
         openworship
       </span>
     </div>

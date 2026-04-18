@@ -34,10 +34,10 @@ function ProjectItemRow({
 }) {
   return (
     <li
-      className={`relative flex items-center gap-[6px] bg-obsidian border border-iron/40 border-l-2 rounded-sm py-2 px-3 pr-7 outline-none transition-all group${
+      className={`relative flex items-center gap-[6px] bg-bg-1 border border-line/40 border-l-2 rounded-sm py-2 px-3 pr-7 outline-none transition-all group${
         isLive
-          ? " !border-l-gold bg-slate"
-          : " border-l-transparent hover:bg-slate hover:border-smoke hover:border-l-smoke focus-within:bg-slate focus-within:border-smoke focus-within:border-l-smoke"
+          ? " !border-l-accent bg-bg-2"
+          : " border-l-transparent hover:bg-bg-2 hover:border-line-strong hover:border-l-muted focus-within:bg-bg-2 focus-within:border-line-strong focus-within:border-l-muted"
       }`}
       draggable={!isReadOnly}
       onDragStart={() => onDragStart?.(item.id)}
@@ -46,7 +46,7 @@ function ProjectItemRow({
     >
       {!isReadOnly && (
         <span
-          className="shrink-0 text-smoke text-[13px] cursor-grab opacity-0 transition-opacity select-none group-hover:opacity-100"
+          className="shrink-0 text-muted text-[13px] cursor-grab opacity-0 transition-opacity select-none group-hover:opacity-100"
           aria-hidden="true"
           title="Drag to reorder"
         >
@@ -61,20 +61,20 @@ function ProjectItemRow({
         onKeyDown={(e) => e.key === "Enter" && onPush(item)}
       >
         <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-[11px] font-medium text-chalk tracking-[0.04em]">{item.reference}</span>
-          <span className="font-mono text-[10px] text-ash tracking-[0.08em]">{item.translation}</span>
+          <span className="text-[11px] font-medium text-ink tracking-[0.04em]">{item.reference}</span>
+          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">{item.translation}</span>
           {isLive && (
             <span
-              className="w-[6px] h-[6px] rounded-full bg-gold [box-shadow:0_0_4px_var(--color-gold)] ml-auto"
+              className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
               aria-label="Live"
             />
           )}
         </div>
-        <p className="m-0 text-[11px] leading-[1.45] text-ash line-clamp-2">{item.text}</p>
+        <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">{item.text}</p>
       </div>
       {!isReadOnly && (
         <button
-          className="absolute top-1/2 right-[6px] -translate-y-1/2 bg-transparent border-none text-smoke text-sm leading-none cursor-pointer px-1 py-0.5 rounded-[2px] opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 hover:text-ember"
+          className="absolute top-1/2 right-[6px] -translate-y-1/2 bg-transparent border-none text-muted text-sm leading-none cursor-pointer px-1 py-0.5 rounded-[2px] opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 hover:text-danger"
           title="Remove from schedule"
           aria-label={`Remove ${item.reference} from schedule`}
           onClick={(e) => {
@@ -117,7 +117,7 @@ function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void 
     <form className="flex gap-2 mb-3 shrink-0" onSubmit={handleSubmit}>
       <input
         ref={inputRef}
-        className="flex-1 bg-transparent border-none border-b border-b-iron/60 outline-none py-2 text-chalk font-sans text-[13px] transition-colors placeholder:text-smoke focus:border-b-gold disabled:opacity-50"
+        className="flex-1 bg-transparent border-none border-b border-b-line/60 outline-none py-2 text-ink font-sans text-[13px] transition-colors placeholder:text-muted focus:border-b-accent disabled:opacity-50"
         placeholder="Service name\u2026"
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -125,7 +125,7 @@ function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void 
         autoComplete="off"
       />
       <button
-        className="font-sans text-[10px] font-medium tracking-[0.08em] text-void bg-gold border-none rounded-sm px-[10px] py-1 cursor-pointer uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        className="font-sans text-[10px] font-medium tracking-[0.08em] text-[#1A0D00] bg-accent border-none rounded-sm px-[10px] py-1 cursor-pointer uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         type="submit"
         disabled={saving || !name.trim()}
       >
@@ -224,14 +224,14 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
   };
 
   const resultCls = (isLive: boolean) =>
-    `bg-obsidian border border-l-2 rounded-sm py-2 px-3 cursor-pointer outline-none transition-all hover:bg-slate hover:border-smoke focus:bg-slate focus:border-smoke${
-      isLive ? " border-l-gold-muted bg-slate border-iron/40" : " border-l-transparent border-iron/40"
+    `bg-bg-1 border border-l-2 rounded-sm py-2 px-3 cursor-pointer outline-none transition-all hover:bg-bg-2 hover:border-line-strong focus:bg-bg-2 focus:border-line-strong${
+      isLive ? " border-l-accent/60 bg-bg-2 border-line/40" : " border-l-transparent border-line/40"
     }`;
 
   return (
-    <div className="shrink-0 mt-3 border-t border-iron">
+    <div className="shrink-0 mt-3 border-t border-line">
       <button
-        className="w-full flex items-center justify-between bg-transparent border-none text-smoke font-sans text-[10px] font-medium tracking-[0.1em] uppercase cursor-pointer pt-3 pb-0 px-0 transition-colors hover:text-ash"
+        className="w-full flex items-center justify-between bg-transparent border-none text-muted font-sans text-[10px] font-medium tracking-[0.1em] uppercase cursor-pointer pt-3 pb-0 px-0 transition-colors hover:text-ink-3"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
@@ -240,12 +240,12 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
       </button>
 
       {open && (
-        <div className="pt-3 max-h-[280px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-iron [&::-webkit-scrollbar-thumb]:rounded-sm">
+        <div className="pt-3 max-h-[280px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-sm">
           {/* Search controls */}
           <div className="flex gap-2 items-center mb-2">
             <div className="flex-1 relative">
               <input
-                className="w-full bg-transparent border-none border-b border-b-iron/60 outline-none py-2 text-chalk font-sans text-xs transition-colors box-border placeholder:text-smoke focus:border-b-gold"
+                className="w-full bg-transparent border-none border-b border-b-line/60 outline-none py-2 text-ink font-sans text-xs transition-colors box-border placeholder:text-muted focus:border-b-accent"
                 type="text"
                 placeholder={'Search \u2014 e.g. John 3:16 or \u201cshepherd\u201d'}
                 value={query}
@@ -254,11 +254,11 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                 spellCheck={false}
               />
               {isSearching && (
-                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border border-smoke border-t-gold animate-spin" />
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border border-muted border-t-accent animate-spin" />
               )}
             </div>
             <select
-              className="bg-obsidian border-none border-b border-b-iron/60 text-ash font-mono text-[10px] tracking-[0.06em] py-2 px-1 outline-none cursor-pointer min-w-[46px] focus:border-b-gold"
+              className="bg-bg-1 border-none border-b border-b-line/60 text-ink-3 font-mono text-[10px] tracking-[0.06em] py-2 px-1 outline-none cursor-pointer min-w-[46px] focus:border-b-accent"
               value={translation}
               onChange={(e) => {
                 setTranslation(e.target.value);
@@ -274,7 +274,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
           {/* Bank results */}
           {bankResults.length > 0 && (
             <>
-              <p className="text-[10px] font-medium tracking-[0.1em] text-smoke uppercase my-2 mx-0">
+              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">
                 {query.trim() ? "Past services" : "Recently used"}
               </p>
               <ul className="list-none m-0 p-0 flex flex-col gap-px" role="list">
@@ -290,16 +290,16 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                       onKeyDown={(e) => e.key === "Enter" && handlePush(entry.reference, entry.text, entry.translation)}
                     >
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[11px] font-medium text-chalk tracking-[0.04em]">{entry.reference}</span>
-                        <span className="font-mono text-[10px] text-ash tracking-[0.08em]">{entry.translation}</span>
+                        <span className="text-[11px] font-medium text-ink tracking-[0.04em]">{entry.reference}</span>
+                        <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">{entry.translation}</span>
                         {entry.use_count > 1 && (
-                          <span className="font-mono text-[9px] text-smoke">×{entry.use_count}</span>
+                          <span className="font-mono text-[9px] text-muted">×{entry.use_count}</span>
                         )}
                         {isLive && (
-                          <span className="w-[6px] h-[6px] rounded-full bg-gold [box-shadow:0_0_4px_var(--color-gold)] ml-auto" aria-label="Live" />
+                          <span className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto" aria-label="Live" />
                         )}
                       </div>
-                      <p className="m-0 text-[11px] leading-[1.45] text-ash line-clamp-2">{entry.text}</p>
+                      <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">{entry.text}</p>
                     </li>
                   );
                 })}
@@ -310,7 +310,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
           {/* Scripture search results */}
           {searchResults.length > 0 && (
             <>
-              <p className="text-[10px] font-medium tracking-[0.1em] text-smoke uppercase my-2 mx-0">Scripture</p>
+              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">Scripture</p>
               <ul className="list-none m-0 p-0 flex flex-col gap-px" role="list">
                 {searchResults
                   .filter((v) => !bankResults.some((b) => b.reference === v.reference))
@@ -326,21 +326,21 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                         onKeyDown={(e) => e.key === "Enter" && handlePush(v.reference, v.text, v.translation)}
                       >
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[11px] font-medium text-chalk tracking-[0.04em]">{v.reference}</span>
-                          <span className="font-mono text-[10px] text-ash tracking-[0.08em]">{v.translation}</span>
+                          <span className="text-[11px] font-medium text-ink tracking-[0.04em]">{v.reference}</span>
+                          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">{v.translation}</span>
                           {v.score != null && v.score < 1.0 && (
                             <span
-                              className="text-[9px] text-smoke font-mono ml-auto opacity-70"
+                              className="text-[9px] text-muted font-mono ml-auto opacity-70"
                               title={`${Math.round(v.score * 100)}% relevance`}
                             >
                               {Math.round(v.score * 100)}%
                             </span>
                           )}
                           {isLive && (
-                            <span className="w-[6px] h-[6px] rounded-full bg-gold [box-shadow:0_0_4px_var(--color-gold)] ml-auto" aria-label="Live" />
+                            <span className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto" aria-label="Live" />
                           )}
                         </div>
-                        <p className="m-0 text-[11px] leading-[1.45] text-ash line-clamp-2">{v.text}</p>
+                        <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">{v.text}</p>
                       </li>
                     );
                   })}
@@ -351,7 +351,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
           {/* Song results */}
           {songResults.length > 0 && (
             <>
-              <p className="text-[10px] font-medium tracking-[0.1em] text-smoke uppercase my-2 mx-0">Songs</p>
+              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">Songs</p>
               <ul className="list-none m-0 p-0 flex flex-col gap-px" role="list">
                 {songResults.map((song) => {
                   const key = `song:${song.id}`;
@@ -366,13 +366,13 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                       onKeyDown={(e) => e.key === "Enter" && handlePushSong(song)}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-gold leading-none" aria-hidden="true">♪</span>
-                        <span className="text-[11px] font-medium text-chalk tracking-[0.04em]">{song.title}</span>
+                        <span className="text-[10px] text-accent leading-none" aria-hidden="true">♪</span>
+                        <span className="text-[11px] font-medium text-ink tracking-[0.04em]">{song.title}</span>
                         {song.artist && (
-                          <span className="font-mono text-[10px] text-ash tracking-[0.08em]">{song.artist}</span>
+                          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">{song.artist}</span>
                         )}
                         {isLive && (
-                          <span className="w-[6px] h-[6px] rounded-full bg-gold [box-shadow:0_0_4px_var(--color-gold)] ml-auto" aria-label="Live" />
+                          <span className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto" aria-label="Live" />
                         )}
                       </div>
                     </li>
@@ -383,7 +383,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
           )}
 
           {query.trim() && !isSearching && searchResults.length === 0 && bankResults.length === 0 && songResults.length === 0 && (
-            <p className="text-[11px] text-smoke py-2 m-0">No results for "{query}"</p>
+            <p className="text-[11px] text-muted py-2 m-0">No results for "{query}"</p>
           )}
         </div>
       )}
@@ -503,12 +503,12 @@ export function SchedulePanel() {
     <div className="flex flex-col h-full min-h-0 gap-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 shrink-0">
-        <span className="text-[11px] font-medium tracking-[0.12em] text-ash uppercase">SCHEDULE</span>
+        <span className="text-[11px] font-medium tracking-[0.12em] text-ink-3 uppercase">SCHEDULE</span>
         {activeProject ? (
           <>
             <button
               data-qa="schedule-summarize-btn"
-              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-void bg-ember border-none mr-0.5 transition-all hover:brightness-110"
+              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-[#1A0D00] bg-danger border-none mr-0.5 transition-all hover:brightness-110"
               onClick={() => handleCloseProject(true)}
               title="End service and generate AI summary"
             >
@@ -516,7 +516,7 @@ export function SchedulePanel() {
             </button>
             <button
               data-qa="schedule-end-btn"
-              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-void bg-gold border-none transition-all hover:brightness-110"
+              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-[#1A0D00] bg-accent border-none transition-all hover:brightness-110"
               onClick={() => handleCloseProject(false)}
               title="End this service without summary"
             >
@@ -526,7 +526,7 @@ export function SchedulePanel() {
         ) : (
           <button
             data-qa="schedule-new-btn"
-            className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-chalk bg-transparent border border-iron transition-colors hover:border-ash"
+            className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-ink bg-transparent border border-line transition-colors hover:border-line-strong"
             onClick={() => setShowNewForm((v) => !v)}
             title="Start a new service"
           >
@@ -548,12 +548,12 @@ export function SchedulePanel() {
 
       {/* Active project */}
       {activeProject ? (
-        <div className="flex-1 overflow-y-auto min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-iron [&::-webkit-scrollbar-thumb]:rounded-sm">
-          <p className="text-xs font-medium text-chalk m-0 mb-3 tracking-[0.02em] whitespace-nowrap overflow-hidden text-ellipsis">
+        <div className="flex-1 overflow-y-auto min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-sm">
+          <p className="text-xs font-medium text-ink m-0 mb-3 tracking-[0.02em] whitespace-nowrap overflow-hidden text-ellipsis">
             {activeProject.name}
           </p>
           {activeProject.items.length === 0 ? (
-            <p className="text-xs text-smoke m-0 leading-[1.5]">
+            <p className="text-xs text-muted m-0 leading-[1.5]">
               Push scripture to display \u2014 items appear here automatically.
             </p>
           ) : (
@@ -577,15 +577,15 @@ export function SchedulePanel() {
           )}
         </div>
       ) : !showNewForm ? (
-        <p className="text-xs text-smoke m-0 leading-[1.5]">
+        <p className="text-xs text-muted m-0 leading-[1.5]">
           No active service. Start one to track your content.
         </p>
       ) : null}
 
       {/* Past projects */}
-      <div className="shrink-0 mt-3 border-t border-iron pt-3">
+      <div className="shrink-0 mt-3 border-t border-line pt-3">
         <button
-          className="w-full flex items-center justify-between bg-transparent border-none text-smoke font-sans text-[10px] font-medium tracking-[0.1em] uppercase cursor-pointer p-0 mb-2 transition-colors hover:text-ash"
+          className="w-full flex items-center justify-between bg-transparent border-none text-muted font-sans text-[10px] font-medium tracking-[0.1em] uppercase cursor-pointer p-0 mb-2 transition-colors hover:text-ink-3"
           onClick={() => setShowPastProjects((v) => !v)}
           aria-expanded={showPastProjects}
         >
@@ -594,12 +594,12 @@ export function SchedulePanel() {
         </button>
         {showPastProjects && (
           pastProjects.length === 0 ? (
-            <p className="text-[11px] text-smoke m-0 leading-[1.5]">
+            <p className="text-[11px] text-muted m-0 leading-[1.5]">
               No past services. Close an active service to archive it here.
             </p>
           ) : (
             <ul
-              className="list-none m-0 p-0 flex flex-col gap-px max-h-[120px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-iron)_transparent]"
+              className="list-none m-0 p-0 flex flex-col gap-px max-h-[120px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent]"
               role="list"
             >
               {pastProjects.map((p) => (
@@ -607,12 +607,12 @@ export function SchedulePanel() {
                   key={p.id}
                   className="flex items-center gap-2 py-2 px-2 rounded-sm transition-colors hover:bg-white/[0.04]"
                 >
-                  <span className="flex-1 text-xs text-chalk whitespace-nowrap overflow-hidden text-ellipsis">{p.name}</span>
-                  <span className="font-mono text-[10px] text-smoke whitespace-nowrap">
+                  <span className="flex-1 text-xs text-ink whitespace-nowrap overflow-hidden text-ellipsis">{p.name}</span>
+                  <span className="font-mono text-[10px] text-muted whitespace-nowrap">
                     {p.items.length} item{p.items.length !== 1 ? "s" : ""}
                   </span>
                   <button
-                    className="font-sans text-[10px] font-medium tracking-[0.06em] text-ash bg-transparent border border-iron rounded-sm px-[6px] py-0.5 cursor-pointer uppercase shrink-0 transition-colors hover:text-chalk hover:border-ash"
+                    className="font-sans text-[10px] font-medium tracking-[0.06em] text-ink-3 bg-transparent border border-line rounded-sm px-[6px] py-0.5 cursor-pointer uppercase shrink-0 transition-colors hover:text-ink hover:border-line-strong"
                     onClick={() => handleOpenProject(p.id)}
                     title="Load this service"
                   >
