@@ -1,44 +1,44 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
-import { EB_Garamond } from "next/font/google";
+import { Crimson_Pro, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geist = Geist({
-  variable: "--font-geist",
+const crimsonPro = Crimson_Pro({
+  variable: "--font-crimson",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
-const ebGaramond = EB_Garamond({
-  variable: "--font-garamond",
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
   subsets: ["latin"],
-  weight: ["400", "600"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "openworship — AI-powered worship display software",
+  title: "openworship — Every word lands.",
   description:
-    "Free, AI-powered worship display software. Detects scripture and lyrics in real time. No manual lookup. No expensive licenses.",
+    "Free, AI-powered worship display. Detects scripture and lyrics in real time. No manual lookup. No expensive licenses. Built for every church, everywhere.",
   openGraph: {
-    title: "openworship — AI-powered worship display software",
+    title: "openworship — Every word lands.",
     description:
-      "Free, AI-powered worship display software. Detects scripture and lyrics in real time. No manual lookup. No expensive licenses.",
+      "Free, AI-powered worship display. Detects scripture and lyrics in real time. No manual lookup. No expensive licenses.",
     type: "website",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "openworship — AI-powered worship display software",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "openworship — AI-powered worship display software",
+    title: "openworship — Every word lands.",
     description:
-      "Free, AI-powered worship display software. Detects scripture and lyrics in real time.",
-    images: ["/og-image.png"],
+      "Free, AI-powered worship display. Detects scripture and lyrics in real time.",
   },
 };
 
@@ -50,9 +50,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geist.variable} ${ebGaramond.variable} antialiased`}
+      className={`${crimsonPro.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="min-h-screen flex flex-col">{children}</body>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('ow-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }
