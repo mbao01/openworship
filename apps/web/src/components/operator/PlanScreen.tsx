@@ -2,12 +2,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "../../lib/tauri";
 import { toastError } from "../../lib/toast";
-import type { ProjectItem, ServiceProject } from "../../lib/types";
+import type { AudioSettings, EmailSettings, ProjectItem, ServiceProject, TranslationInfo, VerseResult } from "../../lib/types";
+import { searchScriptures, listTranslations, getActiveTranslation, switchLiveTranslation } from "../../lib/commands/content";
+import { addItemToActiveProject } from "../../lib/commands/projects";
+import { getAudioSettings, setAudioSettings, getEmailSettings, setEmailSettings } from "../../lib/commands/settings";
 
 export function PlanScreen() {
   const [project, setProject] = useState<ServiceProject | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showAddSearch, setShowAddSearch] = useState(false);
   const dragItemId = useRef<string | null>(null);
+
+  // Translation settings
+  const [translations, setTranslations] = useState<TranslationInfo[]>([]);
+  const [activeTranslation, setActiveTranslation] = useState("ESV");
+
+  // Audio settings (rolling context window)
+  const [audioSettings, setAudioSettingsState] = useState<AudioSettings | null>(null);
+
+  // Email settings
+  const [emailSettings, setEmailSettingsState] = useState<EmailSettings | null>(null);
 
   const loadProject = useCallback(async () => {
     try {
@@ -26,6 +40,16 @@ export function PlanScreen() {
       setProject(e.payload.closed_at_ms === null ? e.payload : null);
     }).then((fn) => { unlisten = fn; });
     return () => unlisten?.();
+  }, []);
+
+  // Load settings on mount
+  useEffect(() => {
+    Promise.all([listTranslations(), getActiveTranslation()])
+      .then(([list, active]) => { setTranslations(list); setActiveTranslation(active); })
+      .catch(() => {});
+
+    getAudioSettings().then(setAudioSettingsState).catch(() => {});
+    getEmailSettings().then(setEmailSettingsState).catch(() => {});
   }, []);
 
   const handlePush = async (item: ProjectItem) => {
@@ -101,7 +125,7 @@ export function PlanScreen() {
         {project && (
           <button
             className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00]"
-            onClick={() => handleCreate("")}
+            onClick={() => setShowAddSearch(v => !v)}
           >
             + Add item
           </button>
@@ -109,6 +133,15 @@ export function PlanScreen() {
       </div>
 
       {showNewForm && !project && <NewServiceForm onCreate={handleCreate} onCancel={() => setShowNewForm(false)} />}
+
+      {project && showAddSearch && (
+        <AddItemSearch
+          onAdd={async (v) => {
+            await addItemToActiveProject(v.reference, v.text, v.translation);
+            await loadProject();
+          }}
+        />
+      )}
 
       {items.length > 0 ? (
         <div className="border border-line rounded-lg overflow-hidden max-w-[900px]">
@@ -162,8 +195,19 @@ export function PlanScreen() {
             label="Default translation"
             description="Used when the AI detects scripture without an explicit translation cue."
             control={
-              <select className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]">
-                <option>ESV</option><option>NIV</option><option>KJV</option>
+              <select
+                className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]"
+                value={activeTranslation}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  switchLiveTranslation(value)
+                    .then(() => setActiveTranslation(value))
+                    .catch(() => {});
+                }}
+              >
+                {translations.map((t) => (
+                  <option key={t.id} value={t.abbreviation}>{t.abbreviation}</option>
+                ))}
               </select>
             }
           />
@@ -171,15 +215,39 @@ export function PlanScreen() {
             label="Rolling context window"
             description="Longer window helps slow or story-heavy preachers. 10s is default."
             control={
-              <select className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]">
-                <option>8 seconds</option><option>10 seconds</option><option>15 seconds</option>
+              <select
+                className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]"
+                value={audioSettings?.semantic_threshold_auto ?? 10}
+                onChange={(e) => {
+                  if (!audioSettings) return;
+                  const value = Number(e.target.value);
+                  const updated = { ...audioSettings, semantic_threshold_auto: value };
+                  setAudioSettings(updated)
+                    .then(() => setAudioSettingsState(updated))
+                    .catch(() => {});
+                }}
+              >
+                <option value={8}>8 seconds</option>
+                <option value={10}>10 seconds</option>
+                <option value={15}>15 seconds</option>
               </select>
             }
           />
           <SettingRow
             label="Email service summary"
             description="AI-generated recap sent to subscribers 6 hours after service ends."
-            control={<Toggle defaultOn />}
+            control={
+              <Toggle
+                on={emailSettings?.auto_send ?? false}
+                onToggle={() => {
+                  if (!emailSettings) return;
+                  const updated = { ...emailSettings, auto_send: !emailSettings.auto_send };
+                  setEmailSettings(updated)
+                    .then(() => setEmailSettingsState(updated))
+                    .catch(() => {});
+                }}
+              />
+            }
           />
         </div>
       )}
@@ -188,6 +256,67 @@ export function PlanScreen() {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function AddItemSearch({ onAdd }: { onAdd: (v: VerseResult) => Promise<void> }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<VerseResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const handleSearch = (q: string) => {
+    setQuery(q);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!q.trim()) { setResults([]); return; }
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await searchScriptures(q);
+        setResults(res);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  };
+
+  return (
+    <div className="mb-4 max-w-[900px]">
+      <input
+        ref={inputRef}
+        className="w-full px-3 py-2 bg-bg-2 border border-line rounded-[3px] text-ink text-sm mb-2"
+        placeholder="Search scripture\u2026"
+        value={query}
+        onChange={(e) => handleSearch(e.target.value)}
+      />
+      {loading && <div className="text-xs text-ink-3 py-2">Searching...</div>}
+      {results.length > 0 && (
+        <div className="border border-line rounded-lg overflow-hidden">
+          {results.map((v, i) => (
+            <button
+              key={`${v.reference}-${v.translation}-${i}`}
+              className="w-full text-left px-3.5 py-2.5 border-b border-line last:border-b-0 transition-colors hover:bg-bg-2 cursor-pointer"
+              onClick={async () => {
+                try {
+                  await onAdd(v);
+                } catch (e) {
+                  toastError("Failed to add item")(e);
+                }
+              }}
+            >
+              <span className="text-[12.5px] text-ink">{v.reference}</span>
+              <span className="ml-2 font-mono text-[9.5px] text-ink-3 tracking-[0.08em] uppercase">{v.translation}</span>
+              <span className="block text-xs text-ink-3 mt-0.5 line-clamp-1">{v.text}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function NewServiceForm({ onCreate, onCancel }: { onCreate: (name: string) => void; onCancel: () => void }) {
   const [name, setName] = useState("");
@@ -228,12 +357,11 @@ function SettingRow({ label, description, control }: { label: string; descriptio
   );
 }
 
-function Toggle({ defaultOn = false }: { defaultOn?: boolean }) {
-  const [on, setOn] = useState(defaultOn);
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button
       className={`relative w-[38px] h-[22px] rounded-[11px] transition-colors cursor-pointer ${on ? "bg-accent" : "bg-bg-3"}`}
-      onClick={() => setOn((v) => !v)}
+      onClick={onToggle}
       role="switch"
       aria-checked={on}
     >

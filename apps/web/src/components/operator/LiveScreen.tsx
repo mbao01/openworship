@@ -3,8 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useQueue } from "../../hooks/use-queue";
 import { useTranslations } from "../../hooks/use-translations";
-import type { DetectionMode, QueueItem, TranscriptEvent, VerseResult, Song } from "../../lib/types";
+import type { DetectionMode, QueueItem, TranscriptEvent, VerseResult, Song, AnnouncementItem } from "../../lib/types";
 import { toastError } from "../../lib/toast";
+import { listAnnouncements, pushAnnouncementToDisplay } from "../../lib/commands/annotations";
 
 interface LiveScreenProps {
   mode: DetectionMode;
@@ -27,8 +28,15 @@ function LibraryPanel() {
   const [query, setQuery] = useState("");
   const [scriptureResults, setScriptureResults] = useState<VerseResult[]>([]);
   const [songResults, setSongResults] = useState<Song[]>([]);
+  const [slides, setSlides] = useState<AnnouncementItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (tab === "slides") {
+      listAnnouncements().then(setSlides).catch(() => {});
+    }
+  }, [tab]);
 
   const runSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -156,7 +164,22 @@ function LibraryPanel() {
           </div>
         ))}
 
-        {tab === "slides" && (
+        {tab === "slides" && slides.length > 0 && slides.map((slide) => (
+          <div
+            key={slide.id}
+            className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
+            onClick={() => pushAnnouncementToDisplay(slide.id).catch(toastError("Failed to push slide"))}
+          >
+            <span className="font-serif italic text-sm text-accent text-center">{"\u2299"}</span>
+            <div>
+              <div className="font-medium text-sm">{slide.title}</div>
+              {slide.body && <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em] line-clamp-1">{slide.body}</div>}
+            </div>
+            <span className="font-mono text-[9.5px] text-ink-3">{"\u21B5"}</span>
+          </div>
+        ))}
+
+        {tab === "slides" && slides.length === 0 && (
           <div className="px-3.5 py-6 text-center text-xs text-muted">
             No slides loaded
           </div>
@@ -175,7 +198,7 @@ function LibraryPanel() {
 // ─── Stage Panel (center, flex-1) ────────────────────────────────────────────
 
 function StagePanel({ mode }: { mode: DetectionMode }) {
-  const { queue, live, approve, skip, clearLive } = useQueue();
+  const { queue, live, approve, skip, clearLive, rejectLive } = useQueue();
   const { translations, active: activeTranslation, setActive: setActiveTranslation } = useTranslations();
   const pending = queue[0] ?? null;
 
@@ -219,10 +242,10 @@ function StagePanel({ mode }: { mode: DetectionMode }) {
             disabled={!pending}
           />
           <StageBtn label="Skip" kbd="X" onClick={() => pending && skip(pending.id).catch(toastError("Failed to skip"))} disabled={!pending} />
-          <StageBtn label="Not this one" kbd="N" />
+          <StageBtn label="Not this one" kbd="N" onClick={() => rejectLive().catch(toastError("Failed to reject"))} />
         </div>
         <div className="flex gap-1 pl-2.5 ml-1.5 border-l border-line">
-          <StageBtn label="Black" kbd="B" />
+          <StageBtn label="Black" kbd="B" onClick={() => clearLive().catch(toastError("Failed to clear"))} />
           <StageBtn label="Clear" onClick={() => clearLive().catch(toastError("Failed to clear"))} />
         </div>
         <div className="flex-1" />

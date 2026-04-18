@@ -60,9 +60,11 @@ export function AudioSection() {
         <SettingRow label="Backend">
           <Select
             value={settings.backend}
-            onValueChange={(v) => update({ backend: v as typeof settings.backend })}
+            onValueChange={(v) =>
+              update({ backend: v as typeof settings.backend })
+            }
           >
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-42">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -76,7 +78,9 @@ export function AudioSection() {
         {settings.backend === "whisper" && (
           <SettingRow
             label="Whisper model"
-            description={installed ? "Model installed" : "~75 MB download required"}
+            description={
+              installed ? "Model installed" : "~75 MB download required"
+            }
           >
             {installed ? (
               <span className="font-mono text-[10.5px] text-success uppercase tracking-[0.05em]">
@@ -117,7 +121,11 @@ export function AudioSection() {
         )}
       </Section>
 
-      <Section title="Anthropic API key" separator description="Required for semantic scripture matching and service summaries.">
+      <Section
+        title="Anthropic API key"
+        separator
+        description="Required for semantic scripture matching and service summaries."
+      >
         <SettingRow label="API key">
           <div className="flex gap-2">
             <input
@@ -143,7 +151,9 @@ export function AudioSection() {
         <SettingRow label="Microphone">
           <Select
             value={settings.audio_input_device ?? "__default__"}
-            onValueChange={(v) => update({ audio_input_device: v === "__default__" ? null : v })}
+            onValueChange={(v) =>
+              update({ audio_input_device: v === "__default__" ? null : v })
+            }
           >
             <SelectTrigger className="w-48">
               <SelectValue placeholder="System default" />
@@ -165,7 +175,11 @@ export function AudioSection() {
         </SettingRow>
       </Section>
 
-      <Section title="Semantic matching" separator description="AI-powered scripture matching using semantic similarity.">
+      <Section
+        title="Semantic matching"
+        separator
+        description="AI-powered scripture matching using semantic similarity."
+      >
         <SettingRow label="Enable semantic matching">
           <Toggle
             checked={settings.semantic_enabled}
@@ -175,30 +189,50 @@ export function AudioSection() {
 
         {settings.semantic_enabled && (
           <>
-            <SettingRow label={`Auto threshold — ${Math.round(settings.semantic_threshold_auto * 100)}%`}>
+            <SettingRow
+              label={`Auto threshold — ${Math.round(settings.semantic_threshold_auto * 100)}%`}
+            >
               <div className="w-36">
                 <Slider
-                  min={50} max={100} step={1}
+                  min={50}
+                  max={100}
+                  step={1}
                   value={[Math.round(settings.semantic_threshold_auto * 100)]}
-                  onValueChange={([v]: number[]) => update({ semantic_threshold_auto: v / 100 })}
+                  onValueChange={([v]: number[]) =>
+                    update({ semantic_threshold_auto: v / 100 })
+                  }
                 />
               </div>
             </SettingRow>
-            <SettingRow label={`Copilot threshold — ${Math.round(settings.semantic_threshold_copilot * 100)}%`}>
+            <SettingRow
+              label={`Copilot threshold — ${Math.round(settings.semantic_threshold_copilot * 100)}%`}
+            >
               <div className="w-36">
                 <Slider
-                  min={50} max={100} step={1}
-                  value={[Math.round(settings.semantic_threshold_copilot * 100)]}
-                  onValueChange={([v]: number[]) => update({ semantic_threshold_copilot: v / 100 })}
+                  min={50}
+                  max={100}
+                  step={1}
+                  value={[
+                    Math.round(settings.semantic_threshold_copilot * 100),
+                  ]}
+                  onValueChange={([v]: number[]) =>
+                    update({ semantic_threshold_copilot: v / 100 })
+                  }
                 />
               </div>
             </SettingRow>
-            <SettingRow label={`Lyrics auto — ${Math.round(settings.lyrics_threshold_auto * 100)}%`}>
+            <SettingRow
+              label={`Lyrics auto — ${Math.round(settings.lyrics_threshold_auto * 100)}%`}
+            >
               <div className="w-36">
                 <Slider
-                  min={50} max={100} step={1}
+                  min={50}
+                  max={100}
+                  step={1}
                   value={[Math.round(settings.lyrics_threshold_auto * 100)]}
-                  onValueChange={([v]: number[]) => update({ lyrics_threshold_auto: v / 100 })}
+                  onValueChange={([v]: number[]) =>
+                    update({ lyrics_threshold_auto: v / 100 })
+                  }
                 />
               </div>
             </SettingRow>

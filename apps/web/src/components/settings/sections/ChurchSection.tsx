@@ -52,12 +52,16 @@ export function ChurchSection({ identity }: ChurchSectionProps) {
       </Section>
 
       {isHq && identity.invite_code && (
-        <Section title="Invite code" separator description="Share this code with member branches to connect to your HQ.">
-          <div className="flex items-center gap-2">
-            <span className="flex-1 font-mono text-sm text-accent bg-bg-2 border border-line rounded px-3 py-1.5">
+        <Section
+          title="Invite code"
+          separator
+          description="Share this code with member branches to connect to your HQ."
+        >
+          <div className="flex items-center gap-2 pb-3">
+            <span className="flex-1 font-mono text-sm font-bold text-accent bg-bg-2 border border-line rounded px-3 py-1.5">
               {identity.invite_code}
             </span>
-            <Button variant="outline" size="sm" onClick={handleCopy}>
+            <Button variant="outline" size="default" onClick={handleCopy}>
               {copied ? "Copied!" : "Copy"}
             </Button>
           </div>

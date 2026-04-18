@@ -1,8 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueue } from "../../hooks/use-queue";
+import { getObsDisplayUrl, openDisplayWindow } from "../../lib/commands/display-window";
+import { getDisplaySettings, setDisplaySettings } from "../../lib/commands/settings";
+import type { DisplaySettings } from "../../lib/types";
 
 export function DisplayScreen() {
   const { live } = useQueue();
+  const [displayUrl, setDisplayUrl] = useState("http://localhost:7411/display");
+  const [displaySettings, setDisplaySettingsState] = useState<DisplaySettings | null>(null);
+  const [resolution, setResolution] = useState("1920 \u00D7 1080");
+  const [background, setBackground] = useState("Solid black");
+  const [safeArea, setSafeArea] = useState(true);
+
+  useEffect(() => {
+    getObsDisplayUrl().then(setDisplayUrl).catch(() => {});
+    getDisplaySettings()
+      .then((s) => setDisplaySettingsState(s))
+      .catch(() => {});
+  }, []);
+
+  const handleOpenOnProjector = () => {
+    openDisplayWindow(null).catch(() => {});
+  };
 
   return (
     <div className="flex-1 overflow-y-auto px-14 py-10 bg-bg">
@@ -12,13 +31,13 @@ export function DisplayScreen() {
       <p className="text-ink-3 text-sm mb-8 max-w-[56ch]">
         One source of truth. The display runs on{" "}
         <code className="font-mono bg-bg-2 px-1.5 py-px rounded-sm text-xs">
-          http://localhost:7411/display
+          {displayUrl}
         </code>{" "}
         {"\u2014"} open it on any screen, or drop it into OBS as a Browser Source.
       </p>
 
       {/* Live display preview */}
-      <div className="max-w-[900px] mb-6">
+      <div className="max-w-[900px] mb-4">
         <div
           className="w-full aspect-video bg-[#050403] text-[#F5EFDF] px-[72px] py-14 flex flex-col justify-center relative border border-line-strong"
           style={{ boxShadow: "0 20px 60px -20px rgba(0,0,0,0.6), inset 0 0 120px rgba(0,0,0,0.6)" }}
@@ -44,6 +63,16 @@ export function DisplayScreen() {
         </div>
       </div>
 
+      {/* Open on projector button */}
+      <div className="max-w-[900px] mb-6">
+        <button
+          className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00]"
+          onClick={handleOpenOnProjector}
+        >
+          Open on projector
+        </button>
+      </div>
+
       {/* Output settings */}
       <div className="max-w-[900px]">
         <h2 className="font-serif text-2xl font-normal tracking-[-0.015em] mb-4 pb-3 border-b border-line">
@@ -54,7 +83,7 @@ export function DisplayScreen() {
           description="Copy this to OBS or open on the projector machine."
           control={
             <span className="font-mono text-[11px] text-accent">
-              http://localhost:7411/display
+              {displayUrl}
             </span>
           }
         />
@@ -62,7 +91,16 @@ export function DisplayScreen() {
           label="Resolution"
           description="Match your projector's native resolution for sharpest text."
           control={
-            <select className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]">
+            <select
+              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]"
+              value={resolution}
+              onChange={(e) => {
+                setResolution(e.target.value);
+                if (displaySettings) {
+                  setDisplaySettings({ ...displaySettings }).catch(() => {});
+                }
+              }}
+            >
               <option>1920 {"\u00D7"} 1080</option>
               <option>2560 {"\u00D7"} 1440</option>
               <option>3840 {"\u00D7"} 2160</option>
@@ -73,7 +111,16 @@ export function DisplayScreen() {
           label="Background"
           description="Black keeps focus on text. Transparent lets you overlay video."
           control={
-            <select className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]">
+            <select
+              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]"
+              value={background}
+              onChange={(e) => {
+                setBackground(e.target.value);
+                if (displaySettings) {
+                  setDisplaySettings({ ...displaySettings }).catch(() => {});
+                }
+              }}
+            >
               <option>Solid black</option>
               <option>Transparent</option>
               <option>Custom image</option>
@@ -83,7 +130,17 @@ export function DisplayScreen() {
         <SettingRow
           label="Safe area"
           description="Keep text inside a 90% margin for lower-third graphics."
-          control={<Toggle defaultOn />}
+          control={
+            <ToggleControlled
+              on={safeArea}
+              onChange={(v) => {
+                setSafeArea(v);
+                if (displaySettings) {
+                  setDisplaySettings({ ...displaySettings }).catch(() => {});
+                }
+              }}
+            />
+          }
         />
       </div>
     </div>
@@ -102,12 +159,11 @@ function SettingRow({ label, description, control }: { label: string; descriptio
   );
 }
 
-function Toggle({ defaultOn = false }: { defaultOn?: boolean }) {
-  const [on, setOn] = useState(defaultOn);
+function ToggleControlled({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       className={`relative w-[38px] h-[22px] rounded-[11px] transition-colors cursor-pointer ${on ? "bg-accent" : "bg-bg-3"}`}
-      onClick={() => setOn((v) => !v)}
+      onClick={() => onChange(!on)}
       role="switch"
       aria-checked={on}
     >

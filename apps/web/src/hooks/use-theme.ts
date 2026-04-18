@@ -4,7 +4,6 @@ import type { ThemeMode } from "@/lib/types";
 
 export type AccentName = "copper" | "crimson" | "sage" | "indigo";
 export type LayoutMode = "cinematic" | "dense";
-export type WindowChrome = "mac" | "win" | "frameless";
 export type UIDensity = "normal" | "compact";
 export type ContentType = "scripture" | "lyrics" | "slide" | "black";
 
@@ -15,8 +14,6 @@ export interface DisplayPrefs {
   accent: AccentName;
   /** Stage layout density. */
   layoutMode: LayoutMode;
-  /** Window chrome style. */
-  windowChrome: WindowChrome;
   /** UI information density. */
   density: UIDensity;
   /** What the display output shows. */
@@ -39,7 +36,6 @@ const DEFAULTS: DisplayPrefs = {
   appTheme: "dark",
   accent: "copper",
   layoutMode: "cinematic",
-  windowChrome: "mac",
   density: "normal",
   contentType: "scripture",
   confThreshold: 60,
@@ -94,12 +90,6 @@ function applyPrefs(prefs: DisplayPrefs): void {
     root.classList.remove("dark");
   }
 
-  // Frameless attribute for window chrome
-  const win = document.getElementById("window");
-  if (win) {
-    win.classList.toggle("frameless", prefs.windowChrome === "frameless");
-  }
-
   // Apply accent CSS vars
   const a = ACCENT_MAP[prefs.accent] ?? ACCENT_MAP.copper;
   root.style.setProperty("--color-accent", a.c);
@@ -111,7 +101,6 @@ export interface UseThemeReturn extends DisplayPrefs {
   setAppTheme: (v: ThemeMode) => void;
   setAccent: (v: AccentName) => void;
   setLayoutMode: (v: LayoutMode) => void;
-  setWindowChrome: (v: WindowChrome) => void;
   setDensity: (v: UIDensity) => void;
   setContentType: (v: ContentType) => void;
   setConfThreshold: (v: number) => void;
@@ -180,12 +169,11 @@ export function useTheme(): UseThemeReturn {
 
   return {
     ...prefs,
-    setAppTheme:      (v) => update({ appTheme: v }),
-    setAccent:        (v) => update({ accent: v }),
-    setLayoutMode:    (v) => update({ layoutMode: v }),
-    setWindowChrome:  (v) => update({ windowChrome: v }),
-    setDensity:       (v) => update({ density: v }),
-    setContentType:   (v) => update({ contentType: v }),
+    setAppTheme: (v) => update({ appTheme: v }),
+    setAccent: (v) => update({ accent: v }),
+    setLayoutMode: (v) => update({ layoutMode: v }),
+    setDensity: (v) => update({ density: v }),
+    setContentType: (v) => update({ contentType: v }),
     setConfThreshold: (v) => update({ confThreshold: v }),
   };
 }
