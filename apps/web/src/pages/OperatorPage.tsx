@@ -11,6 +11,7 @@ import { LogsScreen } from "../components/operator/LogsScreen";
 import { DisplayScreen } from "../components/operator/DisplayScreen";
 import { SettingsScreen } from "../components/operator/SettingsScreen";
 import { CommandPalette } from "../components/operator/CommandPalette";
+import { AssetsScreen } from "../components/operator/AssetsScreen";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
@@ -74,6 +75,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
             <PreviewScreen onGoLive={() => setScreen("live")} />
           )}
           {screen === "library" && <LibraryScreen />}
+          {screen === "assets" && <AssetsScreen />}
           {screen === "logs" && <LogsScreen />}
           {screen === "display" && <DisplayScreen />}
         </main>
