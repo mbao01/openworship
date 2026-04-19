@@ -483,6 +483,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::read_text_file,
             commands::open_artifact,
             commands::read_artifact_bytes,
+            commands::read_thumbnail,
             // ── Phase 14: Summaries + email ────────────────────────────────
             commands::generate_service_summary,
             commands::list_service_summaries,

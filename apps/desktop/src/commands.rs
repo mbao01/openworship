@@ -7,7 +7,7 @@ use crate::state::AppState;
 use ow_audio::{AudioConfig, AudioInputDevice, SttStatus, list_input_devices};
 use ow_core::{DetectionMode, QueueItem, QueueStatus, ScriptureDetector};
 use ow_display::ContentEvent;
-use ow_search::VerseResult;
+use ow_search::{VerseResult, parse_range_reference};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
@@ -21,6 +21,14 @@ pub fn search_scriptures(
     translation: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<Vec<VerseResult>, String> {
+    // Check for verse range pattern (e.g. "Romans 8:38-39") before full-text search.
+    if let Some((book, chapter, start, end)) = parse_range_reference(&query) {
+        return state
+            .search
+            .search_range(&book, chapter, start, end, translation.as_deref())
+            .map_err(|e| e.to_string());
+    }
+
     state
         .search
         .search(&query, translation.as_deref(), 25)
@@ -43,8 +51,27 @@ pub fn push_to_display(
     app: AppHandle,
 ) -> Result<(), String> {
     let event = ContentEvent::scripture(reference.clone(), text.clone(), translation.clone());
-    // Ignore send errors when no display client is connected.
+    // Send to display WebSocket clients.
     let _ = state.display_tx.send(event);
+
+    // ── Update queue: retire current live, add this item as live ──────────────
+    {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        // Retire any currently live items
+        for item in q.iter_mut() {
+            if item.status == QueueStatus::Live {
+                item.status = QueueStatus::Dismissed;
+            }
+        }
+        // Add as new live item
+        let mut new_item = QueueItem::new(reference.clone(), text.clone(), translation.clone());
+        new_item.status = QueueStatus::Live;
+        q.push_back(new_item);
+        // Emit queue update so the UI reflects the change
+        let snapshot: Vec<QueueItem> = q.iter().cloned().collect();
+        drop(q);
+        let _ = app.emit("detection://queue-updated", snapshot);
+    }
 
     // ── Update content bank ───────────────────────────────────────────────────
     {
@@ -546,11 +573,8 @@ pub fn approve_item(
 
     if let Some(item) = q.iter_mut().find(|i| i.id == id) {
         item.status = QueueStatus::Live;
-        let _ = state.display_tx.send(ContentEvent::scripture(
-            item.reference.clone(),
-            item.text.clone(),
-            item.translation.clone(),
-        ));
+        let event = content_event_for_item(item);
+        let _ = state.display_tx.send(event);
     } else {
         return Err(format!("item {id} not found in queue"));
     }
@@ -1059,6 +1083,11 @@ pub fn add_item_to_active_project(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<ServiceProject, String> {
+    // Keep copies for queue enqueue (originals get moved into ProjectItem)
+    let q_ref = reference.clone();
+    let q_text = text.clone();
+    let q_trans = translation.clone();
+
     let active_id = state
         .active_project_id
         .read()
@@ -1097,6 +1126,18 @@ pub fn add_item_to_active_project(
         crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
         p
     };
+
+    // Enqueue as pending so it appears in the PREVIEW display
+    if !q_ref.is_empty() {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        if !q.iter().any(|qi| qi.reference == q_ref && qi.status == QueueStatus::Pending) {
+            let new_item = QueueItem::new(q_ref, q_text, q_trans);
+            q.push_back(new_item);
+            let snapshot: Vec<QueueItem> = q.iter().cloned().collect();
+            drop(q);
+            let _ = app.emit("detection://queue-updated", snapshot);
+        }
+    }
 
     let _ = app.emit("service://project-updated", &project);
     Ok(project)
@@ -2632,6 +2673,18 @@ pub fn read_artifact_bytes(
     let entry = db.get_by_id(&id).map_err(|e| e.to_string())?
         .ok_or_else(|| format!("artifact not found: {id}"))?;
     let abs = db.abs_path(&entry.path);
+    std::fs::read(&abs).map_err(|e| e.to_string())
+}
+
+/// Read an artifact's thumbnail image bytes.
+#[tauri::command]
+pub fn read_thumbnail(id: String, state: State<'_, AppState>) -> Result<Vec<u8>, String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = db.get_by_id(&id).map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("artifact not found: {id}"))?;
+    let thumb_path = entry.thumbnail_path.as_ref()
+        .ok_or("no thumbnail available")?;
+    let abs = db.abs_path(thumb_path);
     std::fs::read(&abs).map_err(|e| e.to_string())
 }
 

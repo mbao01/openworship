@@ -7,7 +7,7 @@ use ow_db::Verse;
 use serde::{Deserialize, Serialize};
 use tantivy::{
     collector::TopDocs,
-    query::{BooleanQuery, Occur, QueryParser, TermQuery},
+    query::{BooleanQuery, Occur, QueryParser, RangeQuery, TermQuery},
     schema::{
         Field, IndexRecordOption, OwnedValue, Schema, SchemaBuilder, Value, FAST, INDEXED, STORED,
         STRING, TEXT,
@@ -91,6 +91,90 @@ impl SearchEngine {
             .context("failed to build index reader")?;
 
         Ok(Self { reader, index, fields })
+    }
+
+    /// Search for a verse range (e.g. "Romans 8:38-39").
+    /// Returns all verses matching book + chapter where verse >= start AND verse <= end.
+    /// When `translation` is Some, results are filtered to that abbreviation.
+    pub fn search_range(
+        &self,
+        book: &str,
+        chapter: u32,
+        start_verse: u32,
+        end_verse: u32,
+        translation: Option<&str>,
+    ) -> Result<Vec<VerseResult>> {
+        let searcher = self.reader.searcher();
+
+        let mut must: Vec<(Occur, Box<dyn tantivy::query::Query>)> = vec![
+            (
+                Occur::Must,
+                Box::new(TermQuery::new(
+                    Term::from_field_text(self.fields.book, book),
+                    IndexRecordOption::Basic,
+                )),
+            ),
+            (
+                Occur::Must,
+                Box::new(TermQuery::new(
+                    Term::from_field_u64(self.fields.chapter, chapter as u64),
+                    IndexRecordOption::Basic,
+                )),
+            ),
+            (
+                Occur::Must,
+                Box::new(RangeQuery::new_u64(
+                    "verse".to_string(),
+                    start_verse as u64..(end_verse as u64 + 1),
+                )),
+            ),
+        ];
+
+        if let Some(t) = translation {
+            must.push((
+                Occur::Must,
+                Box::new(TermQuery::new(
+                    Term::from_field_text(self.fields.translation, t),
+                    IndexRecordOption::Basic,
+                )),
+            ));
+        }
+
+        let query = BooleanQuery::new(must);
+        // Use a generous limit — a range like 1-176 (Psalm 119) should still work.
+        let top_docs = searcher
+            .search(&query, &TopDocs::with_limit(200))
+            .context("range search failed")?;
+
+        let mut results = Vec::new();
+        for (_score, addr) in top_docs {
+            let doc: TantivyDocument = searcher.doc(addr)?;
+            let get_str = |f: Field| {
+                doc.get_first(f)
+                    .and_then(|v: &OwnedValue| v.as_str())
+                    .unwrap_or("")
+                    .to_string()
+            };
+            let get_u64 = |f: Field| {
+                doc.get_first(f)
+                    .and_then(|v: &OwnedValue| v.as_u64())
+                    .unwrap_or(0) as u32
+            };
+            results.push(VerseResult {
+                translation: get_str(self.fields.translation),
+                book: get_str(self.fields.book),
+                chapter: get_u64(self.fields.chapter),
+                verse: get_u64(self.fields.verse),
+                text: get_str(self.fields.text),
+                reference: get_str(self.fields.reference),
+                score: 1.0,
+            });
+        }
+
+        // Sort by verse number for consistent ordering.
+        results.sort_by_key(|r| r.verse);
+
+        Ok(results)
     }
 
     /// Search by scripture reference (e.g. "John 3:16") or free-text keywords.
@@ -220,6 +304,45 @@ fn build_schema() -> (Schema, Fields) {
 // "Psalm 23"   → ("Psalms", 23, None)
 // "1 Cor 13:1" → ("1 Corinthians", 13, Some(1))
 // ─────────────────────────────────────────
+
+/// Try to parse a verse range like "Romans 8:38-39" or "1 John 3:16-18".
+/// Returns `(canonical_book, chapter, start_verse, end_verse)` on success.
+pub fn parse_range_reference(query: &str) -> Option<(String, u32, u32, u32)> {
+    let q = query.trim();
+
+    // Look for "Book Chapter:StartVerse-EndVerse"
+    // The dash can be ASCII hyphen, en-dash, or em-dash.
+    if let Some(colon) = q.rfind(':') {
+        let after_colon = q[colon + 1..].trim();
+        // Try to split on dash variants (-, \u{2013}, \u{2014})
+        let dash_pos = after_colon
+            .find('-')
+            .or_else(|| after_colon.find('\u{2013}'))
+            .or_else(|| after_colon.find('\u{2014}'));
+        if let Some(dp) = dash_pos {
+            let start_str = after_colon[..dp].trim();
+            // The dash char may be multi-byte; find the next char boundary after dp.
+            let dash_char = after_colon[dp..].chars().next().unwrap();
+            let end_str = after_colon[dp + dash_char.len_utf8()..].trim();
+            if let (Ok(start_v), Ok(end_v)) = (start_str.parse::<u32>(), end_str.parse::<u32>()) {
+                if start_v > 0 && end_v > 0 && end_v >= start_v {
+                    let rest = q[..colon].trim();
+                    if let Some(sp) = rest.rfind(' ') {
+                        let chapter_str = &rest[sp + 1..];
+                        if let Ok(chapter) = chapter_str.parse::<u32>() {
+                            let raw_book = rest[..sp].trim();
+                            if let Some(book) = normalize_book(raw_book) {
+                                return Some((book, chapter, start_v, end_v));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
 
 fn parse_reference(query: &str) -> Option<(String, u32, Option<u32>)> {
     let q = query.trim();
@@ -549,6 +672,73 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_parse_range_reference() {
+        assert_eq!(
+            parse_range_reference("Romans 8:38-39"),
+            Some(("Romans".into(), 8, 38, 39))
+        );
+        assert_eq!(
+            parse_range_reference("Genesis 1:1-3"),
+            Some(("Genesis".into(), 1, 1, 3))
+        );
+        assert_eq!(
+            parse_range_reference("1 John 3:16-18"),
+            Some(("1 John".into(), 3, 16, 18))
+        );
+        assert_eq!(
+            parse_range_reference("Psalm 23:1-6"),
+            Some(("Psalms".into(), 23, 1, 6))
+        );
+        // En-dash and em-dash variants
+        assert_eq!(
+            parse_range_reference("Romans 8:38\u{2013}39"),
+            Some(("Romans".into(), 8, 38, 39))
+        );
+        assert_eq!(
+            parse_range_reference("Romans 8:38\u{2014}39"),
+            Some(("Romans".into(), 8, 38, 39))
+        );
+        // Not a range — single verse
+        assert_eq!(parse_range_reference("John 3:16"), None);
+        // Not a range — free text
+        assert_eq!(parse_range_reference("love one another"), None);
+        // Invalid range (start > end)
+        assert_eq!(parse_range_reference("Romans 8:39-38"), None);
+    }
+
+    #[test]
+    fn test_search_range_returns_correct_verses() {
+        let engine = test_engine();
+        let results = engine
+            .search_range("Psalms", 23, 1, 3, Some("KJV"))
+            .unwrap();
+        assert_eq!(results.len(), 3, "should return verses 1-3 of Psalm 23");
+        assert_eq!(results[0].verse, 1);
+        assert_eq!(results[1].verse, 2);
+        assert_eq!(results[2].verse, 3);
+        assert!(results.iter().all(|r| r.book == "Psalms" && r.chapter == 23));
+        assert!(results.iter().all(|r| r.translation == "KJV"));
+    }
+
+    #[test]
+    fn test_search_range_full_chapter_subset() {
+        let engine = test_engine();
+        // Psalm 23 has 6 verses; request all of them via range
+        let results = engine
+            .search_range("Psalms", 23, 1, 6, Some("KJV"))
+            .unwrap();
+        assert_eq!(results.len(), 6);
+    }
+
+    #[test]
+    fn test_search_range_no_translation_filter() {
+        let engine = test_engine();
+        // Without translation filter, should return results from all translations
+        let results = engine.search_range("John", 3, 16, 16, None).unwrap();
+        assert!(results.len() >= 3, "should have John 3:16 from at least 3 translations");
     }
 
     #[test]

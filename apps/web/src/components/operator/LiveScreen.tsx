@@ -8,12 +8,29 @@ import {
   MicIcon,
   MicOffIcon,
   MusicIcon,
+  PaperclipIcon,
+  PlayIcon,
   PresentationIcon,
+  SearchIcon,
 } from "lucide-react";
 import { startStt, stopStt, getSttStatus } from "../../lib/commands/audio";
+import { searchScriptures, pushToDisplay } from "../../lib/commands/content";
+import { addItemToActiveProject } from "../../lib/commands/projects";
+import {
+  listRecentArtifacts,
+  readThumbnail,
+} from "../../lib/commands/artifacts";
 import { useQueue } from "../../hooks/use-queue";
 import { useTranslations } from "../../hooks/use-translations";
-import type { DetectionMode, QueueItem, TranscriptEvent, VerseResult, Song, AnnouncementItem } from "../../lib/types";
+import type {
+  ArtifactEntry,
+  DetectionMode,
+  QueueItem,
+  TranscriptEvent,
+  VerseResult,
+  Song,
+  AnnouncementItem,
+} from "../../lib/types";
 import { toastError } from "../../lib/toast";
 import { listAnnouncements, pushAnnouncementToDisplay } from "../../lib/commands/annotations";
 
@@ -106,99 +123,301 @@ function LibraryPanel() {
 
   return (
     <section className="flex flex-col w-[280px] shrink-0 bg-bg border-r border-line overflow-hidden">
+      {/* Library – top half */}
+      <div className="flex flex-col h-1/2 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
+          <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+            Library
+          </span>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex px-2 border-b border-line bg-bg-1">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              className={`px-3 py-2.5 font-mono text-[9.5px] tracking-[0.12em] uppercase mb-[-1px] border-b transition-colors ${
+                tab === t.id
+                  ? "text-ink border-accent"
+                  : "text-ink-3 border-transparent hover:text-ink-2"
+              }`}
+              onClick={() => {
+                setTab(t.id);
+                setQuery("");
+                setScriptureResults([]);
+                setSongResults([]);
+              }}
+            >
+              {t.label}
+              {t.count && (
+                <span className="ml-1.5 text-muted text-[9px]">{t.count}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="px-3 py-2.5 border-b border-line">
+          <input
+            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs focus:border-line-strong"
+            placeholder={placeholder}
+            value={query}
+            onChange={handleQueryChange}
+          />
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+          {tab === "scripture" &&
+            scriptureResults.map((v, i) => (
+              <div
+                key={`${v.translation}-${v.reference}-${i}`}
+                className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
+                onClick={() => handlePush(v.reference, v.text, v.translation)}
+              >
+                <span className="text-accent flex items-center justify-center">
+                  <BookOpenIcon className="w-3.5 h-3.5 shrink-0" />
+                </span>
+                <div>
+                  <div className="font-serif italic text-sm">{v.reference}</div>
+                  <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">
+                    {v.translation}
+                  </div>
+                </div>
+                <span className="text-ink-3 flex items-center">
+                  <CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" />
+                </span>
+              </div>
+            ))}
+
+          {tab === "lyrics" &&
+            songResults.map((s) => (
+              <div
+                key={s.id}
+                className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
+                onClick={() => handlePushSong(s)}
+              >
+                <span className="text-accent flex items-center justify-center">
+                  <MusicIcon className="w-3.5 h-3.5 shrink-0" />
+                </span>
+                <div>
+                  <div className="font-medium text-sm">{s.title}</div>
+                  {s.artist && (
+                    <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">
+                      {s.artist}
+                    </div>
+                  )}
+                </div>
+                <span className="text-ink-3 flex items-center">
+                  <CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" />
+                </span>
+              </div>
+            ))}
+
+          {tab === "slides" &&
+            slides.length > 0 &&
+            slides.map((slide) => (
+              <div
+                key={slide.id}
+                className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
+                onClick={() =>
+                  pushAnnouncementToDisplay(slide.id).catch(
+                    toastError("Failed to push slide"),
+                  )
+                }
+              >
+                <span className="text-accent flex items-center justify-center">
+                  <PresentationIcon className="w-3.5 h-3.5 shrink-0" />
+                </span>
+                <div>
+                  <div className="font-medium text-sm">{slide.title}</div>
+                  {slide.body && (
+                    <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em] line-clamp-1">
+                      {slide.body}
+                    </div>
+                  )}
+                </div>
+                <span className="text-ink-3 flex items-center">
+                  <CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" />
+                </span>
+              </div>
+            ))}
+
+          {tab === "slides" && slides.length === 0 && (
+            <div className="px-3.5 py-6 text-center text-xs text-muted">
+              No slides loaded
+            </div>
+          )}
+
+          {query.trim() &&
+            !isSearching &&
+            scriptureResults.length === 0 &&
+            songResults.length === 0 &&
+            tab !== "slides" && (
+              <div className="px-3.5 py-6 text-center text-xs text-muted">
+                No results for &ldquo;{query}&rdquo;
+              </div>
+            )}
+        </div>
+      </div>
+
+      {/* Assets – bottom half */}
+      <AssetsPanel />
+    </section>
+  );
+}
+
+function ThumbnailImage({
+  artifactId,
+  thumbnailPath,
+  className,
+}: {
+  artifactId: string;
+  thumbnailPath: string | null;
+  className?: string;
+}) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!thumbnailPath) return;
+    let revoked = false;
+    let url: string | null = null;
+    readThumbnail(artifactId)
+      .then((bytes) => {
+        if (revoked) return;
+        const blob = new Blob([new Uint8Array(bytes)], { type: "image/jpeg" });
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      })
+      .catch(() => setSrc(null));
+    return () => {
+      revoked = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [artifactId, thumbnailPath]);
+
+  if (!thumbnailPath || !src) {
+    return null;
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      className={className || "w-full h-full object-cover rounded"}
+    />
+  );
+}
+
+function AssetsPanel() {
+  const [assets, setAssets] = useState<ArtifactEntry[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [assetQuery, setAssetQuery] = useState("");
+
+  useEffect(() => {
+    listRecentArtifacts(50)
+      .then(setAssets)
+      .catch(() => {});
+  }, []);
+
+  const filtered = (
+    assetQuery.trim()
+      ? assets.filter((a) =>
+          a.name.toLowerCase().includes(assetQuery.toLowerCase()),
+        )
+      : assets
+  ).filter(
+    (a) => a.name !== "_thumbnails" && !a.path.includes("/_thumbnails/"),
+  );
+
+  const handlePushAsset = async (asset: ArtifactEntry) => {
+    try {
+      await invoke("push_custom_slide", {
+        title: asset.name,
+        body: "",
+        imageUrl: null,
+      });
+    } catch (e) {
+      toastError("Failed to push asset")(e);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-1/2 overflow-hidden border-t border-line">
       {/* Header */}
       <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
-        <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">Library</span>
+        <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+          Assets
+        </span>
+        <button
+          className="text-ink-3 hover:text-ink transition-colors"
+          onClick={() => setSearchOpen((v) => !v)}
+        >
+          <SearchIcon className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex px-2 border-b border-line bg-bg-1">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            className={`px-3 py-2.5 font-mono text-[9.5px] tracking-[0.12em] uppercase mb-[-1px] border-b transition-colors ${
-              tab === t.id
-                ? "text-ink border-accent"
-                : "text-ink-3 border-transparent hover:text-ink-2"
-            }`}
-            onClick={() => { setTab(t.id); setQuery(""); setScriptureResults([]); setSongResults([]); }}
-          >
-            {t.label}
-            {t.count && <span className="ml-1.5 text-muted text-[9px]">{t.count}</span>}
-          </button>
-        ))}
-      </div>
+      {/* Search (toggled) */}
+      {searchOpen && (
+        <div className="px-3 py-2.5 border-b border-line">
+          <input
+            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs focus:border-line-strong"
+            placeholder="Filter assets..."
+            value={assetQuery}
+            onChange={(e) => setAssetQuery(e.target.value)}
+            autoFocus
+          />
+        </div>
+      )}
 
-      {/* Search */}
-      <div className="px-3 py-2.5 border-b border-line">
-        <input
-          className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs focus:border-line-strong"
-          placeholder={placeholder}
-          value={query}
-          onChange={handleQueryChange}
-        />
-      </div>
-
-      {/* Results */}
-      <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
-        {tab === "scripture" && scriptureResults.map((v, i) => (
+      {/* Asset grid */}
+      <div className="grid grid-cols-3 gap-1 p-2 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+        {filtered.map((asset) => (
           <div
-            key={`${v.translation}-${v.reference}-${i}`}
-            className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
-            onClick={() => handlePush(v.reference, v.text, v.translation)}
+            key={asset.id}
+            className="group relative aspect-square bg-bg-2 rounded border border-line overflow-hidden"
           >
-            <span className="text-accent flex items-center justify-center"><BookOpenIcon className="w-3.5 h-3.5 shrink-0" /></span>
-            <div>
-              <div className="font-serif italic text-sm">{v.reference}</div>
-              <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">{v.translation}</div>
+            {/* Thumbnail or icon */}
+            {asset.thumbnail_path ? (
+              <ThumbnailImage
+                artifactId={asset.id}
+                thumbnailPath={asset.thumbnail_path}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-ink-3">
+                <PaperclipIcon className="w-5 h-5" />
+              </div>
+            )}
+            {/* Name at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 bg-bg/80 px-1.5 py-0.5">
+              <span className="text-[9px] text-ink truncate block">
+                {asset.name}
+              </span>
             </div>
-            <span className="text-ink-3 flex items-center"><CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" /></span>
+            {/* Hover actions */}
+            <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                type="button"
+                className="p-1 rounded bg-bg/80 text-ink-3 hover:text-accent transition-colors cursor-pointer"
+                title="Push to display"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePushAsset(asset);
+                }}
+              >
+                <PlayIcon className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         ))}
-
-        {tab === "lyrics" && songResults.map((s) => (
-          <div
-            key={s.id}
-            className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
-            onClick={() => handlePushSong(s)}
-          >
-            <span className="text-accent flex items-center justify-center"><MusicIcon className="w-3.5 h-3.5 shrink-0" /></span>
-            <div>
-              <div className="font-medium text-sm">{s.title}</div>
-              {s.artist && <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">{s.artist}</div>}
-            </div>
-            <span className="text-ink-3 flex items-center"><CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" /></span>
-          </div>
-        ))}
-
-        {tab === "slides" && slides.length > 0 && slides.map((slide) => (
-          <div
-            key={slide.id}
-            className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
-            onClick={() => pushAnnouncementToDisplay(slide.id).catch(toastError("Failed to push slide"))}
-          >
-            <span className="text-accent flex items-center justify-center"><PresentationIcon className="w-3.5 h-3.5 shrink-0" /></span>
-            <div>
-              <div className="font-medium text-sm">{slide.title}</div>
-              {slide.body && <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em] line-clamp-1">{slide.body}</div>}
-            </div>
-            <span className="text-ink-3 flex items-center"><CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" /></span>
-          </div>
-        ))}
-
-        {tab === "slides" && slides.length === 0 && (
-          <div className="px-3.5 py-6 text-center text-xs text-muted">
-            No slides loaded
-          </div>
-        )}
-
-        {query.trim() && !isSearching && scriptureResults.length === 0 && songResults.length === 0 && tab !== "slides" && (
-          <div className="px-3.5 py-6 text-center text-xs text-muted">
-            No results for &ldquo;{query}&rdquo;
+        {filtered.length === 0 && (
+          <div className="col-span-2 px-3.5 py-6 text-center text-xs text-muted">
+            {assetQuery.trim() ? "No matching assets" : "No recent assets"}
           </div>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -394,31 +613,46 @@ function QueueTranscriptPanel() {
       {/* Queue */}
       <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
         <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
-          Queue · <strong className="text-ink-2 font-medium">AI-detected</strong>
+          Queue ·{" "}
+          <strong className="text-ink-2 font-medium">AI-detected</strong>
         </span>
-        <span className="font-mono text-[10px] text-ink-3">{visible.length} items</span>
+        <span className="font-mono text-[10px] text-ink-3">
+          {visible.length} items
+        </span>
       </div>
 
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Queue items (top half) */}
-        <div className="flex-[0_0_auto] max-h-[50%] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+        {/* Queue items - equal third */}
+        <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
           {visible.map((item) => (
             <QueueItemCard
               key={item.id}
               item={item}
-              onApprove={() => approve(item.id).catch(toastError("Failed to approve"))}
-              onReject={() => skip(item.id).catch(toastError("Failed to reject"))}
+              onApprove={() =>
+                approve(item.id).catch(toastError("Failed to approve"))
+              }
+              onReject={() =>
+                skip(item.id).catch(toastError("Failed to reject"))
+              }
             />
           ))}
           {visible.length === 0 && (
-            <div className="px-3.5 py-6 text-center text-xs text-muted">No detections yet</div>
+            <div className="px-3.5 py-6 text-center text-xs text-muted">
+              No detections yet
+            </div>
           )}
         </div>
 
-        {/* Transcript */}
+        {/* Context panel - equal third */}
+        <div className="flex flex-col flex-1 min-h-0">
+          <ContextPanel live={live} />
+        </div>
+
+        {/* Transcript header */}
         <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-t border-line border-b border-line bg-bg-1">
           <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
-            Transcript · <strong className="text-ink-2 font-medium">live</strong>
+            Transcript ·{" "}
+            <strong className="text-ink-2 font-medium">live</strong>
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -429,15 +663,263 @@ function QueueTranscriptPanel() {
               }`}
               onClick={handleMicToggle}
             >
-              {micActive ? <MicIcon className="w-3 h-3 shrink-0 inline mr-1" /> : <MicOffIcon className="w-3 h-3 shrink-0 inline mr-1" />}
+              {micActive ? (
+                <MicIcon className="w-3 h-3 shrink-0 inline mr-1" />
+              ) : (
+                <MicOffIcon className="w-3 h-3 shrink-0 inline mr-1" />
+              )}
               {micActive ? "Stop" : "Start"}
             </button>
             <span className="font-mono text-[10px] text-ink-3">10s</span>
           </div>
         </div>
-        <TranscriptBody />
+
+        {/* Transcript body - equal third */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <TranscriptBody />
+        </div>
       </div>
     </section>
+  );
+}
+
+function mergeVerses(verses: VerseResult[]): {
+  reference: string;
+  text: string;
+  translation: string;
+} {
+  if (verses.length === 0) return { reference: "", text: "", translation: "" };
+  if (verses.length === 1)
+    return {
+      reference: verses[0].reference,
+      text: verses[0].text,
+      translation: verses[0].translation,
+    };
+  const first = verses[0];
+  const last = verses[verses.length - 1];
+  const firstVerse = first.reference.split(":").pop() || "";
+  const lastVerse = last.reference.split(":").pop() || "";
+  const bookChapter = first.reference.split(":")[0];
+  return {
+    reference: `${bookChapter}:${firstVerse}-${lastVerse}`,
+    text: verses.map((v) => v.text).join(" "),
+    translation: first.translation,
+  };
+}
+
+function ContextPanel({ live }: { live: QueueItem | null }) {
+  const [contextVerses, setContextVerses] = useState<VerseResult[]>([]);
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(
+    new Set(),
+  );
+  const lastClickedIndex = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!live || live.kind !== "scripture") {
+      setContextVerses([]);
+      setSelectedIndices(new Set());
+      return;
+    }
+    // Extract book + chapter from reference (e.g. "Romans 8:38-39" → "Romans 8")
+    const match = live.reference.match(/^(.+?)\s+(\d+)/);
+    if (!match) return;
+    const bookChapter = `${match[1]} ${match[2]}`;
+    searchScriptures(bookChapter)
+      .then((verses) => {
+        verses.sort((a, b) => {
+          const aNum = parseInt(a.reference.split(":").pop() || "0");
+          const bNum = parseInt(b.reference.split(":").pop() || "0");
+          return aNum - bNum;
+        });
+        setContextVerses(verses);
+        setSelectedIndices(new Set());
+      })
+      .catch(() => setContextVerses([]));
+  }, [live?.reference, live?.kind]);
+
+  const contextLabel = live?.reference ?? "none";
+
+  // Song sections
+  const songSections: string[] = [];
+  if (live?.kind === "song" && live.text) {
+    const parts = live.text
+      .split(
+        /\n\n|\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Tag)[^\]]*\]/i,
+      )
+      .filter((s) => s.trim());
+    songSections.push(...parts);
+  }
+
+  const handleVerseClick = (e: React.MouseEvent, index: number) => {
+    const v = contextVerses[index];
+    const isMeta = e.metaKey || e.ctrlKey;
+    const isShift = e.shiftKey;
+
+    if (isMeta) {
+      // Toggle individual verse in selection
+      setSelectedIndices((prev) => {
+        const next = new Set(prev);
+        if (next.has(index)) {
+          next.delete(index);
+        } else {
+          next.add(index);
+        }
+        return next;
+      });
+      lastClickedIndex.current = index;
+    } else if (isShift && lastClickedIndex.current !== null) {
+      // Range select
+      const start = Math.min(lastClickedIndex.current, index);
+      const end = Math.max(lastClickedIndex.current, index);
+      setSelectedIndices((prev) => {
+        const next = new Set(prev);
+        for (let i = start; i <= end; i++) {
+          next.add(i);
+        }
+        return next;
+      });
+    } else {
+      // Normal click → push to preview
+      addItemToActiveProject(v.reference, v.text, v.translation).catch(
+        toastError("Failed to add to preview"),
+      );
+      lastClickedIndex.current = index;
+    }
+  };
+
+  const handlePushSelected = () => {
+    const sorted = Array.from(selectedIndices).sort((a, b) => a - b);
+    const verses = sorted.map((i) => contextVerses[i]);
+    const merged = mergeVerses(verses);
+    pushToDisplay(merged.reference, merged.text, merged.translation).catch(
+      toastError("Failed to push to live"),
+    );
+    setSelectedIndices(new Set());
+  };
+
+  const handleQueueSelected = () => {
+    const sorted = Array.from(selectedIndices).sort((a, b) => a - b);
+    const verses = sorted.map((i) => contextVerses[i]);
+    const merged = mergeVerses(verses);
+    addItemToActiveProject(
+      merged.reference,
+      merged.text,
+      merged.translation,
+    ).catch(toastError("Failed to queue"));
+    setSelectedIndices(new Set());
+  };
+
+  return (
+    <>
+      {/* Context header */}
+      <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-t border-line border-b border-line bg-bg-1">
+        <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+          Context ·{" "}
+          <strong className="text-ink-2 font-medium">{contextLabel}</strong>
+        </span>
+      </div>
+
+      {/* Context content */}
+      <div className="relative flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+        {live?.kind === "scripture" &&
+          contextVerses.map((v, i) => {
+            const isActive = live.reference === v.reference;
+            const isSelected = selectedIndices.has(i);
+            return (
+              <div
+                key={`${v.reference}-${i}`}
+                className={`group flex items-center gap-2 px-3.5 py-2 transition-colors cursor-pointer hover:bg-bg-2 ${
+                  isSelected
+                    ? "bg-accent-soft border-l-2 border-l-accent"
+                    : isActive
+                      ? "bg-accent-soft"
+                      : ""
+                }`}
+                onClick={(e) => handleVerseClick(e, i)}
+              >
+                <span className="font-mono text-[9px] text-ink-3 shrink-0 w-5 text-right">
+                  {v.reference.split(":").pop()}
+                </span>
+                <span className="flex-1 text-xs text-ink-2 leading-[1.4] line-clamp-2">
+                  {v.text}
+                </span>
+                <button
+                  type="button"
+                  className="shrink-0 p-1.5 rounded text-ink-3 hover:text-accent hover:bg-accent-soft transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                  title="Push to live"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    pushToDisplay(v.reference, v.text, v.translation).catch(
+                      toastError("Failed to push"),
+                    );
+                  }}
+                >
+                  <PlayIcon className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+
+        {live?.kind === "song" &&
+          songSections.map((section, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-2 px-3.5 py-2 transition-colors hover:bg-bg-2"
+            >
+              <span className="flex-1 text-xs text-ink-2 leading-[1.5] whitespace-pre-line">
+                {section.trim()}
+              </span>
+              <button
+                className="shrink-0 p-1 rounded text-ink-3 hover:text-accent hover:bg-accent-soft transition-colors mt-0.5"
+                title="Push to live"
+                onClick={() =>
+                  pushToDisplay(live.reference, section.trim(), "").catch(
+                    toastError("Failed to push"),
+                  )
+                }
+              >
+                <PlayIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+
+        {(!live || (live.kind !== "scripture" && live.kind !== "song")) && (
+          <div className="px-3.5 py-6 text-center text-xs text-muted">
+            No content on screen
+          </div>
+        )}
+
+        {/* Multi-select action bar */}
+        {selectedIndices.size >= 2 && (
+          <div className="sticky bottom-0 flex items-center justify-between px-3.5 py-2 bg-bg-1 border-t border-line">
+            <span className="text-xs text-ink-3">
+              {selectedIndices.size} verses selected
+            </span>
+            <div className="flex gap-1.5">
+              <button
+                onClick={handlePushSelected}
+                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-accent text-[#1A0D00] bg-accent rounded-[3px] transition-colors hover:bg-accent-hover"
+              >
+                Push to live
+              </button>
+              <button
+                onClick={handleQueueSelected}
+                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-line text-ink-2 rounded-[3px] bg-bg-2 transition-colors hover:bg-bg-3 hover:text-ink"
+              >
+                Queue
+              </button>
+              <button
+                onClick={() => setSelectedIndices(new Set())}
+                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase text-ink-3 rounded-[3px] transition-colors hover:text-ink hover:bg-bg-2"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -510,52 +992,51 @@ function QueueItemCard({ item, onApprove, onReject }: {
 }
 
 function TranscriptBody() {
-  const [entries, setEntries] = useState<{ id: number; text: string; offset_ms: number }[]>([]);
+  const [sentences, setSentences] = useState<string[]>([""]);
   const [micActive, setMicActive] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const idRef = useRef(0);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [entries]);
+  }, [sentences]);
 
   useEffect(() => {
     let unlisten: UnlistenFn | null = null;
     listen<TranscriptEvent>("stt://transcript", (event) => {
       const evt = event.payload;
       setMicActive(evt.mic_active);
-      setEntries((prev) => {
-        const newEntry = { id: ++idRef.current, text: evt.text, offset_ms: evt.offset_ms };
-        const cutoff = evt.offset_ms - 10000;
-        return [...prev.filter((e) => e.offset_ms >= cutoff), newEntry];
+      setSentences((prev) => {
+        const updated = [...prev];
+        const lastIdx = updated.length - 1;
+        updated[lastIdx] = (updated[lastIdx] + " " + evt.text).trim();
+        // If the text ends with sentence-ending punctuation, start a new sentence
+        if (/[.?!]$/.test(evt.text.trim())) {
+          updated.push("");
+        }
+        return updated;
       });
     }).then((fn) => { unlisten = fn; });
     return () => { unlisten?.(); };
   }, []);
 
-  const fmt = (ms: number) => {
-    const totalSec = Math.floor(ms / 1000);
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
+  const nonEmpty = sentences.filter((s) => s.trim());
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3.5 font-serif text-[15px] leading-[1.55] text-ink-3 tracking-[-0.003em] [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
-      {entries.map((entry, i) => {
-        const isCurrent = i === entries.length - 1;
+      {nonEmpty.map((sentence, i) => {
+        const isLast =
+          i === nonEmpty.length - 1 &&
+          sentences[sentences.length - 1].trim() !== "";
         return (
-          <div key={entry.id} className={`mb-2.5 ${isCurrent ? "text-ink italic" : ""}`}>
-            <span className="font-mono text-[9px] text-muted tracking-[0.08em] uppercase mr-2">
-              {fmt(entry.offset_ms)}
-            </span>
-            {entry.text}
-          </div>
+          <p key={i} className={`mb-2.5 ${isLast ? "text-ink italic" : ""}`}>
+            {sentence}
+          </p>
         );
       })}
-      {entries.length === 0 && (
-        <div className="text-muted italic">· {micActive ? "listening" : "mic off"} ·</div>
+      {nonEmpty.length === 0 && (
+        <div className="text-muted italic">
+          {"\u00B7"} {micActive ? "listening" : "mic off"} {"\u00B7"}
+        </div>
       )}
       <div ref={bottomRef} />
     </div>

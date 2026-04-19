@@ -3559,6 +3559,7 @@ dependencies = [
  "anyhow",
  "futures-util",
  "hmac",
+ "image",
  "keyring",
  "lettre",
  "mime_guess",

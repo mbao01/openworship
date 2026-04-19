@@ -231,6 +231,7 @@ export interface ArtifactEntry {
   size_bytes: number;
   mime_type: string | null;
   starred: boolean;
+  thumbnail_path: string | null;
   created_at_ms: number;
   modified_at_ms: number;
 }

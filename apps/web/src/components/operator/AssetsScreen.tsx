@@ -9,6 +9,7 @@ import type {
   ServiceProject,
   StorageUsage,
 } from "../../lib/types";
+import { readThumbnail } from "../../lib/commands/artifacts";
 import {
   Collapsible,
   CollapsibleContent,
@@ -33,6 +34,9 @@ import {
   CheckIcon,
   XIcon,
   AlertTriangleIcon,
+  MinusIcon,
+  PlusIcon,
+  RotateCcwIcon,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -90,9 +94,10 @@ function formatStorageBytes(bytes: number): string {
 
 const iconCls = "w-3.5 h-3.5 shrink-0";
 
-function fileIcon(e: ArtifactEntry) {
+function fileIcon(e: ArtifactEntry, size: "sm" | "lg" = "sm") {
+  const cls = size === "lg" ? "w-7 h-7 shrink-0" : iconCls;
   if (e.is_dir)
-    return <span className="text-accent/80"><FolderIcon className={iconCls} /></span>;
+    return <span className="text-accent/80"><FolderIcon className={cls} /></span>;
   const cat = mimeCategory(e.mime_type);
   const colorCls =
     cat === "image" ? "text-[#7ba6d4]" :
@@ -103,13 +108,54 @@ function fileIcon(e: ArtifactEntry) {
     "text-ink-3";
   return (
     <span className={colorCls}>
-      {cat === "image" ? <ImageIcon className={iconCls} /> :
-       cat === "video" ? <VideoIcon className={iconCls} /> :
-       cat === "audio" ? <Music2Icon className={iconCls} /> :
-       cat === "document" ? <FileTextIcon className={iconCls} /> :
-       cat === "slide" ? <PresentationIcon className={iconCls} /> :
-       <FileIcon className={iconCls} />}
+      {cat === "image" ? <ImageIcon className={cls} /> :
+       cat === "video" ? <VideoIcon className={cls} /> :
+       cat === "audio" ? <Music2Icon className={cls} /> :
+       cat === "document" ? <FileTextIcon className={cls} /> :
+       cat === "slide" ? <PresentationIcon className={cls} /> :
+       <FileIcon className={cls} />}
     </span>
+  );
+}
+
+function ThumbnailImage({
+  artifactId,
+  thumbnailPath,
+  className,
+}: {
+  artifactId: string;
+  thumbnailPath: string | null;
+  className?: string;
+}) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!thumbnailPath) return;
+    let revoked = false;
+    let url: string | null = null;
+    readThumbnail(artifactId)
+      .then((bytes) => {
+        if (revoked) return;
+        const blob = new Blob([new Uint8Array(bytes)], { type: "image/jpeg" });
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      })
+      .catch(() => setSrc(null));
+    return () => {
+      revoked = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [artifactId, thumbnailPath]);
+
+  if (!thumbnailPath || !src) {
+    return null;
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      className={className || "w-full h-full object-cover rounded"}
+    />
   );
 }
 
@@ -852,6 +898,33 @@ export function AssetsScreen() {
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
   const [cloudEntries, setCloudEntries] = useState<CloudSyncInfo[]>([]);
 
+  const [zoom, setZoom] = useState(100);
+  const MIN_ZOOM = 50;
+  const MAX_ZOOM = 300;
+  const ZOOM_STEP = 25;
+
+  const zoomIn = () => setZoom((z) => Math.min(z + ZOOM_STEP, MAX_ZOOM));
+  const zoomOut = () => setZoom((z) => Math.max(z - ZOOM_STEP, MIN_ZOOM));
+  const zoomReset = () => setZoom(100);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key === "=" || e.key === "+") {
+        e.preventDefault();
+        zoomIn();
+      } else if (e.key === "-") {
+        e.preventDefault();
+        zoomOut();
+      } else if (e.key === "0") {
+        e.preventDefault();
+        zoomReset();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -1091,9 +1164,14 @@ export function AssetsScreen() {
 
   const totalSize = entries.reduce((sum, e) => sum + (e.size_bytes ?? 0), 0);
 
-  const visible = entries.filter(
-    (e) => filter === "all" || (!e.is_dir && mimeCategory(e.mime_type) === filter)
-  );
+  const visible = entries
+    .filter(
+      (e) =>
+        filter === "all" || (!e.is_dir && mimeCategory(e.mime_type) === filter),
+    )
+    .filter(
+      (e) => e.name !== "_thumbnails" && !e.path.includes("/_thumbnails/"),
+    );
 
   const metaCls = "text-muted font-mono text-[11px] whitespace-nowrap";
 
@@ -1116,468 +1194,569 @@ export function AssetsScreen() {
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-    <AssetsNav
-      projects={projects}
-      nav={nav}
-      onNav={handleNav}
-      usage={storageUsage}
-      cloudExpanded={cloudExpanded}
-      onToggleCloud={() => setCloudExpanded((v) => !v)}
-    />
-    <div
-      data-qa="artifacts-root"
-      className="flex flex-col flex-1 overflow-hidden bg-bg text-ink font-sans"
-    >
-      {/* ── Compact toolbar ────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-4 h-10 border-b border-line shrink-0 bg-bg-1">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-1 text-[12px] flex-1 min-w-0 overflow-hidden">
-          <span className="text-ink font-medium shrink-0">Assets</span>
-          {nav.kind === "service" && (
-            <>
-              <span className="text-muted mx-[2px]">/</span>
-              <button
-                className="bg-transparent border-none text-ink-3 cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-ink whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px]"
-                onClick={() => handleCrumb(-1)}
-              >
-                {nav.name}
-              </button>
-            </>
-          )}
-          {crumbs.map((c, i) => (
-            <span key={i} className="flex items-center gap-[3px] shrink-0">
-              <span className="text-muted">/</span>
-              <button
-                className="bg-transparent border-none text-ink cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-ink whitespace-nowrap"
-                onClick={() => handleCrumb(i)}
-              >
-                {c.label}
-              </button>
-            </span>
-          ))}
-        </div>
-
-        {/* Right tools */}
-        <div className="flex items-center gap-[6px] shrink-0">
-          {showSearch && (
-            <input
-              data-qa="artifacts-search"
-              className="bg-bg-2 border border-line rounded-[3px] text-ink font-sans text-[11px] px-[8px] py-[4px] w-[160px] outline-none transition-colors focus:border-accent placeholder:text-muted"
-              type="search"
-              placeholder="Search files..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              autoFocus
-              onBlur={() => { if (!query) setShowSearch(false); }}
-            />
-          )}
-          <button
-            className="bg-transparent border-none text-ink-3 cursor-pointer transition-colors hover:text-ink p-1 rounded"
-            onClick={() => setShowSearch((v) => !v)}
-            title="Search"
-          >
-            <SearchIcon className={iconCls} />
-          </button>
-          <button
-            className={[
-              "flex items-center gap-[5px] font-sans text-[11px] px-[10px] py-[5px] rounded-[3px] border cursor-pointer transition-colors",
-              syncing
-                ? "text-accent border-accent/40 bg-accent-soft"
-                : "text-ink-3 border-line hover:text-ink hover:border-line-strong",
-            ].join(" ")}
-            onClick={handleSyncAll}
-            disabled={syncing}
-            title="Sync all files to cloud"
-          >
-            <span className={syncing ? "animate-spin" : ""}><RefreshCwIcon className={iconCls} /></span>
-            Sync
-          </button>
-          <div className="flex gap-[3px]">
-            <button
-              data-qa="artifacts-view-list"
-              className={viewBtnCls(viewMode === "list")}
-              onClick={() => setViewMode("list")}
-              title="List view"
-            >
-              <ListIcon className={iconCls} />
-            </button>
-            <button
-              data-qa="artifacts-view-grid"
-              className={viewBtnCls(viewMode === "grid")}
-              onClick={() => setViewMode("grid")}
-              title="Grid view"
-            >
-              <LayoutGridIcon className={iconCls} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Body ───────────────────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 flex flex-col overflow-hidden bg-bg min-w-0">
-          {/* Section header */}
-          <div className="flex items-center justify-between px-5 py-[10px] border-b border-line shrink-0">
-            <div className="flex flex-col min-w-0">
-              <h1 className="font-serif text-xl text-ink m-0 leading-[1.3] overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
-                {sectionTitle}
-              </h1>
-              {entries.length > 0 && (
-                <span className="text-[11px] text-muted font-mono mt-[1px]">
-                  {entries.length} asset{entries.length !== 1 ? "s" : ""}
-                  {totalSize > 0 ? ` · ${formatStorageBytes(totalSize)}` : ""}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-[6px] shrink-0">
-              <div className="relative">
-                <div className="flex rounded-[3px] overflow-hidden border border-accent/30">
-                  <button
-                    className="flex items-center gap-[5px] bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-[10px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1] border-r border-accent/50"
-                    onClick={() => setNewFolder(true)}
-                  >
-                    + New
-                  </button>
-                  <button
-                    className="bg-accent/90 text-[#1A0D00] px-[6px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1]"
-                    onClick={() => setShowNewMenu((v) => !v)}
-                    title="More options"
-                  >
-                    <ChevronDownIcon className="w-3 h-3 shrink-0" />
-                  </button>
-                </div>
-                {showNewMenu && (
-                  <NewMenu
-                    onNewFolder={() => setNewFolder(true)}
-                    onClose={() => setShowNewMenu(false)}
-                  />
-                )}
-              </div>
-              <button
-                className="flex items-center gap-[5px] bg-transparent border border-line text-ink-3 font-sans text-[11px] px-[10px] py-[5px] rounded-[3px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
-                onClick={handleUpload}
-                title="Upload files"
-              >
-                <UploadIcon className={iconCls} />
-                Upload
-              </button>
-              <input
-                ref={uploadInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFileInput}
-              />
-            </div>
-          </div>
-
-          {/* Filter pills */}
-          <div className="flex gap-[5px] px-5 py-[8px] border-b border-line shrink-0 overflow-x-auto scrollbar-none">
-            {FILTERS.map((f) => (
-              <button
-                key={f.value}
-                data-qa={`artifacts-filter-${f.value}`}
-                className={[
-                  "font-sans text-[10px] font-medium tracking-[0.04em] uppercase rounded-full py-[3px] px-[10px] cursor-pointer transition-colors whitespace-nowrap shrink-0",
-                  filter === f.value
-                    ? "bg-accent text-[#1A0D00] border border-accent"
-                    : "bg-bg-2 text-ink-3 border border-line hover:text-ink hover:border-line-strong",
-                ].join(" ")}
-                onClick={() => setFilter(f.value)}
-              >
-                {f.label}
-              </button>
+      <AssetsNav
+        projects={projects}
+        nav={nav}
+        onNav={handleNav}
+        usage={storageUsage}
+        cloudExpanded={cloudExpanded}
+        onToggleCloud={() => setCloudExpanded((v) => !v)}
+      />
+      <div
+        data-qa="artifacts-root"
+        className="flex flex-col flex-1 overflow-hidden bg-bg text-ink font-sans"
+      >
+        {/* ── Compact toolbar ────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2 px-4 h-10 border-b border-line shrink-0 bg-bg-1">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-1 text-[12px] flex-1 min-w-0 overflow-hidden">
+            <span className="text-ink font-medium shrink-0">Assets</span>
+            {nav.kind === "service" && (
+              <>
+                <span className="text-muted mx-[2px]">/</span>
+                <button
+                  className="bg-transparent border-none text-ink-3 cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-ink whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px]"
+                  onClick={() => handleCrumb(-1)}
+                >
+                  {nav.name}
+                </button>
+              </>
+            )}
+            {crumbs.map((c, i) => (
+              <span key={i} className="flex items-center gap-[3px] shrink-0">
+                <span className="text-muted">/</span>
+                <button
+                  className="bg-transparent border-none text-ink cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-ink whitespace-nowrap"
+                  onClick={() => handleCrumb(i)}
+                >
+                  {c.label}
+                </button>
+              </span>
             ))}
           </div>
 
-          {error && (
-            <p className="text-[11px] text-danger px-5 py-[6px] m-0 border-b border-danger/20 shrink-0">
-              {error}
-            </p>
-          )}
+          {/* Right tools */}
+          <div className="flex items-center gap-[6px] shrink-0">
+            {showSearch && (
+              <input
+                data-qa="artifacts-search"
+                className="bg-bg-2 border border-line rounded-[3px] text-ink font-sans text-[11px] px-[8px] py-[4px] w-[160px] outline-none transition-colors focus:border-accent placeholder:text-muted"
+                type="search"
+                placeholder="Search files..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                autoFocus
+                onBlur={() => {
+                  if (!query) setShowSearch(false);
+                }}
+              />
+            )}
+            <button
+              className="bg-transparent border-none text-ink-3 cursor-pointer transition-colors hover:text-ink p-1 rounded"
+              onClick={() => setShowSearch((v) => !v)}
+              title="Search"
+            >
+              <SearchIcon className={iconCls} />
+            </button>
+            <button
+              className={[
+                "flex items-center gap-[5px] font-sans text-[11px] px-[10px] py-[5px] rounded-[3px] border cursor-pointer transition-colors",
+                syncing
+                  ? "text-accent border-accent/40 bg-accent-soft"
+                  : "text-ink-3 border-line hover:text-ink hover:border-line-strong",
+              ].join(" ")}
+              onClick={handleSyncAll}
+              disabled={syncing}
+              title="Sync all files to cloud"
+            >
+              <span className={syncing ? "animate-spin" : ""}>
+                <RefreshCwIcon className={iconCls} />
+              </span>
+              Sync
+            </button>
+            <div className="flex gap-[3px]">
+              <button
+                data-qa="artifacts-view-list"
+                className={viewBtnCls(viewMode === "list")}
+                onClick={() => setViewMode("list")}
+                title="List view"
+              >
+                <ListIcon className={iconCls} />
+              </button>
+              <button
+                data-qa="artifacts-view-grid"
+                className={viewBtnCls(viewMode === "grid")}
+                onClick={() => setViewMode("grid")}
+                title="Grid view"
+              >
+                <LayoutGridIcon className={iconCls} />
+              </button>
+            </div>
+          </div>
+        </div>
 
-          {/* Content + Preview */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* File list / grid */}
-            <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-              {/* Cloud panels */}
-              {(nav.kind === "cloud_branch" || nav.kind === "cloud_shared") && (
-                <div className="flex-1 overflow-y-auto py-2">
-                  {cloudEntries.length === 0 ? (
-                    <p className="text-center text-muted text-xs py-12">
-                      No synced files in this section.
-                    </p>
-                  ) : (
-                    cloudEntries.map((info) => (
-                      <div
-                        key={info.artifact_id}
-                        className="flex items-center gap-[10px] px-5 py-[8px] border-b border-line text-[12px] hover:bg-bg-2 transition-colors"
-                      >
-                        <SyncCell info={info} />
-                        <span
-                          className="flex-1 text-ink overflow-hidden text-ellipsis whitespace-nowrap"
-                          title={info.cloud_key ?? ""}
-                        >
-                          {info.cloud_key?.split("/").pop() ?? info.artifact_id}
-                        </span>
-                        <span className="text-[11px] text-ink-3 font-mono shrink-0">
-                          {info.last_synced_ms
-                            ? `Synced ${formatDate(info.last_synced_ms)}`
-                            : "Not yet synced"}
-                        </span>
-                        {info.sync_error && (
-                          <span
-                            className="flex items-center gap-1 text-[11px] text-danger shrink-0"
-                            title={info.sync_error}
-                          >
-                            <AlertTriangleIcon className={iconCls} /> {info.sync_error.slice(0, 40)}
-                          </span>
-                        )}
-                      </div>
-                    ))
+        {/* ── Body ───────────────────────────────────────────────────────────── */}
+        <div className="flex flex-1 overflow-hidden">
+          <main className="flex-1 flex flex-col overflow-hidden bg-bg min-w-0">
+            {/* Section header */}
+            <div className="flex items-center justify-between px-5 py-[10px] border-b border-line shrink-0">
+              <div className="flex flex-col min-w-0">
+                <h1 className="font-serif text-xl text-ink m-0 leading-[1.3] overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
+                  {sectionTitle}
+                </h1>
+                {entries.length > 0 && (
+                  <span className="text-[11px] text-muted font-mono mt-[1px]">
+                    {entries.length} asset{entries.length !== 1 ? "s" : ""}
+                    {totalSize > 0 ? ` · ${formatStorageBytes(totalSize)}` : ""}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-[6px] shrink-0">
+                <div className="relative">
+                  <div className="flex rounded-[3px] overflow-hidden border border-accent/30">
+                    <button
+                      className="flex items-center gap-[5px] bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-[10px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1] border-r border-accent/50"
+                      onClick={() => setNewFolder(true)}
+                    >
+                      + New
+                    </button>
+                    <button
+                      className="bg-accent/90 text-[#1A0D00] px-[6px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1]"
+                      onClick={() => setShowNewMenu((v) => !v)}
+                      title="More options"
+                    >
+                      <ChevronDownIcon className="w-3 h-3 shrink-0" />
+                    </button>
+                  </div>
+                  {showNewMenu && (
+                    <NewMenu
+                      onNewFolder={() => setNewFolder(true)}
+                      onClose={() => setShowNewMenu(false)}
+                    />
                   )}
                 </div>
-              )}
+                <button
+                  className="flex items-center gap-[5px] bg-transparent border border-line text-ink-3 font-sans text-[11px] px-[10px] py-[5px] rounded-[3px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+                  onClick={handleUpload}
+                  title="Upload files"
+                >
+                  <UploadIcon className={iconCls} />
+                  Upload
+                </button>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileInput}
+                />
+              </div>
+            </div>
 
-              {/* List view */}
-              {nav.kind !== "cloud_branch" && nav.kind !== "cloud_shared" && viewMode === "list" && (
-                <div className="flex-1 overflow-y-auto">
-                  <table className="w-full border-collapse text-xs">
-                    <thead>
-                      <tr>
-                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-5 py-[7px] border-b border-line sticky top-0 bg-bg-1 w-full">
-                          Name
-                        </th>
-                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
-                          Type
-                        </th>
-                        <th className="text-right font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
-                          Size
-                        </th>
-                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
-                          Modified
-                        </th>
-                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
-                          Sync
-                        </th>
-                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
-                          Shared
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visible.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={6}
-                            className="text-center text-muted text-xs py-16"
-                          >
-                            {query ? "No results." : "No files here yet."}
-                          </td>
-                        </tr>
-                      ) : (
-                        visible.map((e) => {
-                          const sync = syncInfoMap.get(e.id);
-                          const isSelected = selected?.id === e.id;
-                          return (
-                            <tr
-                              key={e.id}
-                              data-qa="artifacts-row"
-                              className={[
-                                "cursor-default border-b border-line/40 transition-colors",
-                                isSelected
-                                  ? "bg-accent-soft"
-                                  : "hover:bg-bg-2",
-                              ].join(" ")}
-                              onClick={() => setSelected(isSelected ? null : e)}
-                              onContextMenu={(ev) => handleCtx(ev, e)}
-                              onDoubleClick={() => handleNavigate(e)}
-                            >
-                              <td className="px-5 py-[7px] align-middle">
-                                <div className="flex items-center gap-[8px] min-w-0">
-                                  <span className="shrink-0">{fileIcon(e)}</span>
-                                  <span className="text-ink text-[13px] overflow-hidden text-ellipsis whitespace-nowrap">
-                                    {e.name}
-                                  </span>
-                                  {e.starred && (
-                                    <span className="text-accent shrink-0"><StarIcon className="w-3 h-3" /></span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className={`px-4 py-[7px] align-middle ${metaCls}`}>
-                                {e.is_dir
-                                  ? "Folder"
-                                  : (e.mime_type?.split("/")[1]?.toUpperCase() ?? "File")}
-                              </td>
-                              <td className={`px-4 py-[7px] align-middle ${metaCls} text-right`}>
-                                {e.is_dir ? "—" : formatBytes(e.size_bytes)}
-                              </td>
-                              <td className={`px-4 py-[7px] align-middle ${metaCls}`}>
-                                {formatDate(e.modified_at_ms)}
-                              </td>
-                              <td className="px-4 py-[7px] align-middle w-[80px]">
-                                <SyncCell info={sync} />
-                              </td>
-                              <td className="px-4 py-[7px] align-middle w-[80px]">
-                                <SharedCell info={sync} />
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+            {/* Filter pills */}
+            <div className="flex gap-[5px] px-5 py-[8px] border-b border-line shrink-0 overflow-x-auto scrollbar-none">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  data-qa={`artifacts-filter-${f.value}`}
+                  className={[
+                    "font-sans text-[10px] font-medium tracking-[0.04em] uppercase rounded-full py-[3px] px-[10px] cursor-pointer transition-colors whitespace-nowrap shrink-0",
+                    filter === f.value
+                      ? "bg-accent text-[#1A0D00] border border-accent"
+                      : "bg-bg-2 text-ink-3 border border-line hover:text-ink hover:border-line-strong",
+                  ].join(" ")}
+                  onClick={() => setFilter(f.value)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
 
-              {/* Grid view */}
-              {nav.kind !== "cloud_branch" && nav.kind !== "cloud_shared" && viewMode === "grid" && (
-                <div className="flex-1 flex flex-wrap content-start gap-3 p-5 overflow-y-auto">
-                  {visible.length === 0 ? (
-                    <p className="w-full text-center text-muted text-xs py-16">
-                      {query ? "No results." : "No files here yet."}
-                    </p>
-                  ) : (
-                    visible.map((e) => {
-                      const sync = syncInfoMap.get(e.id);
-                      const isSelected = selected?.id === e.id;
-                      return (
+            {error && (
+              <p className="text-[11px] text-danger px-5 py-[6px] m-0 border-b border-danger/20 shrink-0">
+                {error}
+              </p>
+            )}
+
+            {/* Content + Preview */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* File list / grid */}
+              <div className="relative flex-1 flex flex-col overflow-hidden min-w-0">
+                {/* Cloud panels */}
+                {(nav.kind === "cloud_branch" ||
+                  nav.kind === "cloud_shared") && (
+                  <div className="flex-1 overflow-y-auto py-2">
+                    {cloudEntries.length === 0 ? (
+                      <p className="text-center text-muted text-xs py-12">
+                        No synced files in this section.
+                      </p>
+                    ) : (
+                      cloudEntries.map((info) => (
                         <div
-                          key={e.id}
-                          data-qa="artifacts-tile"
-                          className={[
-                            "relative w-[88px] flex flex-col items-center gap-[6px] px-2 py-3 rounded-[4px] border cursor-default transition-colors",
-                            isSelected
-                              ? "border-accent/40 bg-accent-soft"
-                              : "border-transparent hover:bg-bg-2 hover:border-line",
-                          ].join(" ")}
-                          onClick={() => setSelected(isSelected ? null : e)}
-                          onContextMenu={(ev) => handleCtx(ev, e)}
-                          onDoubleClick={() => handleNavigate(e)}
+                          key={info.artifact_id}
+                          className="flex items-center gap-[10px] px-5 py-[8px] border-b border-line text-[12px] hover:bg-bg-2 transition-colors"
                         >
-                          <div className="text-[28px] leading-none flex items-center justify-center h-8">
-                            {fileIcon(e)}
-                          </div>
+                          <SyncCell info={info} />
                           <span
-                            className="text-[11px] text-ink text-center max-w-[72px] overflow-hidden text-ellipsis whitespace-nowrap w-full"
-                            title={e.name}
+                            className="flex-1 text-ink overflow-hidden text-ellipsis whitespace-nowrap"
+                            title={info.cloud_key ?? ""}
                           >
-                            {e.name}
+                            {info.cloud_key?.split("/").pop() ??
+                              info.artifact_id}
                           </span>
-                          {e.starred && (
-                            <span className="absolute top-[5px] right-[6px] text-accent"><StarIcon className="w-2.5 h-2.5" /></span>
-                          )}
-                          {sync?.sync_enabled && (
-                            <span className="absolute top-[5px] left-[6px]">
-                              <SyncCell info={sync} />
+                          <span className="text-[11px] text-ink-3 font-mono shrink-0">
+                            {info.last_synced_ms
+                              ? `Synced ${formatDate(info.last_synced_ms)}`
+                              : "Not yet synced"}
+                          </span>
+                          {info.sync_error && (
+                            <span
+                              className="flex items-center gap-1 text-[11px] text-danger shrink-0"
+                              title={info.sync_error}
+                            >
+                              <AlertTriangleIcon className={iconCls} />{" "}
+                              {info.sync_error.slice(0, 40)}
                             </span>
                           )}
                         </div>
-                      );
-                    })
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* List view */}
+                {nav.kind !== "cloud_branch" &&
+                  nav.kind !== "cloud_shared" &&
+                  viewMode === "list" && (
+                    <div className="flex-1 overflow-y-auto">
+                      <div
+                        style={{
+                          transform: `scale(${zoom / 100})`,
+                          transformOrigin: "top left",
+                          width: `${10000 / zoom}%`,
+                        }}
+                      >
+                        <table className="w-full border-collapse text-xs">
+                          <thead>
+                            <tr>
+                              <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-5 py-[7px] border-b border-line sticky top-0 bg-bg-1 w-full">
+                                Name
+                              </th>
+                              <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                                Type
+                              </th>
+                              <th className="text-right font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                                Size
+                              </th>
+                              <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                                Modified
+                              </th>
+                              <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                                Sync
+                              </th>
+                              <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                                Shared
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {visible.length === 0 ? (
+                              <tr>
+                                <td
+                                  colSpan={6}
+                                  className="text-center text-muted text-xs py-16"
+                                >
+                                  {query ? "No results." : "No files here yet."}
+                                </td>
+                              </tr>
+                            ) : (
+                              visible.map((e) => {
+                                const sync = syncInfoMap.get(e.id);
+                                const isSelected = selected?.id === e.id;
+                                return (
+                                  <tr
+                                    key={e.id}
+                                    data-qa="artifacts-row"
+                                    className={[
+                                      "cursor-default border-b border-line/40 transition-colors",
+                                      isSelected
+                                        ? "bg-accent-soft"
+                                        : "hover:bg-bg-2",
+                                    ].join(" ")}
+                                    onClick={() =>
+                                      setSelected(isSelected ? null : e)
+                                    }
+                                    onContextMenu={(ev) => handleCtx(ev, e)}
+                                    onDoubleClick={() => handleNavigate(e)}
+                                  >
+                                    <td className="px-5 py-[7px] align-middle">
+                                      <div className="flex items-center gap-[8px] min-w-0">
+                                        <span className="shrink-0">
+                                          {fileIcon(e)}
+                                        </span>
+                                        <span className="text-ink text-[13px] overflow-hidden text-ellipsis whitespace-nowrap">
+                                          {e.name}
+                                        </span>
+                                        {e.starred && (
+                                          <span className="text-accent shrink-0">
+                                            <StarIcon className="w-3 h-3" />
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td
+                                      className={`px-4 py-[7px] align-middle ${metaCls}`}
+                                    >
+                                      {e.is_dir
+                                        ? "Folder"
+                                        : (e.mime_type
+                                            ?.split("/")[1]
+                                            ?.toUpperCase() ?? "File")}
+                                    </td>
+                                    <td
+                                      className={`px-4 py-[7px] align-middle ${metaCls} text-right`}
+                                    >
+                                      {e.is_dir
+                                        ? "—"
+                                        : formatBytes(e.size_bytes)}
+                                    </td>
+                                    <td
+                                      className={`px-4 py-[7px] align-middle ${metaCls}`}
+                                    >
+                                      {formatDate(e.modified_at_ms)}
+                                    </td>
+                                    <td className="px-4 py-[7px] align-middle w-[80px]">
+                                      <SyncCell info={sync} />
+                                    </td>
+                                    <td className="px-4 py-[7px] align-middle w-[80px]">
+                                      <SharedCell info={sync} />
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   )}
+
+                {/* Grid view */}
+                {nav.kind !== "cloud_branch" &&
+                  nav.kind !== "cloud_shared" &&
+                  viewMode === "grid" && (
+                    <div className="flex-1 overflow-y-auto">
+                      <div
+                        style={{
+                          transform: `scale(${zoom / 100})`,
+                          transformOrigin: "top left",
+                          width: `${10000 / zoom}%`,
+                        }}
+                        className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-4 p-4"
+                      >
+                        {visible.length === 0 ? (
+                          <p className="w-full text-center text-muted text-xs py-16">
+                            {query ? "No results." : "No files here yet."}
+                          </p>
+                        ) : (
+                          visible.map((e) => {
+                            const sync = syncInfoMap.get(e.id);
+                            const isSelected = selected?.id === e.id;
+                            return (
+                              <div
+                                key={e.id}
+                                data-qa="artifacts-tile"
+                                className={[
+                                  "group relative aspect-square bg-bg-2 rounded border overflow-hidden cursor-default transition-colors",
+                                  isSelected
+                                    ? "border-accent/40 ring-1 ring-accent/20"
+                                    : "border-line hover:border-line-strong",
+                                ].join(" ")}
+                                onClick={() =>
+                                  setSelected(isSelected ? null : e)
+                                }
+                                onContextMenu={(ev) => handleCtx(ev, e)}
+                                onDoubleClick={() => handleNavigate(e)}
+                              >
+                                {/* Thumbnail or icon */}
+                                {e.thumbnail_path ? (
+                                  <ThumbnailImage
+                                    artifactId={e.id}
+                                    thumbnailPath={e.thumbnail_path}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-ink-3">
+                                    {fileIcon(e, "lg")}
+                                  </div>
+                                )}
+                                {/* Name overlay */}
+                                <div className="absolute bottom-0 left-0 right-0 bg-bg/80 px-1.5 py-0.5">
+                                  <span
+                                    className="text-[9px] text-ink truncate block"
+                                    title={e.name}
+                                  >
+                                    {e.name}
+                                  </span>
+                                </div>
+                                {/* Badges */}
+                                {e.starred && (
+                                  <span className="absolute top-1 right-1 text-accent">
+                                    <StarIcon className="w-2.5 h-2.5" />
+                                  </span>
+                                )}
+                                {sync?.sync_enabled && (
+                                  <span className="absolute top-1 left-1">
+                                    <SyncCell info={sync} />
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Zoom control bar */}
+                <div className="absolute bottom-2 right-2 flex items-center gap-2 px-2.5 py-1.5 bg-bg-1 border border-line-strong rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.3)] z-10">
+                  <button
+                    onClick={zoomOut}
+                    disabled={zoom <= MIN_ZOOM}
+                    className="p-0.5 text-ink-3 hover:text-ink disabled:opacity-30 cursor-pointer"
+                  >
+                    <MinusIcon className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="range"
+                    min={MIN_ZOOM}
+                    max={MAX_ZOOM}
+                    step={ZOOM_STEP}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className="w-20 accent-accent"
+                  />
+                  <button
+                    onClick={zoomIn}
+                    disabled={zoom >= MAX_ZOOM}
+                    className="p-0.5 text-ink-3 hover:text-ink disabled:opacity-30 cursor-pointer"
+                  >
+                    <PlusIcon className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="font-mono text-[10px] text-ink-3 w-8 text-center">
+                    {zoom}%
+                  </span>
+                  <button
+                    onClick={zoomReset}
+                    className="p-0.5 text-ink-3 hover:text-ink cursor-pointer"
+                    title="Reset zoom"
+                  >
+                    <RotateCcwIcon className="w-3 h-3" />
+                  </button>
                 </div>
-              )}
-
+              </div>
             </div>
-
-          </div>
-        </main>
-      </div>
-
-      {/* Floating preview panel — outside the flex layout */}
-      {selected && (
-        <PreviewPanel
-          entry={selected}
-          syncInfo={syncInfoMap.get(selected.id)}
-          onClose={() => setSelected(null)}
-          onShare={handleShare}
-        />
-      )}
-
-      {/* ── Full-width footer ───────────────────────────────────────────────── */}
-      <footer className="flex items-center justify-between px-4 h-[26px] border-t border-line bg-bg-1 shrink-0 gap-4">
-        {/* Left: path */}
-        <span className="flex items-center gap-[6px] font-mono text-[10px] text-muted min-w-0 overflow-hidden">
-          <span className="w-[5px] h-[5px] rounded-full bg-muted/60 shrink-0" />
-          {settings ? (
-            <span className="overflow-hidden text-ellipsis whitespace-nowrap" title={settings.base_path}>
-              {settings.base_path}
-              {nav.kind === "service" ? `/${nav.name}` : ""}
-              {crumbs.map((c) => `/${c.label}`).join("")}
-            </span>
-          ) : (
-            <span className="text-muted/50">
-              {nav.kind === "cloud_branch" || nav.kind === "cloud_shared"
-                ? `${cloudEntries.length} synced item${cloudEntries.length !== 1 ? "s" : ""}`
-                : `${visible.length} item${visible.length !== 1 ? "s" : ""}`}
-            </span>
-          )}
-        </span>
-
-        {/* Right: sync status + branch */}
-        <div className="flex items-center gap-3 shrink-0">
-          {lastSyncLabel && (
-            <span className="flex items-center gap-[4px] text-[10px] text-muted font-mono">
-              <RefreshCwIcon className="w-2.5 h-2.5 shrink-0" />
-              {lastSyncLabel}
-            </span>
-          )}
-          <span className="flex items-center gap-[5px] text-[10px] text-muted font-mono">
-            <span className="w-[5px] h-[5px] rounded-full bg-accent/60 shrink-0" />
-            Downtown Branch
-          </span>
+          </main>
         </div>
-      </footer>
 
-      {/* Overlays */}
-      {ctxMenu && (
-        <ContextMenu
-          menu={ctxMenu}
-          syncInfo={syncInfoMap.get(ctxMenu.entry.id) ?? null}
-          onOpen={handleOpen}
-          onShare={handleShare}
-          onMoveTo={handleMoveTo}
-          onStar={handleStar}
-          onRename={(e) => setRenaming(e)}
-          onDelete={handleDelete}
-          onSyncNow={handleSyncNow}
-          onClose={() => setCtxMenu(null)}
-        />
-      )}
-      {renaming && (
-        <RenameModal
-          entry={renaming}
-          onConfirm={handleRename}
-          onCancel={() => setRenaming(null)}
-        />
-      )}
-      {newFolder && (
-        <NewFolderModal
-          onConfirm={handleNewFolder}
-          onCancel={() => setNewFolder(false)}
-        />
-      )}
-      {sharing && (
-        <ShareDialog
-          artifact={sharing}
-          syncInfo={syncInfoMap.get(sharing.id) ?? null}
-          onClose={() => setSharing(null)}
-          onSyncToggled={() => {
-            loadEntries();
-            invoke<StorageUsage>("get_storage_usage").then(setStorageUsage).catch(() => {});
-          }}
-        />
-      )}
-      {movingEntry && (
-        <MoveFolderModal
-          entry={movingEntry}
-          onConfirm={handleMoveConfirm}
-          onCancel={() => setMovingEntry(null)}
-        />
-      )}
-    </div>
+        {/* Floating preview panel — outside the flex layout */}
+        {selected && (
+          <PreviewPanel
+            entry={selected}
+            syncInfo={syncInfoMap.get(selected.id)}
+            onClose={() => setSelected(null)}
+            onShare={handleShare}
+          />
+        )}
+
+        {/* ── Full-width footer ───────────────────────────────────────────────── */}
+        <footer className="flex items-center justify-between px-4 h-[26px] border-t border-line bg-bg-1 shrink-0 gap-4">
+          {/* Left: path */}
+          <span className="flex items-center gap-[6px] font-mono text-[10px] text-muted min-w-0 overflow-hidden">
+            <span className="w-[5px] h-[5px] rounded-full bg-muted/60 shrink-0" />
+            {settings ? (
+              <span
+                className="overflow-hidden text-ellipsis whitespace-nowrap"
+                title={settings.base_path}
+              >
+                {settings.base_path}
+                {nav.kind === "service" ? `/${nav.name}` : ""}
+                {crumbs.map((c) => `/${c.label}`).join("")}
+              </span>
+            ) : (
+              <span className="text-muted/50">
+                {nav.kind === "cloud_branch" || nav.kind === "cloud_shared"
+                  ? `${cloudEntries.length} synced item${cloudEntries.length !== 1 ? "s" : ""}`
+                  : `${visible.length} item${visible.length !== 1 ? "s" : ""}`}
+              </span>
+            )}
+          </span>
+
+          {/* Right: sync status + branch */}
+          <div className="flex items-center gap-3 shrink-0">
+            {lastSyncLabel && (
+              <span className="flex items-center gap-[4px] text-[10px] text-muted font-mono">
+                <RefreshCwIcon className="w-2.5 h-2.5 shrink-0" />
+                {lastSyncLabel}
+              </span>
+            )}
+            <span className="flex items-center gap-[5px] text-[10px] text-muted font-mono">
+              <span className="w-[5px] h-[5px] rounded-full bg-accent/60 shrink-0" />
+              Downtown Branch
+            </span>
+          </div>
+        </footer>
+
+        {/* Overlays */}
+        {ctxMenu && (
+          <ContextMenu
+            menu={ctxMenu}
+            syncInfo={syncInfoMap.get(ctxMenu.entry.id) ?? null}
+            onOpen={handleOpen}
+            onShare={handleShare}
+            onMoveTo={handleMoveTo}
+            onStar={handleStar}
+            onRename={(e) => setRenaming(e)}
+            onDelete={handleDelete}
+            onSyncNow={handleSyncNow}
+            onClose={() => setCtxMenu(null)}
+          />
+        )}
+        {renaming && (
+          <RenameModal
+            entry={renaming}
+            onConfirm={handleRename}
+            onCancel={() => setRenaming(null)}
+          />
+        )}
+        {newFolder && (
+          <NewFolderModal
+            onConfirm={handleNewFolder}
+            onCancel={() => setNewFolder(false)}
+          />
+        )}
+        {sharing && (
+          <ShareDialog
+            artifact={sharing}
+            syncInfo={syncInfoMap.get(sharing.id) ?? null}
+            onClose={() => setSharing(null)}
+            onSyncToggled={() => {
+              loadEntries();
+              invoke<StorageUsage>("get_storage_usage")
+                .then(setStorageUsage)
+                .catch(() => {});
+            }}
+          />
+        )}
+        {movingEntry && (
+          <MoveFolderModal
+            entry={movingEntry}
+            onConfirm={handleMoveConfirm}
+            onCancel={() => setMovingEntry(null)}
+          />
+        )}
+      </div>
     </div>
   );
 }

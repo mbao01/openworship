@@ -11,6 +11,19 @@ use tokio::sync::broadcast;
 /// Number of consecutive empty-text chunks before emitting a warning event.
 const EMPTY_CHUNK_WARN_THRESHOLD: u32 = 5;
 
+/// Compute the new words in `current` that weren't in `prev`.
+/// Uses a simple longest-common-prefix diff on whitespace-split words.
+fn diff_new_words(prev: &str, current: &str) -> String {
+    let prev_words: Vec<&str> = prev.split_whitespace().collect();
+    let curr_words: Vec<&str> = current.split_whitespace().collect();
+    let common = prev_words
+        .iter()
+        .zip(curr_words.iter())
+        .take_while(|(a, b)| a == b)
+        .count();
+    curr_words[common..].join(" ")
+}
+
 /// Whether the STT engine is currently active.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -84,28 +97,53 @@ impl SttEngine {
         let start = Instant::now();
         let chunk_ms = config.chunk_ms;
 
-        // Single keeper+worker thread: keeps the cpal Stream alive AND drives
-        // transcription. Since we use unsafe impl Send for AudioCapturer this
-        // is safe — we move it into exactly one thread and never share it.
+        // Sliding-window transcription thread: accumulates 200ms micro-chunks
+        // into a 1.5s ring buffer, transcribes after each new chunk, and diffs
+        // the output to emit only new words. This gives ~200ms perceived latency
+        // while still feeding Whisper enough audio (≥1.01s).
+        let sample_rate = config.sample_rate;
         thread::spawn(move || {
             let capturer = capturer;
+            // 1.5s sliding window — enough for Whisper to produce segments
+            let window_samples = (sample_rate as usize * 1500) / 1000; // 24,000
+            let min_samples: usize = 16_160; // Whisper minimum
+            let mut ring: Vec<f32> = Vec::with_capacity(window_samples);
+            let mut prev_text = String::new();
             let mut consecutive_empty: u32 = 0;
+
             loop {
                 if !running_worker.load(Ordering::Acquire) {
                     break;
                 }
-                match capturer.rx.recv_timeout(std::time::Duration::from_millis(chunk_ms as u64 * 2)) {
+                match capturer.rx.recv_timeout(std::time::Duration::from_millis(500)) {
                     Ok(samples) => {
+                        // Append new micro-chunk to ring buffer
+                        ring.extend_from_slice(&samples);
+                        // Trim to last 1.5s
+                        if ring.len() > window_samples {
+                            let excess = ring.len() - window_samples;
+                            ring.drain(..excess);
+                        }
+                        // Wait until we have enough audio for Whisper
+                        if ring.len() < min_samples {
+                            continue;
+                        }
+
                         let offset_ms = start.elapsed().as_millis() as u64;
-                        match transcriber.transcribe(&samples) {
+                        match transcriber.transcribe(&ring) {
                             Ok(text) if !text.is_empty() => {
-                                consecutive_empty = 0;
-                                let _ = tx.send(TranscriptEvent {
-                                    text,
-                                    offset_ms,
-                                    duration_ms: chunk_ms,
-                                    mic_active: true,
-                                });
+                                // Diff: emit only new words
+                                let new_text = diff_new_words(&prev_text, &text);
+                                if !new_text.is_empty() {
+                                    consecutive_empty = 0;
+                                    let _ = tx.send(TranscriptEvent {
+                                        text: new_text,
+                                        offset_ms,
+                                        duration_ms: chunk_ms,
+                                        mic_active: true,
+                                    });
+                                }
+                                prev_text = text;
                             }
                             Ok(_) => {
                                 consecutive_empty += 1;
