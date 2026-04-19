@@ -7,7 +7,29 @@
  */
 
 import { invoke } from "../tauri";
-import type { ServiceProject } from "../types";
+import type { ServiceProject, TaskStatus } from "../types";
+
+/**
+ * Permanently deletes a service project and all its items and tasks.
+ */
+export async function deleteServiceProject(projectId: string): Promise<void> {
+  return invoke("delete_service_project", { projectId });
+}
+
+/**
+ * Updates a service project's name or other metadata.
+ */
+export async function updateServiceProject(
+  projectId: string,
+  updates: { name?: string; description?: string; scheduled_at_ms?: number },
+): Promise<ServiceProject> {
+  return invoke<ServiceProject>("update_service_project", {
+    projectId,
+    name: updates.name,
+    description: updates.description,
+    scheduledAtMs: updates.scheduled_at_ms,
+  });
+}
 
 /**
  * Creates a new service project with the given name.
@@ -70,4 +92,68 @@ export async function removeItemFromActiveProject(itemId: string): Promise<void>
  */
 export async function reorderActiveProjectItems(itemIds: string[]): Promise<void> {
   return invoke("reorder_active_project_items", { itemIds });
+}
+
+// ─── Item update ─────────────────────────────────────────────────────────────
+
+export async function updateProjectItem(
+  itemId: string,
+  updates: { duration_secs?: number | null; notes?: string | null; item_type?: string },
+): Promise<ServiceProject> {
+  return invoke<ServiceProject>("update_project_item", {
+    itemId,
+    durationSecs: updates.duration_secs,
+    notes: updates.notes,
+    itemType: updates.item_type,
+  });
+}
+
+// ─── Tasks ───────────────────────────────────────────────────────────────────
+
+export async function createServiceTask(
+  serviceId: string,
+  title: string,
+  description?: string,
+): Promise<ServiceProject> {
+  return invoke<ServiceProject>("create_service_task", { serviceId, title, description });
+}
+
+export async function updateServiceTask(
+  taskId: string,
+  updates: { title?: string; description?: string | null; status?: TaskStatus },
+): Promise<ServiceProject> {
+  return invoke<ServiceProject>("update_service_task", {
+    taskId,
+    title: updates.title,
+    description: updates.description,
+    status: updates.status,
+  });
+}
+
+export async function deleteServiceTask(taskId: string): Promise<ServiceProject> {
+  return invoke<ServiceProject>("delete_service_task", { taskId });
+}
+
+// ─── Asset linking ───────────────────────────────────────────────────────────
+
+export async function linkAssetToItem(
+  itemId: string,
+  artifactId: string,
+): Promise<ServiceProject> {
+  return invoke<ServiceProject>("link_asset_to_item", { itemId, artifactId });
+}
+
+export async function unlinkAssetFromItem(
+  itemId: string,
+  artifactId: string,
+): Promise<ServiceProject> {
+  return invoke<ServiceProject>("unlink_asset_from_item", { itemId, artifactId });
+}
+
+export async function uploadAndLinkAsset(
+  itemId: string,
+  fileName: string,
+  data: number[],
+): Promise<ServiceProject> {
+  return invoke<ServiceProject>("upload_and_link_asset", { itemId, fileName, data });
 }

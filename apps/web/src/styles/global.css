@@ -57,7 +57,7 @@ html[data-app-theme="light"] {
   --color-ink:         #1A1714;
   --color-ink-2:       #3A332C;
   --color-ink-3:       #6B6259;
-  --color-muted:       #8F8578;
+  --color-muted:       #7A7064;
   --color-accent:      #6B4423;
   --color-accent-soft: rgba(107,68,35,0.10);
   --color-accent-hover: #8A5A32;
@@ -78,7 +78,7 @@ html[data-density="compact"] {
 @theme inline {
   --color-background:         var(--color-bg);
   --color-foreground:         var(--color-ink);
-  --color-muted:              var(--color-bg-2);
+  --color-muted:              #7A7064;
   --color-muted-foreground:   var(--color-ink-3);
   --color-border:             var(--color-line-strong);
   --color-input:              var(--color-line-strong);

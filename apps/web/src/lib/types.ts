@@ -6,7 +6,7 @@ export interface TranscriptEvent {
   mic_active: boolean;
 }
 
-/** A single scripture item within a service project. */
+/** A single content/event item within a service project. */
 export interface ProjectItem {
   id: string;
   reference: string;
@@ -14,6 +14,27 @@ export interface ProjectItem {
   translation: string;
   position: number;
   added_at_ms: number;
+  /** Event type: "scripture", "song", "prayer", "sermon", "announcement", "other" */
+  item_type: string;
+  /** Planned duration in seconds. */
+  duration_secs: number | null;
+  /** Operator notes for this event. */
+  notes: string | null;
+  /** Linked artifact IDs (assets attached to this event). */
+  asset_ids: string[];
+}
+
+export type TaskStatus = "backlog" | "todo" | "in_progress" | "done" | "cancelled";
+
+/** A task within a service project. */
+export interface ServiceTask {
+  id: string;
+  service_id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  created_at_ms: number;
+  updated_at_ms: number;
 }
 
 /** A named container for the ordered content of a single worship service. */
@@ -23,7 +44,12 @@ export interface ServiceProject {
   created_at_ms: number;
   /** null while the service is active; set when the operator ends the service. */
   closed_at_ms: number | null;
+  /** Scheduled date/time for the service (operator-editable). */
+  scheduled_at_ms: number | null;
+  /** Service description / notes. */
+  description: string | null;
   items: ProjectItem[];
+  tasks: ServiceTask[];
 }
 
 /** An entry in the global content bank (auto-populated on push_to_display). */

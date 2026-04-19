@@ -38,7 +38,7 @@ pub fn now_ms() -> i64 {
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
 
-/// A single scripture item within a service project.
+/// A single content/event item within a service project.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectItem {
     pub id: String,
@@ -48,6 +48,46 @@ pub struct ProjectItem {
     /// Display order (0-based).
     pub position: usize,
     pub added_at_ms: i64,
+    /// Event type: "scripture", "song", "prayer", "sermon", "announcement", "other"
+    #[serde(default = "default_item_type")]
+    pub item_type: String,
+    /// Planned duration in seconds (e.g. 300 for 5 minutes).
+    #[serde(default)]
+    pub duration_secs: Option<u32>,
+    /// Operator notes for this event.
+    #[serde(default)]
+    pub notes: Option<String>,
+    /// Linked artifact IDs (assets attached to this event).
+    #[serde(default)]
+    pub asset_ids: Vec<String>,
+}
+
+fn default_item_type() -> String {
+    "scripture".into()
+}
+
+/// Task status for service planning.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskStatus {
+    Backlog,
+    Todo,
+    InProgress,
+    Done,
+    Cancelled,
+}
+
+/// A task within a service project (e.g. "Print bulletins", "Sound check").
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceTask {
+    pub id: String,
+    pub service_id: String,
+    pub title: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    pub status: TaskStatus,
+    pub created_at_ms: i64,
+    pub updated_at_ms: i64,
 }
 
 /// A named container for the ordered content plan of a single worship service.
@@ -58,7 +98,17 @@ pub struct ServiceProject {
     pub created_at_ms: i64,
     /// `None` while the service is active; set when the operator ends the service.
     pub closed_at_ms: Option<i64>,
+    /// Scheduled date/time for the service (operator-editable).
+    /// Defaults to `created_at_ms` if not set.
+    #[serde(default)]
+    pub scheduled_at_ms: Option<i64>,
+    /// Service description / notes.
+    #[serde(default)]
+    pub description: Option<String>,
     pub items: Vec<ProjectItem>,
+    /// Per-service task list.
+    #[serde(default)]
+    pub tasks: Vec<ServiceTask>,
 }
 
 impl ServiceProject {

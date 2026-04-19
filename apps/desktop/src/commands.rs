@@ -1,4 +1,4 @@
-use crate::service::{ContentBankEntry, ProjectItem, ServiceProject};
+use crate::service::{ContentBankEntry, ProjectItem, ServiceProject, ServiceTask, TaskStatus, new_id, now_ms};
 use crate::settings::{AudioSettings, SttBackend};
 use crate::slides::{AnnouncementItem, SermonNote};
 use crate::slides::{save_announcements, save_sermon_notes};
@@ -86,6 +86,10 @@ pub fn push_to_display(
                         translation,
                         position,
                         added_at_ms: crate::service::now_ms(),
+                        item_type: "scripture".into(),
+                        duration_secs: None,
+                        notes: None,
+                        asset_ids: vec![],
                     });
                     let p = p.clone();
                     crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
@@ -864,6 +868,58 @@ pub(crate) fn detect_and_queue(
 
 // ─── Service project commands ─────────────────────────────────────────────────
 
+/// Delete a service project and all its items and tasks.
+#[tauri::command]
+pub fn delete_service_project(
+    project_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let len_before = projects.len();
+    projects.retain(|p| p.id != project_id);
+    if projects.len() == len_before {
+        return Err("Project not found".into());
+    }
+    // Clear active project if it was the deleted one
+    {
+        let mut active = state.active_project_id.write().map_err(|e| e.to_string())?;
+        if active.as_deref() == Some(&project_id) {
+            *active = None;
+        }
+    }
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://projects-changed", ());
+    Ok(())
+}
+
+/// Update a service project's name, description, or scheduled time.
+#[tauri::command]
+pub fn update_service_project(
+    project_id: String,
+    name: Option<String>,
+    description: Option<String>,
+    scheduled_at_ms: Option<i64>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter().position(|p| p.id == project_id).ok_or("Project not found")?;
+    if let Some(n) = name {
+        projects[idx].name = n;
+    }
+    if let Some(d) = description {
+        projects[idx].description = if d.is_empty() { None } else { Some(d) };
+    }
+    if let Some(t) = scheduled_at_ms {
+        projects[idx].scheduled_at_ms = Some(t);
+    }
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let result = projects[idx].clone();
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
 /// Create a new named service project and make it the active project.
 #[tauri::command]
 pub fn create_service_project(
@@ -876,7 +932,10 @@ pub fn create_service_project(
         name,
         created_at_ms: crate::service::now_ms(),
         closed_at_ms: None,
+        scheduled_at_ms: None,
+        description: None,
         items: vec![],
+        tasks: vec![],
     };
 
     {
@@ -1023,6 +1082,10 @@ pub fn add_item_to_active_project(
                 translation,
                 position,
                 added_at_ms: crate::service::now_ms(),
+                item_type: "scripture".into(),
+                duration_secs: None,
+                notes: None,
+                asset_ids: vec![],
             });
         }
 
@@ -1145,6 +1208,182 @@ pub fn search_content_bank(
             .collect()
     };
     Ok(results)
+}
+
+// ─── Project item update ─────────────────────────────────────────────────────
+
+/// Update metadata on a project item (duration, notes, type).
+#[tauri::command]
+pub fn update_project_item(
+    item_id: String,
+    duration_secs: Option<u32>,
+    notes: Option<String>,
+    item_type: Option<String>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let active_id = state.active_project_id.read().map_err(|e| e.to_string())?;
+    let active_id = active_id.as_deref().ok_or("No active project")?.to_string();
+    let idx = projects.iter().position(|p| p.id == active_id).ok_or("Project not found")?;
+    let item = projects[idx].items.iter_mut().find(|i| i.id == item_id).ok_or("Item not found")?;
+    if let Some(d) = duration_secs { item.duration_secs = Some(d); }
+    if let Some(n) = notes { item.notes = if n.is_empty() { None } else { Some(n) }; }
+    if let Some(t) = item_type { item.item_type = t; }
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+// ─── Service tasks ───────────────────────────────────────────────────────────
+
+/// Create a task within a service project.
+#[tauri::command]
+pub fn create_service_task(
+    service_id: String,
+    title: String,
+    description: Option<String>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter().position(|p| p.id == service_id).ok_or("Project not found")?;
+    let task = ServiceTask {
+        id: new_id(),
+        service_id: service_id.clone(),
+        title,
+        description,
+        status: TaskStatus::Todo,
+        created_at_ms: now_ms(),
+        updated_at_ms: now_ms(),
+    };
+    projects[idx].tasks.push(task);
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+/// Update a task's title, description, or status.
+#[tauri::command]
+pub fn update_service_task(
+    task_id: String,
+    title: Option<String>,
+    description: Option<String>,
+    status: Option<TaskStatus>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter()
+        .position(|p| p.tasks.iter().any(|t| t.id == task_id))
+        .ok_or("Task not found in any project")?;
+    let task = projects[idx].tasks.iter_mut().find(|t| t.id == task_id).unwrap();
+    if let Some(t) = title { task.title = t; }
+    if let Some(d) = description { task.description = if d.is_empty() { None } else { Some(d) }; }
+    if let Some(s) = status { task.status = s; }
+    task.updated_at_ms = now_ms();
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+/// Delete a task from a service project.
+#[tauri::command]
+pub fn delete_service_task(
+    task_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter()
+        .position(|p| p.tasks.iter().any(|t| t.id == task_id))
+        .ok_or("Task not found in any project")?;
+    projects[idx].tasks.retain(|t| t.id != task_id);
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+// ─── Asset linking ───────────────────────────────────────────────────────────
+
+/// Link an existing artifact to a project item's assets.
+#[tauri::command]
+pub fn link_asset_to_item(
+    item_id: String,
+    artifact_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let active_id = state.active_project_id.read().map_err(|e| e.to_string())?;
+    let active_id = active_id.as_deref().ok_or("No active project")?.to_string();
+    let idx = projects.iter().position(|p| p.id == active_id).ok_or("Project not found")?;
+    let item = projects[idx].items.iter_mut().find(|i| i.id == item_id).ok_or("Item not found")?;
+    if !item.asset_ids.contains(&artifact_id) {
+        item.asset_ids.push(artifact_id);
+    }
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+/// Unlink an artifact from a project item's assets.
+#[tauri::command]
+pub fn unlink_asset_from_item(
+    item_id: String,
+    artifact_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let active_id = state.active_project_id.read().map_err(|e| e.to_string())?;
+    let active_id = active_id.as_deref().ok_or("No active project")?.to_string();
+    let idx = projects.iter().position(|p| p.id == active_id).ok_or("Project not found")?;
+    let item = projects[idx].items.iter_mut().find(|i| i.id == item_id).ok_or("Item not found")?;
+    item.asset_ids.retain(|id| id != &artifact_id);
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+/// Upload a file to the service's artifact directory, then link it to a project item.
+#[tauri::command]
+pub fn upload_and_link_asset(
+    item_id: String,
+    file_name: String,
+    data: Vec<u8>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let active_id = {
+        let id = state.active_project_id.read().map_err(|e| e.to_string())?;
+        id.as_ref().cloned().ok_or("No active project")?
+    };
+
+    // Import file into artifacts
+    let artifact = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::artifacts::write_artifact_bytes(&mut db, Some(active_id.clone()), None, file_name, data)
+            .map_err(|e| e.to_string())?
+    };
+
+    // Link to the item
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter().position(|p| p.id == active_id).ok_or("Project not found")?;
+    let item = projects[idx].items.iter_mut().find(|i| i.id == item_id).ok_or("Item not found")?;
+    if !item.asset_ids.contains(&artifact.id) {
+        item.asset_ids.push(artifact.id);
+    }
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
 }
 
 // ─── Semantic search status ───────────────────────────────────────────────────
@@ -1438,6 +1677,10 @@ pub fn push_song_to_display(
                         translation,
                         position,
                         added_at_ms: crate::service::now_ms(),
+                        item_type: "scripture".into(),
+                        duration_secs: None,
+                        notes: None,
+                        asset_ids: vec![],
                     });
                     let p = p.clone();
                     crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
