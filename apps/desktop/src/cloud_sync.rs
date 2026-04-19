@@ -435,18 +435,19 @@ fn sha256_hex(data: &[u8]) -> String {
     hex_encode(&Sha256::digest(data))
 }
 
-fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
+fn hmac_sha256(key: &[u8], data: &[u8]) -> Result<Vec<u8>> {
     use hmac::{Hmac, Mac};
     use sha2::Sha256;
-    let mut mac = Hmac::<Sha256>::new_from_slice(key).expect("HMAC key");
+    let mut mac = Hmac::<Sha256>::new_from_slice(key)
+        .map_err(|e| anyhow::anyhow!("invalid HMAC key: {e}"))?;
     mac.update(data);
-    mac.finalize().into_bytes().to_vec()
+    Ok(mac.finalize().into_bytes().to_vec())
 }
 
-fn derive_signing_key(secret: &str, date: &str, region: &str, service: &str) -> Vec<u8> {
-    let k_date = hmac_sha256(format!("AWS4{secret}").as_bytes(), date.as_bytes());
-    let k_region = hmac_sha256(&k_date, region.as_bytes());
-    let k_service = hmac_sha256(&k_region, service.as_bytes());
+fn derive_signing_key(secret: &str, date: &str, region: &str, service: &str) -> Result<Vec<u8>> {
+    let k_date = hmac_sha256(format!("AWS4{secret}").as_bytes(), date.as_bytes())?;
+    let k_region = hmac_sha256(&k_date, region.as_bytes())?;
+    let k_service = hmac_sha256(&k_region, service.as_bytes())?;
     hmac_sha256(&k_service, b"aws4_request")
 }
 
@@ -458,7 +459,7 @@ fn sign_request(
     payload: &[u8],
     config: &S3Config,
     datetime: &str, // "20260101T120000Z"
-) -> String {
+) -> Result<String> {
     let date = &datetime[..8];
     let region = &config.region;
 
@@ -509,13 +510,13 @@ fn sign_request(
     );
 
     // Signature
-    let signing_key = derive_signing_key(&config.secret_access_key, date, region, "s3");
-    let signature = hex_encode(&hmac_sha256(&signing_key, string_to_sign.as_bytes()));
+    let signing_key = derive_signing_key(&config.secret_access_key, date, region, "s3")?;
+    let signature = hex_encode(&hmac_sha256(&signing_key, string_to_sign.as_bytes())?);
 
-    format!(
+    Ok(format!(
         "AWS4-HMAC-SHA256 Credential={}/{},SignedHeaders={},Signature={}",
         config.access_key_id, credential_scope, signed_headers, signature
-    )
+    ))
 }
 
 fn s3_datetime_now() -> String {
@@ -585,7 +586,7 @@ pub async fn s3_put_object(
         ("content-type", content_type),
         ("host", host_with_port.as_str()),
     ];
-    let auth = sign_request("PUT", &url, &headers, &data, config, &datetime);
+    let auth = sign_request("PUT", &url, &headers, &data, config, &datetime)?;
     let resp = client
         .put(url)
         .header("Authorization", auth)
@@ -626,7 +627,7 @@ pub async fn s3_head_object(
         None => host.clone(),
     };
     let headers = [("host", host_with_port.as_str())];
-    let auth = sign_request("HEAD", &url, &headers, &[], config, &datetime);
+    let auth = sign_request("HEAD", &url, &headers, &[], config, &datetime)?;
     let resp = client
         .head(url)
         .header("Authorization", auth)
@@ -666,7 +667,7 @@ pub async fn s3_get_object(
         None => host.clone(),
     };
     let headers = [("host", host_with_port.as_str())];
-    let auth = sign_request("GET", &url, &headers, &[], config, &datetime);
+    let auth = sign_request("GET", &url, &headers, &[], config, &datetime)?;
     let resp = client
         .get(url)
         .header("Authorization", auth)
@@ -710,7 +711,7 @@ pub async fn s3_delete_object(
         None => host.clone(),
     };
     let headers = [("host", host_with_port.as_str())];
-    let auth = sign_request("DELETE", &url, &headers, &[], config, &datetime);
+    let auth = sign_request("DELETE", &url, &headers, &[], config, &datetime)?;
     let resp = client
         .delete(url)
         .header("Authorization", auth)

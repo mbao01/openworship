@@ -28,11 +28,18 @@ use tokio::sync::broadcast;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if let Err(e) = try_run() {
+        eprintln!("[fatal] application failed to start: {e}");
+        std::process::exit(1);
+    }
+}
+
+fn try_run() -> Result<(), Box<dyn std::error::Error>> {
     // ── Scripture DB + search index ────────────────────────────────────────────
-    let db = ow_db::open_and_seed().expect("Failed to open Bible DB");
-    let verses = ow_db::get_all_verses(&db).expect("Failed to load verses");
+    let db = ow_db::open_and_seed().map_err(|e| { eprintln!("[startup] Bible DB: {e}"); e })?;
+    let verses = ow_db::get_all_verses(&db)?;
     let search =
-        Arc::new(ow_search::SearchEngine::build(&verses).expect("Failed to build search index"));
+        Arc::new(ow_search::SearchEngine::build(&verses)?);
 
     // ── Display server channel ─────────────────────────────────────────────────
     let (display_tx, _) = broadcast::channel::<ow_display::ContentEvent>(32);
@@ -59,7 +66,7 @@ pub fn run() {
     let projects = Arc::new(RwLock::new(service::load_projects()));
     let content_bank = Arc::new(RwLock::new(service::load_content_bank()));
     let active_project_id = {
-        let plist = projects.read().unwrap();
+        let plist = projects.read().unwrap_or_else(|e| e.into_inner());
         let active = plist
             .iter()
             .filter(|p| p.is_open())
@@ -79,9 +86,13 @@ pub fn run() {
         .map(|s| s.semantic_enabled)
         .unwrap_or(true);
     let embedder: Arc<dyn ow_embed::Embedder> = if semantic_enabled_at_startup {
-        Arc::new(
-            ow_embed::LocalEmbedder::new().expect("failed to initialize embedding model"),
-        )
+        match ow_embed::LocalEmbedder::new() {
+            Ok(e) => Arc::new(e),
+            Err(e) => {
+                eprintln!("[embed] failed to initialize embedding model: {e}; falling back to NullEmbedder");
+                Arc::new(ow_embed::NullEmbedder)
+            }
+        }
     } else {
         eprintln!("[embed] semantic search disabled — skipping ONNX model init");
         Arc::new(ow_embed::NullEmbedder)
@@ -107,14 +118,14 @@ pub fn run() {
             eprintln!("[songs] failed to open songs DB: {e}; using in-memory fallback");
             // Fallback: open an in-memory DB so the app still starts.
             Arc::new(Mutex::new(
-                SongsDb::open_in_memory().expect("failed to open in-memory songs DB"),
+                SongsDb::open_in_memory()?,
             ))
         }
     };
 
     let song_refs: Vec<SongRef> = songs_db
         .lock()
-        .unwrap()
+        .unwrap_or_else(|e| e.into_inner())
         .all_refs()
         .unwrap_or_default();
     let song_refs = Arc::new(RwLock::new(song_refs));
@@ -138,8 +149,7 @@ pub fn run() {
         Err(e) => {
             eprintln!("[artifacts] failed to open db: {e}; using in-memory fallback");
             Arc::new(Mutex::new(
-                artifacts::ArtifactsDb::open_in_memory()
-                    .expect("failed to open in-memory artifacts DB"),
+                artifacts::ArtifactsDb::open_in_memory()?,
             ))
         }
     };
@@ -150,8 +160,7 @@ pub fn run() {
         Err(e) => {
             eprintln!("[cloud_sync] failed to open db: {e}; using in-memory fallback");
             Arc::new(Mutex::new(
-                cloud_sync::CloudSyncDb::open_in_memory()
-                    .expect("failed to open in-memory cloud_sync DB"),
+                cloud_sync::CloudSyncDb::open_in_memory()?,
             ))
         }
     };
@@ -506,4 +515,6 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    Ok(())
 }

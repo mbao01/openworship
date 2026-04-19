@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckIcon, CircleIcon } from "lucide-react";
 import { getAudioLevel, listAudioInputDevices, getSttStatus } from "@/lib/commands/audio";
 import { getDisplayWindowOpen, listMonitors } from "@/lib/commands/display-window";
@@ -40,6 +40,8 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
   });
   const [simulateText, setSimulateText] = useState("");
   const [detections, setDetections] = useState<QueueItem[]>([]);
+  const [countdown, setCountdown] = useState<string | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const toggle = (k: string) => setChecks((c) => ({ ...c, [k]: !c[k] }));
   const autoToggle = (k: string) => setChecks((c) => ({ ...c, [k]: true }));
@@ -94,6 +96,38 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
   useEffect(() => {
     getActiveProject().then(setProject).catch(() => {});
   }, []);
+
+  // ── Countdown to scheduled_at_ms ──────────────────────────────────────────
+  useEffect(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+
+    const scheduledMs = project?.scheduled_at_ms;
+    if (!scheduledMs) {
+      setCountdown(null);
+      return;
+    }
+
+    const tick = () => {
+      const diff = scheduledMs - Date.now();
+      if (diff <= 0) {
+        setCountdown("NOW");
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        return;
+      }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setCountdown(
+        `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`,
+      );
+    };
+
+    tick();
+    countdownRef.current = setInterval(tick, 1_000);
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [project?.scheduled_at_ms]);
 
   // ── Poll mic level every 500ms ──────────────────────────────────────────────
   useEffect(() => {
@@ -185,7 +219,7 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
             <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent mr-1.5" />
             PREVIEW · NOT ON AIR · dry-run mode
           </span>
-          <span>STARTS IN · 00:14:22</span>
+          <span>{countdown ? `STARTS IN · ${countdown}` : "NOT SCHEDULED"}</span>
         </div>
 
         <div className="flex-1 p-5 flex items-center justify-center" style={{
@@ -257,7 +291,16 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
             >
               Simulate speech
             </button>
-            <button className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded-[3px] hover:bg-bg-3">
+            <button
+              className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded-[3px] hover:bg-bg-3"
+              onClick={() => {
+                const now = Date.now();
+                const fiveMin = 5 * 60 * 1000;
+                setProject((prev) =>
+                  prev ? { ...prev, scheduled_at_ms: now + fiveMin } : prev,
+                );
+              }}
+            >
               Dry-run timer
             </button>
           </div>

@@ -359,7 +359,11 @@ pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
 /// Stop the STT engine.
 #[tauri::command]
 pub fn stop_stt(state: State<'_, AppState>) {
-    state.stt.lock().unwrap().stop();
+    if let Ok(mut engine) = state.stt.lock() {
+        engine.stop();
+    } else {
+        eprintln!("[stt] failed to acquire lock for stop; mutex poisoned");
+    }
 }
 
 /// Return the current STT engine status.
@@ -420,7 +424,7 @@ pub fn list_audio_input_devices() -> Result<Vec<AudioInputDevice>, String> {
 #[tauri::command]
 pub fn get_audio_level(state: State<'_, AppState>) -> f32 {
     // Prefer STT engine level when it's running
-    let stt_level = state.stt.lock().unwrap().audio_level_rms();
+    let stt_level = state.stt.lock().unwrap_or_else(|e| e.into_inner()).audio_level_rms();
     if stt_level > 0.0 {
         return stt_level;
     }
@@ -1279,7 +1283,8 @@ pub fn update_service_task(
     let idx = projects.iter()
         .position(|p| p.tasks.iter().any(|t| t.id == task_id))
         .ok_or("Task not found in any project")?;
-    let task = projects[idx].tasks.iter_mut().find(|t| t.id == task_id).unwrap();
+    let task = projects[idx].tasks.iter_mut().find(|t| t.id == task_id)
+        .expect("checked above: position guarantees task exists");
     if let Some(t) = title { task.title = t; }
     if let Some(d) = description { task.description = if d.is_empty() { None } else { Some(d) }; }
     if let Some(s) = status { task.status = s; }

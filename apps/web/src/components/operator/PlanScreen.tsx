@@ -19,6 +19,7 @@ import {
 } from "@/lib/commands/content";
 import {
   addItemToActiveProject,
+  closeActiveProject,
   createServiceProject,
   createServiceTask,
   deleteServiceProject,
@@ -32,6 +33,7 @@ import {
   updateServiceTask,
   uploadAndLinkAsset,
 } from "@/lib/commands/projects";
+// generateServiceSummary available from "@/lib/commands/summaries" for future use
 import {
   getAudioSettings,
   setAudioSettings,
@@ -381,6 +383,7 @@ function ServiceDetail({
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskStatus | "all">("all");
   const [taskView, setTaskView] = useState<"list" | "board">("list");
+  const [endConfirm, setEndConfirm] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
@@ -526,6 +529,14 @@ function ServiceDetail({
             />
             {isReadOnly && (
               <span className="text-muted text-[10px] italic">read-only</span>
+            )}
+            {!isReadOnly && (
+              <button
+                className="px-3 py-1.5 text-xs font-medium rounded border border-danger/40 text-danger bg-transparent cursor-pointer transition-colors hover:bg-danger/10"
+                onClick={() => setEndConfirm(true)}
+              >
+                End service
+              </button>
             )}
           </div>
         </div>
@@ -885,6 +896,23 @@ function ServiceDetail({
       </section>
 
       {/* Settings section removed -- controls moved inline to header */}
+
+      <ConfirmDialog
+        open={endConfirm}
+        onOpenChange={setEndConfirm}
+        title="End this service?"
+        description="This will close the service. Items will be preserved but no new content will be added. You can optionally generate an AI summary."
+        confirmLabel="End service"
+        variant="danger"
+        onConfirm={async () => {
+          try {
+            await closeActiveProject();
+            await onProjectsChanged();
+          } catch (e) {
+            toastError("Failed to end service")(e);
+          }
+        }}
+      />
     </div>
   );
 }

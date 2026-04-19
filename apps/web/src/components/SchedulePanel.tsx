@@ -476,9 +476,7 @@ export function SchedulePanel() {
       setLiveReference(null);
       loadProjects();
       if (withSummary && projectId) {
-        invoke("generate_service_summary", { projectId }).catch((e) => {
-          console.error("[summary] generation failed:", e);
-        });
+        invoke("generate_service_summary", { projectId }).catch(() => {});
       }
     } catch (e) {
       toastError("Failed to close service")(e);

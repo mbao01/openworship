@@ -31,12 +31,14 @@ import {
   LayoutGridIcon,
   StarIcon,
   CheckIcon,
+  XIcon,
+  AlertTriangleIcon,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatBytes(bytes: number | null): string {
-  if (bytes === null) return "\u2014";
+  if (bytes === null) return "—";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1048576).toFixed(1)} MB`;
@@ -124,7 +126,7 @@ type Nav =
 // ─── Sync badge + progress ────────────────────────────────────────────────────
 
 function SyncCell({ info }: { info: CloudSyncInfo | undefined }) {
-  if (!info || !info.sync_enabled) return <span className="text-muted text-[11px]">&mdash;</span>;
+  if (!info || !info.sync_enabled) return <span className="text-muted text-[11px]">—</span>;
 
   if (info.status === "syncing" && info.progress !== null) {
     const pct = Math.round(info.progress * 100);
@@ -146,17 +148,17 @@ function SyncCell({ info }: { info: CloudSyncInfo | undefined }) {
     );
   }
 
-  if (info.status === "queued") return <span className="text-muted text-[10px]" title="Queued">&middot;&middot;&middot;</span>;
-  if (info.status === "conflict") return <span className="text-[#e89a00] text-[10px]" title="Conflict">&#9888;</span>;
-  if (info.status === "error") return <span className="text-danger text-[10px]" title={info.sync_error ?? "Error"}>&#10005;</span>;
+  if (info.status === "queued") return <span className="text-muted text-[10px]" title="Queued">···</span>;
+  if (info.status === "conflict") return <span className="text-[#e89a00]" title="Conflict"><AlertTriangleIcon className={iconCls} /></span>;
+  if (info.status === "error") return <span className="text-danger" title={info.sync_error ?? "Error"}><XIcon className={iconCls} /></span>;
 
-  return <span className="text-muted text-[11px]">&mdash;</span>;
+  return <span className="text-muted text-[11px]">—</span>;
 }
 
 // ─── Shared cell ──────────────────────────────────────────────────────────────
 
 function SharedCell({ info }: { info: CloudSyncInfo | undefined }) {
-  if (!info || !info.sync_enabled) return <span className="text-muted text-[11px]">&mdash;</span>;
+  if (!info || !info.sync_enabled) return <span className="text-muted text-[11px]">—</span>;
 
   if (info.cloud_key?.includes("public")) {
     return (
@@ -166,7 +168,7 @@ function SharedCell({ info }: { info: CloudSyncInfo | undefined }) {
     );
   }
 
-  return <span className="text-muted text-[11px]">&mdash;</span>;
+  return <span className="text-muted text-[11px]">—</span>;
 }
 
 // ─── Artifacts Sidebar (shadcn Sidebar, collapsible="icon") ───────────────────
@@ -327,7 +329,7 @@ function ContextMenu({
   }, [onClose]);
 
   const btnCls =
-    "block w-full text-left bg-transparent border-none font-sans text-[12px] text-ink px-[14px] py-[6px] cursor-pointer transition-colors hover:bg-white/[0.06] whitespace-nowrap";
+    "block w-full text-left bg-transparent border-none font-sans text-[12px] text-ink px-[14px] py-[6px] cursor-pointer transition-colors hover:bg-bg-2 whitespace-nowrap";
   const sep = <div className="h-px bg-line my-[3px] mx-2" />;
 
   return (
@@ -369,7 +371,7 @@ function ContextMenu({
       </button>
       {sep}
       <button
-        className={`${btnCls} text-danger`}
+        className={`${btnCls} hover:text-danger`}
         onClick={() => { onDelete(menu.entry); onClose(); }}
       >
         Delete
@@ -399,9 +401,9 @@ function RenameModal({
         className="bg-bg-1 border border-line-strong rounded-lg p-5 w-[320px] flex flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[13px] font-semibold text-ink m-0">Rename</p>
+        <p className="font-serif text-base text-ink m-0">Rename</p>
         <input
-          className="bg-bg-2 border border-line rounded-[3px] text-ink font-sans text-[13px] px-[10px] py-[6px] outline-none transition-colors focus:border-accent"
+          className="bg-bg-2 border border-line rounded-[3px] text-ink text-sm px-[10px] py-[6px] outline-none transition-colors focus:border-accent focus:outline-none"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -412,13 +414,13 @@ function RenameModal({
         />
         <div className="flex justify-end gap-2">
           <button
-            className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+            className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="bg-accent text-[#1A0D00] border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
+            className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-default"
             onClick={() => onConfirm(name.trim())}
             disabled={!name.trim() || name.trim() === entry.name}
           >
@@ -447,9 +449,9 @@ function NewFolderModal({
         className="bg-bg-1 border border-line-strong rounded-lg p-5 w-[320px] flex flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[13px] font-semibold text-ink m-0">New Folder</p>
+        <p className="font-serif text-base text-ink m-0">New Folder</p>
         <input
-          className="bg-bg-2 border border-line rounded-[3px] text-ink font-sans text-[13px] px-[10px] py-[6px] outline-none transition-colors focus:border-accent"
+          className="bg-bg-2 border border-line rounded-[3px] text-ink text-sm px-[10px] py-[6px] outline-none transition-colors focus:border-accent focus:outline-none"
           placeholder="Folder name"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -461,13 +463,13 @@ function NewFolderModal({
         />
         <div className="flex justify-end gap-2">
           <button
-            className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+            className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="bg-accent text-[#1A0D00] border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
+            className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-default"
             onClick={() => onConfirm(name.trim())}
             disabled={!name.trim()}
           >
@@ -532,7 +534,7 @@ function MoveFolderModal({
         className="bg-bg-1 border border-line-strong rounded-lg p-5 w-[360px] flex flex-col gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[13px] font-semibold text-ink m-0">Move to Folder</p>
+        <p className="font-serif text-base text-ink m-0">Move to Folder</p>
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-1 text-[11px] text-ink-3 flex-wrap">
@@ -566,7 +568,7 @@ function MoveFolderModal({
             folders.map((f) => (
               <div
                 key={f.id}
-                className={`flex items-center justify-between px-3 py-[6px] cursor-pointer text-[12px] transition-colors hover:bg-white/5 ${selected === f.path ? "text-accent bg-white/5" : "text-ink"}`}
+                className={`flex items-center justify-between px-3 py-[6px] cursor-pointer text-[12px] transition-colors hover:bg-bg-2 ${selected === f.path ? "text-accent bg-accent-soft" : "text-ink"}`}
                 onClick={() => setSelected(f.path)}
                 onDoubleClick={() => handleOpen(f)}
               >
@@ -593,13 +595,13 @@ function MoveFolderModal({
 
         <div className="flex justify-end gap-2">
           <button
-            className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-[14px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+            className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="bg-accent text-[#1A0D00] border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12]"
+            className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer"
             onClick={() => onConfirm(destinationPath)}
           >
             Move Here
@@ -654,8 +656,7 @@ function PreviewPanel({
           blobUrl = URL.createObjectURL(blob);
           setFileSrc(blobUrl);
         })
-        .catch((e) => {
-          console.error("[preview] read_artifact_bytes failed:", e);
+        .catch(() => {
           setFileSrc(null);
         });
     } else {
@@ -695,7 +696,7 @@ function PreviewPanel({
           onClick={onClose}
           aria-label="Close preview"
         >
-          &#10005;
+          <XIcon className="w-3 h-3 shrink-0" />
         </button>
       </div>
 
@@ -707,7 +708,7 @@ function PreviewPanel({
               src={fileSrc}
               alt={entry.name}
               className="w-full h-full object-contain"
-              onError={(e) => { console.error("[preview] image load failed:", e); setFileSrc(null); }}
+              onError={() => { setFileSrc(null); }}
             />
           ) : isVideo && fileSrc ? (
             <video
@@ -807,7 +808,7 @@ function NewMenu({
   }, [onClose]);
 
   const btnCls =
-    "block w-full text-left bg-transparent border-none font-sans text-[12px] text-ink px-[12px] py-[7px] cursor-pointer transition-colors hover:bg-white/[0.06] whitespace-nowrap";
+    "block w-full text-left bg-transparent border-none font-sans text-[12px] text-ink px-[12px] py-[7px] cursor-pointer transition-colors hover:bg-bg-2 whitespace-nowrap";
 
   return (
     <div
@@ -1084,7 +1085,7 @@ export function AssetsScreen() {
     nav.kind === "all" ? "All Assets" :
     nav.kind === "recent" ? "Recent" :
     nav.kind === "starred" ? "Starred" :
-    nav.kind === "cloud_branch" ? "My Branch \u2014 Cloud" :
+    nav.kind === "cloud_branch" ? "My Branch — Cloud" :
     nav.kind === "cloud_shared" ? "Church Shared" :
     nav.name;
 
@@ -1218,13 +1219,13 @@ export function AssetsScreen() {
           {/* Section header */}
           <div className="flex items-center justify-between px-5 py-[10px] border-b border-line shrink-0">
             <div className="flex flex-col min-w-0">
-              <h1 className="font-serif text-lg text-ink m-0 leading-[1.3] overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
+              <h1 className="font-serif text-xl text-ink m-0 leading-[1.3] overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
                 {sectionTitle}
               </h1>
               {entries.length > 0 && (
                 <span className="text-[11px] text-muted font-mono mt-[1px]">
                   {entries.length} asset{entries.length !== 1 ? "s" : ""}
-                  {totalSize > 0 ? ` \u00b7 ${formatStorageBytes(totalSize)}` : ""}
+                  {totalSize > 0 ? ` · ${formatStorageBytes(totalSize)}` : ""}
                 </span>
               )}
             </div>
@@ -1311,7 +1312,7 @@ export function AssetsScreen() {
                     cloudEntries.map((info) => (
                       <div
                         key={info.artifact_id}
-                        className="flex items-center gap-[10px] px-5 py-[8px] border-b border-line/50 text-[12px] hover:bg-white/[0.02] transition-colors"
+                        className="flex items-center gap-[10px] px-5 py-[8px] border-b border-line text-[12px] hover:bg-bg-2 transition-colors"
                       >
                         <SyncCell info={info} />
                         <span
@@ -1327,10 +1328,10 @@ export function AssetsScreen() {
                         </span>
                         {info.sync_error && (
                           <span
-                            className="text-[11px] text-danger shrink-0"
+                            className="flex items-center gap-1 text-[11px] text-danger shrink-0"
                             title={info.sync_error}
                           >
-                            &#9888; {info.sync_error.slice(0, 40)}
+                            <AlertTriangleIcon className={iconCls} /> {info.sync_error.slice(0, 40)}
                           </span>
                         )}
                       </div>
@@ -1345,22 +1346,22 @@ export function AssetsScreen() {
                   <table className="w-full border-collapse text-xs">
                     <thead>
                       <tr>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-5 py-[7px] border-b border-line sticky top-0 bg-bg-1 w-full">
+                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-5 py-[7px] border-b border-line sticky top-0 bg-bg-1 w-full">
                           Name
                         </th>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
                           Type
                         </th>
-                        <th className="text-right text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                        <th className="text-right font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
                           Size
                         </th>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
                           Modified
                         </th>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
                           Sync
                         </th>
-                        <th className="text-left text-[9px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
+                        <th className="text-left font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-muted px-4 py-[7px] border-b border-line sticky top-0 bg-bg-1 whitespace-nowrap">
                           Shared
                         </th>
                       </tr>
@@ -1387,7 +1388,7 @@ export function AssetsScreen() {
                                 "cursor-default border-b border-line/40 transition-colors",
                                 isSelected
                                   ? "bg-accent-soft"
-                                  : "hover:bg-white/[0.025]",
+                                  : "hover:bg-bg-2",
                               ].join(" ")}
                               onClick={() => setSelected(isSelected ? null : e)}
                               onContextMenu={(ev) => handleCtx(ev, e)}
@@ -1396,7 +1397,7 @@ export function AssetsScreen() {
                               <td className="px-5 py-[7px] align-middle">
                                 <div className="flex items-center gap-[8px] min-w-0">
                                   <span className="shrink-0">{fileIcon(e)}</span>
-                                  <span className="text-ink text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
+                                  <span className="text-ink text-[13px] overflow-hidden text-ellipsis whitespace-nowrap">
                                     {e.name}
                                   </span>
                                   {e.starred && (
@@ -1410,7 +1411,7 @@ export function AssetsScreen() {
                                   : (e.mime_type?.split("/")[1]?.toUpperCase() ?? "File")}
                               </td>
                               <td className={`px-4 py-[7px] align-middle ${metaCls} text-right`}>
-                                {e.is_dir ? "\u2014" : formatBytes(e.size_bytes)}
+                                {e.is_dir ? "—" : formatBytes(e.size_bytes)}
                               </td>
                               <td className={`px-4 py-[7px] align-middle ${metaCls}`}>
                                 {formatDate(e.modified_at_ms)}
@@ -1449,7 +1450,7 @@ export function AssetsScreen() {
                             "relative w-[88px] flex flex-col items-center gap-[6px] px-2 py-3 rounded-[4px] border cursor-default transition-colors",
                             isSelected
                               ? "border-accent/40 bg-accent-soft"
-                              : "border-transparent hover:bg-white/[0.04] hover:border-line",
+                              : "border-transparent hover:bg-bg-2 hover:border-line",
                           ].join(" ")}
                           onClick={() => setSelected(isSelected ? null : e)}
                           onContextMenu={(ev) => handleCtx(ev, e)}

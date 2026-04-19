@@ -5,9 +5,12 @@ import {
   BookOpenIcon,
   CircleIcon,
   CornerDownLeftIcon,
+  MicIcon,
+  MicOffIcon,
   MusicIcon,
   PresentationIcon,
 } from "lucide-react";
+import { startStt, stopStt, getSttStatus } from "../../lib/commands/audio";
 import { useQueue } from "../../hooks/use-queue";
 import { useTranslations } from "../../hooks/use-translations";
 import type { DetectionMode, QueueItem, TranscriptEvent, VerseResult, Song, AnnouncementItem } from "../../lib/types";
@@ -106,9 +109,6 @@ function LibraryPanel() {
       {/* Header */}
       <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
         <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">Library</span>
-        <button className="w-[22px] h-[22px] flex items-center justify-center rounded-[3px] text-ink-3 text-[13px] hover:bg-bg-3 hover:text-ink">
-          +
-        </button>
       </div>
 
       {/* Tabs */}
@@ -217,7 +217,7 @@ function StagePanel({ mode }: { mode: DetectionMode }) {
           <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent mr-1.5" />
           {mode.toUpperCase()} MODE · listening · rolling 10s context
         </span>
-        <span>DISPLAY OUTPUT · 1920 × 1080</span>
+        <span>DISPLAY OUTPUT</span>
       </div>
 
       {/* Dual display preview */}
@@ -373,6 +373,21 @@ function StageBtn({ label, kbd, primary, onClick, disabled, danger }: {
 function QueueTranscriptPanel() {
   const { queue, live, approve, skip } = useQueue();
   const visible = [...(live ? [live] : []), ...queue].slice(0, 10);
+  const [micActive, setMicActive] = useState(false);
+
+  useEffect(() => {
+    getSttStatus().then(s => setMicActive(s === "running")).catch(() => {});
+  }, []);
+
+  const handleMicToggle = async () => {
+    if (micActive) {
+      await stopStt().catch(() => {});
+      setMicActive(false);
+    } else {
+      await startStt().catch(() => {});
+      setMicActive(true);
+    }
+  };
 
   return (
     <section className="flex flex-col w-[340px] shrink-0 border-l border-line overflow-hidden">
@@ -405,7 +420,20 @@ function QueueTranscriptPanel() {
           <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
             Transcript · <strong className="text-ink-2 font-medium">live</strong>
           </span>
-          <span className="font-mono text-[10px] text-ink-3">10s</span>
+          <div className="flex items-center gap-2">
+            <button
+              className={`px-2 py-0.5 font-mono text-[9px] tracking-[0.1em] uppercase border rounded-[3px] transition-colors ${
+                micActive
+                  ? "text-live border-live/40 hover:bg-live/10"
+                  : "text-ink-3 border-line hover:text-ink hover:border-line-strong"
+              }`}
+              onClick={handleMicToggle}
+            >
+              {micActive ? <MicIcon className="w-3 h-3 shrink-0 inline mr-1" /> : <MicOffIcon className="w-3 h-3 shrink-0 inline mr-1" />}
+              {micActive ? "Stop" : "Start"}
+            </button>
+            <span className="font-mono text-[10px] text-ink-3">10s</span>
+          </div>
         </div>
         <TranscriptBody />
       </div>

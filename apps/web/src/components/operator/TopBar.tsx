@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { DetectionMode } from "../../lib/types";
-import { getAudioLevel } from "../../lib/commands/audio";
+import { getAudioLevel, startStt, stopStt } from "../../lib/commands/audio";
 import { getAudioSettings } from "../../lib/commands/settings";
 import { toastError } from "../../lib/toast";
 
@@ -64,6 +64,16 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleMicToggle = async () => {
+    if (micActive) {
+      await stopStt().catch(() => {});
+      setMicActive(false);
+    } else {
+      await startStt().catch(() => {});
+      setMicActive(true);
+    }
+  };
+
   function handleModeChange(next: DetectionMode) {
     invoke("set_detection_mode", { mode: next })
       .then(() => onModeChange(next))
@@ -97,7 +107,11 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
         </div>
 
         {/* Mic group */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-line h-[52px]">
+        <button
+          className="flex items-center gap-2.5 pl-3 border-l border-line h-[52px] cursor-pointer hover:bg-bg-2/50 transition-colors"
+          onClick={handleMicToggle}
+          title={micActive ? "Stop microphone" : "Start microphone"}
+        >
           <span
             className={`w-2 h-2 rounded-full ${
               micActive ? "bg-live animate-[blink_2s_infinite]" : "bg-bg-4"
@@ -107,7 +121,7 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
           <span className="font-mono text-[10.5px] tracking-[0.05em] uppercase text-ink-3">
             {inputLabel}
           </span>
-        </div>
+        </button>
       </div>
 
       {/* Right */}

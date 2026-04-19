@@ -2,23 +2,17 @@ import { useEffect, useState } from "react";
 import { CircleIcon } from "lucide-react";
 import { useQueue } from "../../hooks/use-queue";
 import { getObsDisplayUrl, openDisplayWindow } from "../../lib/commands/display-window";
-import { getDisplaySettings, setDisplaySettings } from "../../lib/commands/settings";
-import type { DisplaySettings } from "../../lib/types";
 import { Toggle } from "../ui/toggle";
 
 export function DisplayScreen() {
   const { live } = useQueue();
   const [displayUrl, setDisplayUrl] = useState("http://localhost:7411/display");
-  const [displaySettings, setDisplaySettingsState] = useState<DisplaySettings | null>(null);
   const [resolution, setResolution] = useState("1920 × 1080");
   const [background, setBackground] = useState("Solid black");
   const [safeArea, setSafeArea] = useState(true);
 
   useEffect(() => {
     getObsDisplayUrl().then(setDisplayUrl).catch(() => {});
-    getDisplaySettings()
-      .then((s) => setDisplaySettingsState(s))
-      .catch(() => {});
   }, []);
 
   const handleOpenOnProjector = () => {
@@ -104,9 +98,6 @@ export function DisplayScreen() {
               value={resolution}
               onChange={(e) => {
                 setResolution(e.target.value);
-                if (displaySettings) {
-                  setDisplaySettings({ ...displaySettings }).catch(() => {});
-                }
               }}
             >
               <option>1920 × 1080</option>
@@ -124,9 +115,6 @@ export function DisplayScreen() {
               value={background}
               onChange={(e) => {
                 setBackground(e.target.value);
-                if (displaySettings) {
-                  setDisplaySettings({ ...displaySettings }).catch(() => {});
-                }
               }}
             >
               <option>Solid black</option>
@@ -143,9 +131,6 @@ export function DisplayScreen() {
               checked={safeArea}
               onCheckedChange={(v) => {
                 setSafeArea(v);
-                if (displaySettings) {
-                  setDisplaySettings({ ...displaySettings }).catch(() => {});
-                }
               }}
             />
           }

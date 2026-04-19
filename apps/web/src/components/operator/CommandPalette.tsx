@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { invoke } from "../../lib/tauri";
 import { toastError } from "../../lib/toast";
+import { clearLive } from "../../lib/commands/detection";
 import type { VerseResult, Song } from "../../lib/types";
 
 interface CommandPaletteProps {
@@ -119,7 +120,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     groups.push({
       group: "Actions",
       items: [
-        { glyph: <SquareIcon className="w-3.5 h-3.5 shrink-0" />, main: "Black display", sub: "Action", onSelect: onClose },
+        { glyph: <SquareIcon className="w-3.5 h-3.5 shrink-0" />, main: "Black display", sub: "Action", onSelect: () => { clearLive().catch(toastError("Failed to clear display")); onClose(); } },
       ],
     });
   }

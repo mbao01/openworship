@@ -162,7 +162,9 @@ pub fn save_projects(projects: &[ServiceProject]) -> Result<()> {
     if let Some(p) = path.parent() {
         std::fs::create_dir_all(p)?;
     }
-    std::fs::write(&path, serde_json::to_vec_pretty(projects)?)?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_vec_pretty(projects)?)?;
+    std::fs::rename(&tmp, &path)?;
     Ok(())
 }
 
@@ -186,7 +188,9 @@ pub fn save_content_bank(bank: &[ContentBankEntry]) -> Result<()> {
     if let Some(p) = path.parent() {
         std::fs::create_dir_all(p)?;
     }
-    std::fs::write(&path, serde_json::to_vec_pretty(bank)?)?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_vec_pretty(bank)?)?;
+    std::fs::rename(&tmp, &path)?;
     Ok(())
 }
 
@@ -227,6 +231,8 @@ pub fn save_session_memory(mem: &SessionMemory) -> Result<()> {
     if let Some(p) = path.parent() {
         std::fs::create_dir_all(p)?;
     }
-    std::fs::write(&path, serde_json::to_vec_pretty(mem)?)?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_vec_pretty(mem)?)?;
+    std::fs::rename(&tmp, &path)?;
     Ok(())
 }

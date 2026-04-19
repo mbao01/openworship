@@ -237,7 +237,7 @@ pub async fn run_loop(
                         let snapshot = {
                             let mut q = queue.lock().unwrap_or_else(|e| e.into_inner());
                             match current_mode {
-                                DetectionMode::Auto | DetectionMode::Offline => {
+                                DetectionMode::Auto => {
                                     let _ = display_tx.send(ev);
                                     for it in q.iter_mut() {
                                         if it.status == QueueStatus::Live {
@@ -246,7 +246,9 @@ pub async fn run_loop(
                                     }
                                     item.status = QueueStatus::Live;
                                 }
-                                DetectionMode::Copilot => { /* stays Pending */ }
+                                DetectionMode::Copilot | DetectionMode::Offline => {
+                                    /* stays Pending for manual approval */
+                                }
                                 DetectionMode::Airplane => unreachable!(),
                             }
                             q.push_back(item);
@@ -495,19 +497,19 @@ fn enqueue_song_ref(
     item.is_semantic = false;
 
     match mode {
-        DetectionMode::Auto | DetectionMode::Offline => {
+        DetectionMode::Auto => {
             // For songs in Auto mode we leave the item Live but don't push to
             // display yet — the operator or a subsequent `push_song_to_display`
             // call will load lyrics.  This avoids sending empty lyrics to the
             // display screen.
             item.status = QueueStatus::Live;
         }
-        DetectionMode::Copilot => { /* stays Pending */ }
+        DetectionMode::Copilot | DetectionMode::Offline => { /* stays Pending */ }
         DetectionMode::Airplane => unreachable!("guarded by caller"),
     }
 
     let mut q = queue.lock().unwrap_or_else(|e| e.into_inner());
-    if matches!(mode, DetectionMode::Auto | DetectionMode::Offline) {
+    if mode == DetectionMode::Auto {
         for it in q.iter_mut() {
             if it.status == QueueStatus::Live {
                 it.status = QueueStatus::Dismissed;
@@ -545,17 +547,19 @@ fn enqueue_item_inner(
     item.kind = kind.to_owned();
     item.song_id = song_id;
 
-    match mode {
-        DetectionMode::Auto | DetectionMode::Offline => {
-            let _ = display_tx.send(ContentEvent::scripture(&reference, &text, &translation));
-            item.status = QueueStatus::Live;
-        }
-        DetectionMode::Copilot => { /* stays Pending */ }
-        DetectionMode::Airplane => unreachable!("guarded by caller"),
+    // Auto mode: auto-approve only when confidence >= 0.95.
+    // Offline and Copilot: items queue as Pending for manual approval.
+    let auto_approve = mode == DetectionMode::Auto
+        && confidence.map(|c| c >= 0.95).unwrap_or(false);
+
+    if auto_approve {
+        let _ = display_tx.send(ContentEvent::scripture(&reference, &text, &translation));
+        item.status = QueueStatus::Live;
     }
+    // Otherwise stays Pending (Copilot, Offline, or Auto with low confidence).
 
     let mut q = queue.lock().unwrap_or_else(|e| e.into_inner());
-    if matches!(mode, DetectionMode::Auto | DetectionMode::Offline) {
+    if auto_approve {
         for it in q.iter_mut() {
             if it.status == QueueStatus::Live {
                 it.status = QueueStatus::Dismissed;
