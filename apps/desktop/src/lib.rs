@@ -295,21 +295,33 @@ pub fn run() {
                     eprintln!("[embed] bundled index not available, building on-device…");
                 }
 
-                // Fall back to on-device build (dev mode, or missing/corrupt bundle).
-                let result = tokio::task::spawn_blocking(move || {
-                    ow_embed::build_index(&*embed_embedder, &verse_results)
-                })
-                .await;
-                match result {
-                    Ok(Ok(index)) => {
-                        let count = index.len();
-                        if let Ok(mut guard) = embed_index.write() {
-                            *guard = Some(index);
+                // Fall back to on-device build in dev mode only.
+                // In release builds, skip the expensive 30-60 min embedding process.
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!("[embed] dev mode: building index on-device (this may take a while)…");
+                    let result = tokio::task::spawn_blocking(move || {
+                        ow_embed::build_index(&*embed_embedder, &verse_results)
+                    })
+                    .await;
+                    match result {
+                        Ok(Ok(index)) => {
+                            let count = index.len();
+                            if let Ok(mut guard) = embed_index.write() {
+                                *guard = Some(index);
+                            }
+                            eprintln!("[embed] semantic index ready ({count} verses)");
                         }
-                        eprintln!("[embed] semantic index ready ({count} verses)");
+                        Ok(Err(e)) => eprintln!("[embed] failed to build semantic index: {e}"),
+                        Err(e) => eprintln!("[embed] embedding task panicked: {e}"),
                     }
-                    Ok(Err(e)) => eprintln!("[embed] failed to build semantic index: {e}"),
-                    Err(e) => eprintln!("[embed] embedding task panicked: {e}"),
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    eprintln!(
+                        "[embed] No bundled index found. Semantic search unavailable.\n\
+                         Run `./scripts/build-embedding-index.sh` before packaging."
+                    );
                 }
             });
 
