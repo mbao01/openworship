@@ -2616,6 +2616,20 @@ pub fn open_artifact(id: String, state: State<'_, AppState>) -> Result<(), Strin
     Ok(())
 }
 
+/// Read an artifact's raw bytes. Used by the frontend preview panel to render
+/// images, videos, etc. via blob URLs when the asset:// protocol is unavailable.
+#[tauri::command]
+pub fn read_artifact_bytes(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<u8>, String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = db.get_by_id(&id).map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("artifact not found: {id}"))?;
+    let abs = db.abs_path(&entry.path);
+    std::fs::read(&abs).map_err(|e| e.to_string())
+}
+
 // ── Phase 16: Cloud Sync ───────────────────────────────────────────────────────
 
 use crate::cloud_sync::{AclEntry, AccessLevel, CloudSyncInfo, S3Config, SyncStatus};

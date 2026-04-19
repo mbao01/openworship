@@ -251,21 +251,32 @@ pub fn run() {
                 detect_announcements,
             ));
 
-            // Resolve the bundled pre-built index path for the active translation.
+            // Resolve the pre-built index path for the active translation.
             // Indices are named scripture_index_<TRANSLATION>.bin (e.g. scripture_index_KJV.bin).
-            // Only valid in packaged builds; absent in dev mode.
             let active_translation_code = embed_translation
                 .read()
                 .map(|t| t.clone())
                 .unwrap_or_else(|_| "KJV".to_string());
-            let bundled_index_path = app
-                .path()
-                .resource_dir()
-                .ok()
-                .map(|dir: std::path::PathBuf| {
-                    dir.join("resources")
-                        .join(format!("scripture_index_{active_translation_code}.bin"))
-                });
+            let index_filename = format!("scripture_index_{active_translation_code}.bin");
+
+            // In dev mode, check the source tree first (apps/desktop/resources/).
+            // In packaged builds, check the bundled resource directory.
+            let bundled_index_path = {
+                // Dev: relative to the crate's Cargo.toml directory
+                let dev_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("resources")
+                    .join(&index_filename);
+                if dev_path.exists() {
+                    eprintln!("[embed] found dev index at {}", dev_path.display());
+                    Some(dev_path)
+                } else {
+                    // Packaged: bundled resource directory
+                    app.path()
+                        .resource_dir()
+                        .ok()
+                        .map(|dir: std::path::PathBuf| dir.join("resources").join(&index_filename))
+                }
+            };
 
             // Background: load bundled embedding index or build on-device.
             tauri::async_runtime::spawn(async move {
@@ -462,6 +473,7 @@ pub fn run() {
             commands::set_artifacts_base_path,
             commands::read_text_file,
             commands::open_artifact,
+            commands::read_artifact_bytes,
             // ── Phase 14: Summaries + email ────────────────────────────────
             commands::generate_service_summary,
             commands::list_service_summaries,

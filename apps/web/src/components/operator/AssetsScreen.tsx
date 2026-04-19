@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { ShareDialog } from "../ShareDialog";
 import { invoke } from "../../lib/tauri";
 import type {
@@ -64,6 +63,18 @@ function mimeCategory(mime: string | null): ArtifactCategory {
   if (mime.includes("presentation") || mime.includes("powerpoint"))
     return "slide";
   return "other";
+}
+
+function guessMimeFromExt(ext: string): string {
+  const map: Record<string, string> = {
+    png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
+    webp: "image/webp", svg: "image/svg+xml", bmp: "image/bmp", ico: "image/x-icon",
+    mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
+    mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", flac: "audio/flac",
+    pdf: "application/pdf",
+    txt: "text/plain", md: "text/markdown", json: "application/json",
+  };
+  return map[ext] || "application/octet-stream";
 }
 
 function formatStorageBytes(bytes: number): string {
@@ -613,11 +624,15 @@ function PreviewPanel({
   onShare: (e: ArtifactEntry) => void;
 }) {
   const mime = entry.mime_type ?? "";
-  const isImage = mime.startsWith("image/");
-  const isVideo = mime.startsWith("video/");
-  const isAudio = mime.startsWith("audio/");
-  const isPdf = mime.includes("pdf");
-  const isText = mime.startsWith("text/") && !isPdf;
+  const fileExt = entry.name.split(".").pop()?.toLowerCase() ?? "";
+  const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"];
+  const VIDEO_EXTS = ["mp4", "webm", "mov", "avi", "mkv"];
+  const AUDIO_EXTS = ["mp3", "wav", "ogg", "flac", "aac", "m4a"];
+  const isImage = mime.startsWith("image/") || IMAGE_EXTS.includes(fileExt);
+  const isVideo = mime.startsWith("video/") || VIDEO_EXTS.includes(fileExt);
+  const isAudio = mime.startsWith("audio/") || AUDIO_EXTS.includes(fileExt);
+  const isPdf = mime.includes("pdf") || fileExt === "pdf";
+  const isText = (mime.startsWith("text/") || ["txt", "md", "json", "xml", "csv", "log", "yml", "yaml", "toml"].includes(fileExt)) && !isPdf;
 
   const [fileSrc, setFileSrc] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
@@ -625,18 +640,35 @@ function PreviewPanel({
   const [textLoading, setTextLoading] = useState(false);
 
   useEffect(() => {
-    if ((isImage || isVideo || isAudio || isPdf) && entry.path) {
-      try {
-        setFileSrc(convertFileSrc(entry.path));
-      } catch {
-        setFileSrc(null);
-      }
+    let revoked = false;
+    let blobUrl: string | null = null;
+
+    if ((isImage || isVideo || isAudio || isPdf) && entry.id) {
+      // Read raw bytes from the backend and create a blob URL
+      invoke<number[]>("read_artifact_bytes", { id: entry.id })
+        .then((bytes) => {
+          if (revoked) return;
+          const arr = new Uint8Array(bytes);
+          const mime = entry.mime_type || guessMimeFromExt(fileExt);
+          const blob = new Blob([arr], { type: mime });
+          blobUrl = URL.createObjectURL(blob);
+          setFileSrc(blobUrl);
+        })
+        .catch((e) => {
+          console.error("[preview] read_artifact_bytes failed:", e);
+          setFileSrc(null);
+        });
     } else {
       setFileSrc(null);
     }
     setTextContent(null);
     setTextTruncated(false);
-  }, [entry.path, isImage, isVideo, isAudio, isPdf]);
+
+    return () => {
+      revoked = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [entry.id, fileExt, isImage, isVideo, isAudio, isPdf]);
 
   useEffect(() => {
     if (!isText || !entry.id) return;
@@ -650,10 +682,11 @@ function PreviewPanel({
       .finally(() => setTextLoading(false));
   }, [entry.id, isText]);
 
-  const ext = entry.name.split(".").pop()?.toUpperCase() ?? "\u2014";
+  const ext = entry.name.split(".").pop()?.toUpperCase() ?? "—";
+  const canPreview = !entry.is_dir && (isImage || isVideo || isAudio || isPdf || isText);
 
   return (
-    <div className="w-[260px] shrink-0 bg-bg-1 border-l border-line flex flex-col overflow-hidden">
+    <div className={`fixed bottom-6 right-6 w-[320px] bg-bg-1 border border-line-strong rounded-lg flex flex-col overflow-hidden shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] z-[50] animate-[fade-in_150ms_ease-out] ${canPreview ? "h-[400px]" : ""}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
         <span className="text-[9px] font-semibold tracking-[0.12em] uppercase text-muted">Preview</span>
@@ -666,59 +699,55 @@ function PreviewPanel({
         </button>
       </div>
 
-      {/* Render area */}
-      <div className="mx-3 mb-2 rounded-[4px] overflow-hidden bg-bg border border-line flex-1 flex items-center justify-center min-h-0">
-        {isImage && fileSrc ? (
-          <img
-            src={fileSrc}
-            alt={entry.name}
-            className="w-full h-full object-contain"
-            onError={() => setFileSrc(null)}
-          />
-        ) : isVideo && fileSrc ? (
-          <video
-            src={fileSrc}
-            controls
-            className="w-full h-full object-contain"
-          />
-        ) : isAudio && fileSrc ? (
-          <div className="flex flex-col items-center gap-3 p-3 w-full">
-            <Music2Icon className="w-8 h-8 text-muted" />
-            <audio src={fileSrc} controls className="w-full" />
-          </div>
-        ) : isPdf && fileSrc ? (
-          <iframe
-            src={fileSrc}
-            title={entry.name}
-            className="w-full h-full border-none"
-          />
-        ) : isText ? (
-          <div className="w-full h-full overflow-auto p-2">
-            {textLoading ? (
-              <span className="text-[10px] text-muted">Loading...</span>
-            ) : textContent !== null ? (
-              <>
-                <pre className="text-[10px] font-mono text-ink-3 m-0 whitespace-pre-wrap break-words leading-[1.5]">
-                  {textContent}
-                </pre>
-                {textTruncated && (
-                  <p className="text-[9px] text-muted mt-2 m-0 italic">&mdash; truncated at 64 KB &mdash;</p>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col items-center gap-2 text-muted h-full justify-center">
-                <FileIcon className="w-7 h-7" />
-                <span className="text-[10px] font-mono">{ext}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2 text-muted">
-            <FileIcon className="w-7 h-7" />
-            <span className="text-[10px] font-mono">{ext}</span>
-          </div>
-        )}
-      </div>
+      {/* Render area — only shown for previewable content */}
+      {canPreview && (
+        <div className="mx-3 mb-2 rounded-[4px] overflow-hidden bg-bg border border-line flex-1 flex items-center justify-center min-h-0">
+          {isImage && fileSrc ? (
+            <img
+              src={fileSrc}
+              alt={entry.name}
+              className="w-full h-full object-contain"
+              onError={(e) => { console.error("[preview] image load failed:", e); setFileSrc(null); }}
+            />
+          ) : isVideo && fileSrc ? (
+            <video
+              src={fileSrc}
+              controls
+              className="w-full h-full object-contain"
+            />
+          ) : isAudio && fileSrc ? (
+            <div className="flex flex-col items-center gap-3 p-3 w-full">
+              <Music2Icon className="w-8 h-8 text-muted" />
+              <audio src={fileSrc} controls className="w-full" />
+            </div>
+          ) : isPdf && fileSrc ? (
+            <iframe
+              src={fileSrc}
+              title={entry.name}
+              className="w-full h-full border-none"
+            />
+          ) : isText ? (
+            <div className="w-full h-full overflow-auto p-2">
+              {textLoading ? (
+                <span className="text-[10px] text-muted">Loading…</span>
+              ) : textContent !== null ? (
+                <>
+                  <pre className="text-[10px] font-mono text-ink-3 m-0 whitespace-pre-wrap break-words leading-[1.5]">
+                    {textContent}
+                  </pre>
+                  {textTruncated && (
+                    <p className="text-[9px] text-muted mt-2 m-0 italic">— truncated at 64 KB —</p>
+                  )}
+                </>
+              ) : (
+                <span className="text-[10px] text-muted">Unable to load</span>
+              )}
+            </div>
+          ) : (
+            <span className="text-[10px] text-muted">Loading…</span>
+          )}
+        </div>
+      )}
 
       {/* Compact metadata footer */}
       <div className="px-3 pb-3 shrink-0 flex flex-col gap-[6px]">
@@ -1452,18 +1481,19 @@ export function AssetsScreen() {
 
             </div>
 
-            {/* Preview panel */}
-            {selected && (
-              <PreviewPanel
-                entry={selected}
-                syncInfo={syncInfoMap.get(selected.id)}
-                onClose={() => setSelected(null)}
-                onShare={handleShare}
-              />
-            )}
           </div>
         </main>
       </div>
+
+      {/* Floating preview panel — outside the flex layout */}
+      {selected && (
+        <PreviewPanel
+          entry={selected}
+          syncInfo={syncInfoMap.get(selected.id)}
+          onClose={() => setSelected(null)}
+          onShare={handleShare}
+        />
+      )}
 
       {/* ── Full-width footer ───────────────────────────────────────────────── */}
       <footer className="flex items-center justify-between px-4 h-[26px] border-t border-line bg-bg-1 shrink-0 gap-4">
