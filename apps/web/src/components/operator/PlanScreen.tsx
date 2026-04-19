@@ -6,6 +6,7 @@ import type { AudioSettings, EmailSettings, ProjectItem, ServiceProject, Transla
 import { searchScriptures, listTranslations, getActiveTranslation, switchLiveTranslation } from "../../lib/commands/content";
 import { addItemToActiveProject } from "../../lib/commands/projects";
 import { getAudioSettings, setAudioSettings, getEmailSettings, setEmailSettings } from "../../lib/commands/settings";
+import { Toggle } from "../ui/toggle";
 
 export function PlanScreen() {
   const [project, setProject] = useState<ServiceProject | null>(null);
@@ -105,15 +106,19 @@ export function PlanScreen() {
   return (
     <div className="flex-1 overflow-y-auto px-14 py-10 bg-bg">
       <h1 className="font-serif text-[44px] font-normal tracking-[-0.025em] mb-2">
-        {dayName}, {dateStr} <em className="text-accent italic">{"\u00B7"} plan</em>
+        {dayName}, {dateStr}{" "}
+        <em className="text-accent italic">{"\u00B7"} plan</em>
       </h1>
       <p className="text-ink-3 text-sm mb-8 max-w-[56ch]">
-        Drag items to reorder. AI auto-detects additions during the service {"\u2014"} everything you pre-load here arrives exactly on cue.
+        Drag items to reorder. AI auto-detects additions during the service{" "}
+        {"\u2014"} everything you pre-load here arrives exactly on cue.
       </p>
 
       {/* Order of service */}
       <div className="flex items-baseline justify-between mb-4">
-        <h2 className="font-serif text-2xl font-normal tracking-[-0.015em]">Order of service</h2>
+        <h2 className="font-serif text-2xl font-normal tracking-[-0.015em]">
+          Order of service
+        </h2>
         {!project && !showNewForm && (
           <button
             className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00]"
@@ -125,14 +130,19 @@ export function PlanScreen() {
         {project && (
           <button
             className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00]"
-            onClick={() => setShowAddSearch(v => !v)}
+            onClick={() => setShowAddSearch((v) => !v)}
           >
             + Add item
           </button>
         )}
       </div>
 
-      {showNewForm && !project && <NewServiceForm onCreate={handleCreate} onCancel={() => setShowNewForm(false)} />}
+      {showNewForm && !project && (
+        <NewServiceForm
+          onCreate={handleCreate}
+          onCancel={() => setShowNewForm(false)}
+        />
+      )}
 
       {project && showAddSearch && (
         <AddItemSearch
@@ -150,15 +160,26 @@ export function PlanScreen() {
               key={item.id}
               className="grid grid-cols-[52px_24px_1fr_auto] gap-3 px-3.5 py-3 items-center border-b border-line cursor-pointer transition-colors hover:bg-bg-2"
               draggable
-              onDragStart={() => { dragItemId.current = item.id; }}
+              onDragStart={() => {
+                dragItemId.current = item.id;
+              }}
               onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); handleDrop(item.id); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleDrop(item.id);
+              }}
               onClick={() => handlePush(item)}
             >
               <span className="font-mono text-[10px] text-ink-3 tracking-[0.05em]">
-                {new Date(item.added_at_ms).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                {new Date(item.added_at_ms).toLocaleTimeString("en-US", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })}
               </span>
-              <span className="font-serif italic text-sm text-accent text-center">{"\u00A7"}</span>
+              <span className="font-serif italic text-sm text-accent text-center">
+                {"\u00A7"}
+              </span>
               <div className="text-[12.5px] text-ink">
                 {item.reference}
                 <span className="block font-mono text-[9.5px] text-ink-3 tracking-[0.08em] mt-0.5 uppercase">
@@ -167,7 +188,10 @@ export function PlanScreen() {
               </div>
               <button
                 className="text-ink-3 hover:text-danger text-sm transition-colors"
-                onClick={(e) => { e.stopPropagation(); handleRemove(item.id); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove(item.id);
+                }}
                 title="Remove"
               >
                 {"\u00D7"}
@@ -206,7 +230,9 @@ export function PlanScreen() {
                 }}
               >
                 {translations.map((t) => (
-                  <option key={t.id} value={t.abbreviation}>{t.abbreviation}</option>
+                  <option key={t.id} value={t.abbreviation}>
+                    {t.abbreviation}
+                  </option>
                 ))}
               </select>
             }
@@ -221,7 +247,10 @@ export function PlanScreen() {
                 onChange={(e) => {
                   if (!audioSettings) return;
                   const value = Number(e.target.value);
-                  const updated = { ...audioSettings, semantic_threshold_auto: value };
+                  const updated = {
+                    ...audioSettings,
+                    semantic_threshold_auto: value,
+                  };
                   setAudioSettings(updated)
                     .then(() => setAudioSettingsState(updated))
                     .catch(() => {});
@@ -238,10 +267,13 @@ export function PlanScreen() {
             description="AI-generated recap sent to subscribers 6 hours after service ends."
             control={
               <Toggle
-                on={emailSettings?.auto_send ?? false}
-                onToggle={() => {
+                checked={emailSettings?.auto_send ?? false}
+                onCheckedChange={() => {
                   if (!emailSettings) return;
-                  const updated = { ...emailSettings, auto_send: !emailSettings.auto_send };
+                  const updated = {
+                    ...emailSettings,
+                    auto_send: !emailSettings.auto_send,
+                  };
                   setEmailSettings(updated)
                     .then(() => setEmailSettingsState(updated))
                     .catch(() => {});
@@ -354,20 +386,5 @@ function SettingRow({ label, description, control }: { label: string; descriptio
       </div>
       <div className="flex justify-end">{control}</div>
     </div>
-  );
-}
-
-function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
-  return (
-    <button
-      className={`relative w-[38px] h-[22px] rounded-[11px] transition-colors cursor-pointer ${on ? "bg-accent" : "bg-bg-3"}`}
-      onClick={onToggle}
-      role="switch"
-      aria-checked={on}
-    >
-      <span
-        className={`absolute top-[3px] w-4 h-4 rounded-full transition-[left] ${on ? "left-[19px] bg-[#1A0D00]" : "left-[3px] bg-ink"}`}
-      />
-    </button>
   );
 }

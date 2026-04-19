@@ -412,10 +412,46 @@ pub fn list_audio_input_devices() -> Result<Vec<AudioInputDevice>, String> {
 }
 
 /// Return the most-recent RMS audio level `[0.0, 1.0]`.
-/// Returns `0.0` when the STT engine is stopped.
+/// Reads from the STT engine if running, otherwise from the audio monitor.
 #[tauri::command]
 pub fn get_audio_level(state: State<'_, AppState>) -> f32 {
-    state.stt.lock().unwrap().audio_level_rms()
+    // Prefer STT engine level when it's running
+    let stt_level = state.stt.lock().unwrap().audio_level_rms();
+    if stt_level > 0.0 {
+        return stt_level;
+    }
+    // Fall back to standalone audio monitor
+    state.audio_monitor.level_rms()
+}
+
+/// Start a lightweight audio capture purely for VU meter / mic check.
+/// Does NOT start transcription — just opens the mic and reads levels.
+#[tauri::command]
+pub fn start_audio_monitor(state: State<'_, AppState>) -> Result<(), String> {
+    let device_name = state
+        .audio_settings
+        .read()
+        .map_err(|e| e.to_string())?
+        .audio_input_device
+        .clone();
+    eprintln!("[audio-monitor] starting with device: {:?}", device_name);
+    let result = state
+        .audio_monitor
+        .start(device_name)
+        .map_err(|e| {
+            eprintln!("[audio-monitor] start failed: {e}");
+            e.to_string()
+        });
+    if result.is_ok() {
+        eprintln!("[audio-monitor] started successfully, is_running={}", state.audio_monitor.is_running());
+    }
+    result
+}
+
+/// Stop the audio monitor.
+#[tauri::command]
+pub fn stop_audio_monitor(state: State<'_, AppState>) {
+    state.audio_monitor.stop();
 }
 
 // ─── Detection commands ───────────────────────────────────────────────────────

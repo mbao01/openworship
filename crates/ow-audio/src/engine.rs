@@ -147,3 +147,137 @@ impl Default for SttEngine {
         Self::new().0
     }
 }
+
+/// Lightweight audio-only capture for VU meter / mic check.
+///
+/// Opens the mic directly via cpal and computes RMS on every callback,
+/// without running any transcription or chunk buffering. Updates ~20×
+/// per second for smooth VU meter rendering.
+pub struct AudioMonitor {
+    level: Arc<AtomicU32>,
+    running: Arc<AtomicBool>,
+}
+
+impl AudioMonitor {
+    pub fn new() -> Self {
+        Self {
+            level: Arc::new(AtomicU32::new(0)),
+            running: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    /// Current RMS audio level [0.0, 1.0].
+    pub fn level_rms(&self) -> f32 {
+        f32::from_bits(self.level.load(Ordering::Relaxed))
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.running.load(Ordering::Relaxed)
+    }
+
+    /// Start capturing audio purely for level metering.
+    pub fn start(&self, device_name: Option<String>) -> Result<()> {
+        if self.running.load(Ordering::Relaxed) {
+            return Ok(());
+        }
+
+        let level = self.level.clone();
+        let running = self.running.clone();
+        running.store(true, Ordering::Release);
+
+        let level_clear = self.level.clone();
+        let running_check = self.running.clone();
+
+        // Build and own the cpal stream on a dedicated thread — cpal
+        // streams are !Send on macOS CoreAudio, so we must create AND
+        // keep them alive on the same thread.
+        thread::spawn(move || {
+            use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+
+            let host = cpal::default_host();
+            let device = (|| {
+                if let Some(ref name) = device_name {
+                    if let Ok(mut devs) = host.input_devices() {
+                        if let Some(d) = devs.find(|d| d.name().ok().as_deref() == Some(name.as_str())) {
+                            return Some(d);
+                        }
+                    }
+                }
+                host.default_input_device()
+            })();
+
+            let device = match device {
+                Some(d) => d,
+                None => {
+                    eprintln!("[audio-monitor] no audio input device available");
+                    running_check.store(false, Ordering::Release);
+                    return;
+                }
+            };
+
+            let config = match device.default_input_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("[audio-monitor] no default input config: {e}");
+                    running_check.store(false, Ordering::Release);
+                    return;
+                }
+            };
+            let stream_config: cpal::StreamConfig = config.into();
+
+            let stream = device.build_input_stream(
+                &stream_config,
+                move |data: &[f32], _info| {
+                    if data.is_empty() {
+                        return;
+                    }
+                    let sum_sq: f32 = data.iter().map(|&s| s * s).sum();
+                    let rms = (sum_sq / data.len() as f32).sqrt();
+                    level.store(rms.to_bits(), Ordering::Release);
+                },
+                |err| eprintln!("[audio-monitor] stream error: {err}"),
+                None,
+            );
+
+            let stream = match stream {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("[audio-monitor] failed to build stream: {e}");
+                    running_check.store(false, Ordering::Release);
+                    return;
+                }
+            };
+
+            if let Err(e) = stream.play() {
+                eprintln!("[audio-monitor] failed to start stream: {e}");
+                running_check.store(false, Ordering::Release);
+                return;
+            }
+
+            eprintln!("[audio-monitor] stream started");
+
+            // Keep the stream alive until told to stop
+            while running_check.load(Ordering::Acquire) {
+                thread::sleep(std::time::Duration::from_millis(100));
+            }
+
+            drop(stream);
+            level_clear.store(0u32, Ordering::Release);
+            eprintln!("[audio-monitor] stream stopped");
+        });
+
+        Ok(())
+    }
+
+    /// Stop the audio monitor.
+    pub fn stop(&self) {
+        self.running.store(false, Ordering::Release);
+        self.level.store(0u32, Ordering::Release);
+    }
+}
+
+impl Default for AudioMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}

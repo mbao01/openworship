@@ -3,6 +3,7 @@ import { useQueue } from "../../hooks/use-queue";
 import { getObsDisplayUrl, openDisplayWindow } from "../../lib/commands/display-window";
 import { getDisplaySettings, setDisplaySettings } from "../../lib/commands/settings";
 import type { DisplaySettings } from "../../lib/types";
+import { Toggle } from "../ui/toggle";
 
 export function DisplayScreen() {
   const { live } = useQueue();
@@ -33,17 +34,23 @@ export function DisplayScreen() {
         <code className="font-mono bg-bg-2 px-1.5 py-px rounded-sm text-xs">
           {displayUrl}
         </code>{" "}
-        {"\u2014"} open it on any screen, or drop it into OBS as a Browser Source.
+        {"\u2014"} open it on any screen, or drop it into OBS as a Browser
+        Source.
       </p>
 
       {/* Live display preview */}
       <div className="max-w-[900px] mb-4">
         <div
           className="w-full aspect-video bg-[#050403] text-[#F5EFDF] px-[72px] py-14 flex flex-col justify-center relative border border-line-strong"
-          style={{ boxShadow: "0 20px 60px -20px rgba(0,0,0,0.6), inset 0 0 120px rgba(0,0,0,0.6)" }}
+          style={{
+            boxShadow:
+              "0 20px 60px -20px rgba(0,0,0,0.6), inset 0 0 120px rgba(0,0,0,0.6)",
+          }}
         >
           <div className="absolute top-0 left-0 right-0 px-5 py-2.5 flex justify-between font-mono text-[9.5px] tracking-[0.18em] uppercase text-[rgba(245,239,223,0.5)]">
-            <span>{"\u25CF"} LIVE {"\u00B7"} ON SCREEN</span>
+            <span>
+              {"\u25CF"} LIVE {"\u00B7"} ON SCREEN
+            </span>
             <span>openworship</span>
           </div>
           {live ? (
@@ -131,9 +138,9 @@ export function DisplayScreen() {
           label="Safe area"
           description="Keep text inside a 90% margin for lower-third graphics."
           control={
-            <ToggleControlled
-              on={safeArea}
-              onChange={(v) => {
+            <Toggle
+              checked={safeArea}
+              onCheckedChange={(v) => {
                 setSafeArea(v);
                 if (displaySettings) {
                   setDisplaySettings({ ...displaySettings }).catch(() => {});
@@ -156,18 +163,5 @@ function SettingRow({ label, description, control }: { label: string; descriptio
       </div>
       <div className="flex justify-end">{control}</div>
     </div>
-  );
-}
-
-function ToggleControlled({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      className={`relative w-[38px] h-[22px] rounded-[11px] transition-colors cursor-pointer ${on ? "bg-accent" : "bg-bg-3"}`}
-      onClick={() => onChange(!on)}
-      role="switch"
-      aria-checked={on}
-    >
-      <span className={`absolute top-[3px] w-4 h-4 rounded-full transition-[left] ${on ? "left-[19px] bg-[#1A0D00]" : "left-[3px] bg-ink"}`} />
-    </button>
   );
 }

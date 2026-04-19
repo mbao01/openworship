@@ -11,7 +11,6 @@ import { LogsScreen } from "../components/operator/LogsScreen";
 import { DisplayScreen } from "../components/operator/DisplayScreen";
 import { SettingsScreen } from "../components/operator/SettingsScreen";
 import { CommandPalette } from "../components/operator/CommandPalette";
-import { ArtifactsPage } from "./ArtifactsPage";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;

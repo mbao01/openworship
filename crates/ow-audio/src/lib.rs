@@ -16,7 +16,7 @@ pub mod event;
 pub(crate) mod transcribe;
 
 pub use capture::{AudioConfig, AudioInputDevice, list_input_devices};
-pub use engine::{SttEngine, SttStatus};
+pub use engine::{AudioMonitor, SttEngine, SttStatus};
 pub use event::TranscriptEvent;
 pub use transcribe::Transcriber;
 #[cfg(feature = "whisper")]

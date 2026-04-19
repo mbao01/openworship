@@ -50,6 +50,21 @@ export async function listAudioInputDevices(): Promise<AudioInputDevice[]> {
 }
 
 /**
+ * Starts a lightweight audio capture purely for VU meter / mic check.
+ * Does NOT start transcription — just opens the mic and reads levels.
+ */
+export async function startAudioMonitor(): Promise<void> {
+  return invoke("start_audio_monitor");
+}
+
+/**
+ * Stops the audio monitor.
+ */
+export async function stopAudioMonitor(): Promise<void> {
+  return invoke("stop_audio_monitor");
+}
+
+/**
  * Checks whether the local Whisper base model is downloaded and available.
  * Returns true if the model file exists at ~/.openworship/models/.
  */

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAudioSettings } from "@/hooks/use-audio-settings";
 import { useWhisperModel } from "@/hooks/use-whisper-model";
 import { useAudioLevel } from "@/hooks/use-audio-level";
@@ -8,9 +8,8 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VuMeter } from "@/components/ui/vu-meter";
 import { Button } from "@/components/ui/button";
-import { listAudioInputDevices } from "@/lib/commands/audio";
+import { listAudioInputDevices, startAudioMonitor, stopAudioMonitor } from "@/lib/commands/audio";
 import { setAnthropicApiKey } from "@/lib/commands/settings";
-import { useEffect } from "react";
 import type { AudioInputDevice } from "@/lib/types";
 
 /**
@@ -25,12 +24,42 @@ export function AudioSection() {
   const [apiKey, setApiKey] = useState("");
   const [keyVisible, setKeyVisible] = useState(false);
   const [savingKey, setSavingKey] = useState(false);
+  const [micTesting, setMicTesting] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
 
   useEffect(() => {
     listAudioInputDevices()
       .then(setDevices)
       .catch(() => {});
   }, []);
+
+  // Auto-start audio monitor on mount, stop on unmount
+  useEffect(() => {
+    startAudioMonitor()
+      .then(() => setMicTesting(true))
+      .catch(() => {});
+    return () => {
+      stopAudioMonitor().catch(() => {});
+    };
+  }, []);
+
+  const handleMicTest = async () => {
+    setMicError(null);
+    if (micTesting) {
+      try {
+        await stopAudioMonitor();
+      } catch { /* ignore */ }
+      setMicTesting(false);
+    } else {
+      try {
+        await startAudioMonitor();
+        setMicTesting(true);
+      } catch (e) {
+        setMicError(String(e));
+        setMicTesting(false);
+      }
+    }
+  };
 
   const handleSaveApiKey = async () => {
     setSavingKey(true);
@@ -170,8 +199,26 @@ export function AudioSection() {
           </Select>
         </SettingRow>
 
-        <SettingRow label="Input level">
-          <VuMeter level={audioLevel} />
+        <SettingRow
+          label="Input level"
+          description={
+            micError
+              ? micError
+              : micTesting
+                ? "Listening — speak to test"
+                : "Start mic to see levels"
+          }
+        >
+          <div className="flex items-center gap-3">
+            <VuMeter level={audioLevel} showPercentage />
+            <Button
+              variant={micTesting ? "outline" : "default"}
+              size="sm"
+              onClick={handleMicTest}
+            >
+              {micTesting ? "Stop" : "Test mic"}
+            </Button>
+          </div>
         </SettingRow>
       </Section>
 
