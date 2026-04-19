@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CircleIcon } from "lucide-react";
 import { useQueue } from "../../hooks/use-queue";
 import { getObsDisplayUrl, openDisplayWindow } from "../../lib/commands/display-window";
 import { getDisplaySettings, setDisplaySettings } from "../../lib/commands/settings";
@@ -9,7 +10,7 @@ export function DisplayScreen() {
   const { live } = useQueue();
   const [displayUrl, setDisplayUrl] = useState("http://localhost:7411/display");
   const [displaySettings, setDisplaySettingsState] = useState<DisplaySettings | null>(null);
-  const [resolution, setResolution] = useState("1920 \u00D7 1080");
+  const [resolution, setResolution] = useState("1920 × 1080");
   const [background, setBackground] = useState("Solid black");
   const [safeArea, setSafeArea] = useState(true);
 
@@ -27,14 +28,14 @@ export function DisplayScreen() {
   return (
     <div className="flex-1 overflow-y-auto px-14 py-10 bg-bg">
       <h1 className="font-serif text-[44px] font-normal tracking-[-0.025em] mb-2">
-        Output <em className="text-accent italic">{"\u00B7"} display</em>
+        Output <em className="text-accent italic">· display</em>
       </h1>
       <p className="text-ink-3 text-sm mb-8 max-w-[56ch]">
         One source of truth. The display runs on{" "}
         <code className="font-mono bg-bg-2 px-1.5 py-px rounded-sm text-xs">
           {displayUrl}
         </code>{" "}
-        {"\u2014"} open it on any screen, or drop it into OBS as a Browser
+        — open it on any screen, or drop it into OBS as a Browser
         Source.
       </p>
 
@@ -48,15 +49,15 @@ export function DisplayScreen() {
           }}
         >
           <div className="absolute top-0 left-0 right-0 px-5 py-2.5 flex justify-between font-mono text-[9.5px] tracking-[0.18em] uppercase text-[rgba(245,239,223,0.5)]">
-            <span>
-              {"\u25CF"} LIVE {"\u00B7"} ON SCREEN
+            <span className="inline-flex items-center gap-1">
+              <CircleIcon className="w-3 h-3 shrink-0" fill="currentColor" /> LIVE · ON SCREEN
             </span>
             <span>openworship</span>
           </div>
           {live ? (
             <>
               <div className="font-mono text-[10.5px] tracking-[0.22em] uppercase text-accent mb-5">
-                {live.reference} {"\u00B7"} {live.translation}
+                {live.reference} · {live.translation}
               </div>
               <div className="font-serif italic text-[clamp(22px,2.8vw,38px)] leading-[1.35] tracking-[-0.01em] max-w-[36ch]">
                 &ldquo;{live.text}&rdquo;
@@ -64,7 +65,7 @@ export function DisplayScreen() {
             </>
           ) : (
             <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-center w-full text-[#3A332C]">
-              {"\u2014"} no content on screen {"\u2014"}
+              — no content on screen —
             </div>
           )}
         </div>
@@ -108,9 +109,9 @@ export function DisplayScreen() {
                 }
               }}
             >
-              <option>1920 {"\u00D7"} 1080</option>
-              <option>2560 {"\u00D7"} 1440</option>
-              <option>3840 {"\u00D7"} 2160</option>
+              <option>1920 × 1080</option>
+              <option>2560 × 1440</option>
+              <option>3840 × 2160</option>
             </select>
           }
         />

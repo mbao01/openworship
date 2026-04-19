@@ -3,6 +3,7 @@ import { invoke } from "../../lib/tauri";
 import { toastError, toast } from "../../lib/toast";
 import { listServiceSummaries, generateServiceSummary, sendSummaryEmail } from "../../lib/commands/summaries";
 import type { ServiceProject, ServiceSummary } from "../../lib/types";
+import { BookOpenIcon, CircleIcon, FileTextIcon, MailIcon } from "lucide-react";
 
 export function LogsScreen() {
   const [projects, setProjects] = useState<ServiceProject[]>([]);
@@ -87,7 +88,7 @@ export function LogsScreen() {
       <div className="flex flex-col border-r border-line overflow-hidden">
         <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
           <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
-            Artifacts {"\u00B7"}{" "}
+            Artifacts ·{" "}
             <strong className="text-ink-2 font-medium">past services</strong>
           </span>
           <span className="font-mono text-[10px] text-ink-3">
@@ -146,7 +147,7 @@ export function LogsScreen() {
           <>
             <div className="flex items-baseline gap-4 mb-1.5">
               <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
-                {"\u25CF"}{" "}
+                <CircleIcon className="w-2 h-2 shrink-0 inline fill-current" />{" "}
                 {current.created_at_ms ? formatDate(current.created_at_ms) : ""}
               </div>
               <div className="font-mono text-[10px] text-accent tracking-[0.14em] uppercase">
@@ -157,7 +158,7 @@ export function LogsScreen() {
               {current.name}
             </h1>
             <p className="text-ink-3 text-[13px] mb-8 max-w-[56ch]">
-              {current.items.length} content items pushed {"\u00B7"}{" "}
+              {current.items.length} content items pushed ·{" "}
               auto-generated artifacts ready to publish.
             </p>
 
@@ -167,19 +168,19 @@ export function LogsScreen() {
                 {
                   label: "Full transcript",
                   sub: "VTT + TXT",
-                  icon: "\u00A7",
+                  icon: <FileTextIcon className="w-5 h-5 shrink-0" />,
                   badge: "ready" as const,
                 },
                 {
                   label: "Scripture list",
                   sub: `${current.items.length} items`,
-                  icon: "\u00A7",
+                  icon: <BookOpenIcon className="w-5 h-5 shrink-0" />,
                   badge: "ready" as const,
                 },
                 {
                   label: "Service recap",
                   sub: currentSummary ? "AI-generated" : "AI-drafted",
-                  icon: "\u00B6",
+                  icon: <FileTextIcon className="w-5 h-5 shrink-0" />,
                   badge: recapBadge,
                 },
                 {
@@ -187,7 +188,7 @@ export function LogsScreen() {
                   sub: currentSummary?.email_sent
                     ? "Sent"
                     : "Subject line auto-written",
-                  icon: "\u2709",
+                  icon: <MailIcon className="w-5 h-5 shrink-0" />,
                   badge: emailBadge,
                 },
               ].map((a, i) => (
@@ -196,7 +197,7 @@ export function LogsScreen() {
                   className="p-[18px] bg-bg-1 border border-line rounded cursor-pointer hover:border-line-strong"
                 >
                   <div className="flex justify-between items-baseline mb-2">
-                    <span className="font-serif italic text-[22px] text-accent">
+                    <span className="text-accent">
                       {a.icon}
                     </span>
                     {a.badge !== "none" && (
@@ -222,7 +223,7 @@ export function LogsScreen() {
             {/* Service recap section */}
             <div className="max-w-[780px] mb-8">
               <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase mb-3">
-                {"\u25CF"} SERVICE RECAP
+                <CircleIcon className="w-2 h-2 shrink-0 inline fill-current" /> SERVICE RECAP
               </div>
               {currentSummary ? (
                 <div className="p-6 bg-bg-1 border border-line rounded">
@@ -274,7 +275,7 @@ export function LogsScreen() {
             {/* Timeline */}
             <div className="max-w-[780px]">
               <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase mb-3">
-                {"\u25CF"} TIMELINE {"\u00B7"} ACTUAL
+                <CircleIcon className="w-2 h-2 shrink-0 inline fill-current" /> TIMELINE · ACTUAL
               </div>
               <div className="border border-line rounded overflow-hidden">
                 {current.items
@@ -292,7 +293,7 @@ export function LogsScreen() {
                         )}
                       </span>
                       <span className="font-serif italic text-sm text-accent">
-                        {"\u00A7"}
+                        <BookOpenIcon className="w-3.5 h-3.5 shrink-0 inline" />
                       </span>
                       <span className="text-[13px] text-ink">
                         {item.reference}

@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import {
+  BookOpenIcon,
+  CircleIcon,
+  CornerDownLeftIcon,
+  MusicIcon,
+  PresentationIcon,
+} from "lucide-react";
 import { useQueue } from "../../hooks/use-queue";
 import { useTranslations } from "../../hooks/use-translations";
 import type { DetectionMode, QueueItem, TranscriptEvent, VerseResult, Song, AnnouncementItem } from "../../lib/types";
@@ -140,12 +147,12 @@ function LibraryPanel() {
             className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
             onClick={() => handlePush(v.reference, v.text, v.translation)}
           >
-            <span className="font-serif italic text-sm text-accent text-center">{"\u00A7"}</span>
+            <span className="text-accent flex items-center justify-center"><BookOpenIcon className="w-3.5 h-3.5 shrink-0" /></span>
             <div>
               <div className="font-serif italic text-sm">{v.reference}</div>
               <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">{v.translation}</div>
             </div>
-            <span className="font-mono text-[9.5px] text-ink-3">{"\u21B5"}</span>
+            <span className="text-ink-3 flex items-center"><CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" /></span>
           </div>
         ))}
 
@@ -155,12 +162,12 @@ function LibraryPanel() {
             className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
             onClick={() => handlePushSong(s)}
           >
-            <span className="font-serif italic text-sm text-accent text-center">{"\u266A"}</span>
+            <span className="text-accent flex items-center justify-center"><MusicIcon className="w-3.5 h-3.5 shrink-0" /></span>
             <div>
               <div className="font-medium text-sm">{s.title}</div>
               {s.artist && <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">{s.artist}</div>}
             </div>
-            <span className="font-mono text-[9.5px] text-ink-3">{"\u21B5"}</span>
+            <span className="text-ink-3 flex items-center"><CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" /></span>
           </div>
         ))}
 
@@ -170,12 +177,12 @@ function LibraryPanel() {
             className="grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent text-ink-2 cursor-pointer transition-colors hover:bg-bg-2 hover:text-ink"
             onClick={() => pushAnnouncementToDisplay(slide.id).catch(toastError("Failed to push slide"))}
           >
-            <span className="font-serif italic text-sm text-accent text-center">{"\u2299"}</span>
+            <span className="text-accent flex items-center justify-center"><PresentationIcon className="w-3.5 h-3.5 shrink-0" /></span>
             <div>
               <div className="font-medium text-sm">{slide.title}</div>
               {slide.body && <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em] line-clamp-1">{slide.body}</div>}
             </div>
-            <span className="font-mono text-[9.5px] text-ink-3">{"\u21B5"}</span>
+            <span className="text-ink-3 flex items-center"><CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" /></span>
           </div>
         ))}
 
@@ -208,9 +215,9 @@ function StagePanel({ mode }: { mode: DetectionMode }) {
       <div className="flex justify-between items-center px-3.5 py-1.5 font-mono text-[9.5px] tracking-[0.12em] uppercase text-ink-3 bg-bg-1 border-b border-line">
         <span>
           <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent mr-1.5" />
-          {mode.toUpperCase()} MODE {"\u00B7"} listening {"\u00B7"} rolling 10s context
+          {mode.toUpperCase()} MODE · listening · rolling 10s context
         </span>
-        <span>DISPLAY OUTPUT {"\u00B7"} 1920 {"\u00D7"} 1080</span>
+        <span>DISPLAY OUTPUT · 1920 × 1080</span>
       </div>
 
       {/* Dual display preview */}
@@ -274,7 +281,9 @@ function DisplayScreen({ label, labelColor, item, dimmed }: {
 }) {
   const isSong = item?.kind === "song";
   const isLive = label === "LIVE";
-  const marker = isLive ? "\u25CF" : "\u25CB";
+  const marker = isLive
+    ? <CircleIcon className="w-3 h-3 shrink-0 inline" fill="currentColor" />
+    : <CircleIcon className="w-3 h-3 shrink-0 inline" />;
   const sublabel = isLive ? "ON SCREEN" : "CUED NEXT";
 
   return (
@@ -290,7 +299,7 @@ function DisplayScreen({ label, labelColor, item, dimmed }: {
     >
       {/* Label bar */}
       <div className="absolute top-0 left-0 right-0 px-4 py-2 flex justify-between font-mono text-[9.5px] tracking-[0.18em] uppercase" style={{ color: dimmed ? labelColor : "rgba(245,239,223,0.5)" }}>
-        <span>{marker} {label} {"\u00B7"} {sublabel}</span>
+        <span className="inline-flex items-center gap-1">{marker} {label} · {sublabel}</span>
         <span>openworship</span>
       </div>
 
@@ -299,7 +308,7 @@ function DisplayScreen({ label, labelColor, item, dimmed }: {
           {!isSong && (
             <>
               <div className="font-mono text-[10.5px] tracking-[0.22em] uppercase text-accent mb-3" style={dimmed ? { color: "rgba(201,167,106,0.6)" } : undefined}>
-                {item.reference} {"\u00B7"} {item.translation}
+                {item.reference} · {item.translation}
               </div>
               <div
                 className="font-serif italic leading-[1.35] tracking-[-0.01em] max-w-[48ch]"
@@ -320,7 +329,7 @@ function DisplayScreen({ label, labelColor, item, dimmed }: {
         </>
       ) : (
         <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-center w-full text-[#3A332C]">
-          {"\u2014"} {isLive ? "no content" : "nothing cued"} {"\u2014"}
+          — {isLive ? "no content" : "nothing cued"} —
         </div>
       )}
     </div>
@@ -370,7 +379,7 @@ function QueueTranscriptPanel() {
       {/* Queue */}
       <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
         <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
-          Queue {"\u00B7"} <strong className="text-ink-2 font-medium">AI-detected</strong>
+          Queue · <strong className="text-ink-2 font-medium">AI-detected</strong>
         </span>
         <span className="font-mono text-[10px] text-ink-3">{visible.length} items</span>
       </div>
@@ -394,7 +403,7 @@ function QueueTranscriptPanel() {
         {/* Transcript */}
         <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-t border-line border-b border-line bg-bg-1">
           <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
-            Transcript {"\u00B7"} <strong className="text-ink-2 font-medium">live</strong>
+            Transcript · <strong className="text-ink-2 font-medium">live</strong>
           </span>
           <span className="font-mono text-[10px] text-ink-3">10s</span>
         </div>
@@ -412,9 +421,9 @@ function QueueItemCard({ item, onApprove, onReject }: {
   const isLive = item.status === "live";
   const isNext = item.status === "pending" && !isLive;
   const confidencePct = item.confidence != null ? Math.round(item.confidence * 100) : null;
-  const tagLabel = isLive ? `On screen${confidencePct != null ? ` \u00B7 ${confidencePct}%` : ""}` :
-                   isNext ? `Next${confidencePct != null ? ` \u00B7 ${confidencePct}%` : ""}` :
-                   `Detected${confidencePct != null ? ` \u00B7 ${confidencePct}%` : ""}`;
+  const tagLabel = isLive ? `On screen${confidencePct != null ? ` · ${confidencePct}%` : ""}` :
+                   isNext ? `Next${confidencePct != null ? ` · ${confidencePct}%` : ""}` :
+                   `Detected${confidencePct != null ? ` · ${confidencePct}%` : ""}`;
 
   return (
     <div className={`relative px-3.5 py-3 border-b border-line cursor-pointer transition-colors hover:bg-bg-2 ${isLive ? "bg-bg-2" : ""}`}>
@@ -518,7 +527,7 @@ function TranscriptBody() {
         );
       })}
       {entries.length === 0 && (
-        <div className="text-muted italic">{"\u00B7"} {micActive ? "listening" : "mic off"} {"\u00B7"}</div>
+        <div className="text-muted italic">· {micActive ? "listening" : "mic off"} ·</div>
       )}
       <div ref={bottomRef} />
     </div>

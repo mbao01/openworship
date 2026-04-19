@@ -57,17 +57,40 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Trash2Icon } from "lucide-react";
+import {
+  BookOpenIcon,
+  CheckIcon,
+  DiamondIcon,
+  GripVerticalIcon,
+  HeartHandshakeIcon,
+  KanbanIcon,
+  ListIcon,
+  MegaphoneIcon,
+  MusicIcon,
+  PaperclipIcon,
+  PenLineIcon,
+  Trash2Icon,
+  XIcon,
+} from "lucide-react";
 
 // ─── Constants ──────────────────────────────────────────────────────────────────
 
-const TYPE_GLYPHS: Record<string, string> = {
-  song: "\u266A",
-  scripture: "\u00A7",
-  prayer: "\u2307",
-  announcement: "\u2761",
-  sermon: "\u270E",
-  other: "\u25C6",
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  song: <MusicIcon className="w-3.5 h-3.5 shrink-0" />,
+  scripture: <BookOpenIcon className="w-3.5 h-3.5 shrink-0" />,
+  prayer: <HeartHandshakeIcon className="w-3.5 h-3.5 shrink-0" />,
+  announcement: <MegaphoneIcon className="w-3.5 h-3.5 shrink-0" />,
+  sermon: <PenLineIcon className="w-3.5 h-3.5 shrink-0" />,
+  other: <DiamondIcon className="w-3.5 h-3.5 shrink-0" />,
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  song: "Song",
+  scripture: "Scripture",
+  prayer: "Prayer",
+  announcement: "Announcement",
+  sermon: "Sermon",
+  other: "Other",
 };
 
 const ITEM_TYPES = ["song", "scripture", "prayer", "announcement", "sermon", "other"] as const;
@@ -263,9 +286,9 @@ export function PlanScreen() {
                   className={`text-[11px] pl-4 ${isOpen ? "text-ink-3" : "text-muted"}`}
                 >
                   {formatDate(p.created_at_ms)}
-                  <span className="mx-1.5">{"\u00B7"}</span>
+                  <span className="mx-1.5">·</span>
                   {p.items.length} item{p.items.length !== 1 ? "s" : ""}
-                  <span className="mx-1.5">{"\u00B7"}</span>
+                  <span className="mx-1.5">·</span>
                   {p.tasks.length} task{p.tasks.length !== 1 ? "s" : ""}
                 </div>
               </button>
@@ -658,8 +681,8 @@ function ServiceDetail({
                   }
                   const hasComputedTime = idx === 0 || cumulativeSecs > 0;
                   const isExpanded = expandedItemId === item.id;
-                  const glyph =
-                    TYPE_GLYPHS[item.item_type] ?? TYPE_GLYPHS.other;
+                  const icon =
+                    TYPE_ICONS[item.item_type] ?? TYPE_ICONS.other;
 
                   return (
                     <SortableItemRow
@@ -682,12 +705,12 @@ function ServiceDetail({
                                     project.created_at_ms,
                                     cumulativeSecs,
                                   )
-                                : "\u2014"}
+                                : "—"}
                             </span>
 
-                            {/* Type glyph */}
-                            <span className="font-serif italic text-sm text-accent text-center">
-                              {glyph}
+                            {/* Type icon */}
+                            <span className="text-accent flex items-center justify-center">
+                              {icon}
                             </span>
 
                             {/* Name / reference */}
@@ -713,25 +736,25 @@ function ServiceDetail({
 
                             {/* Drag handle */}
                             <span
-                              className={`text-center text-ink-3 text-xs select-none ${
+                              className={`flex items-center justify-center text-ink-3 select-none ${
                                 isReadOnly ? "opacity-30" : "cursor-grab"
                               }`}
                               {...(isReadOnly ? {} : handleProps)}
                             >
-                              {"\u2261"}
+                              <GripVerticalIcon className="w-3.5 h-3.5 shrink-0" />
                             </span>
 
                             {/* Remove button */}
                             {!isReadOnly ? (
                               <button
-                                className="text-ink-3 hover:text-danger text-sm transition-colors text-center cursor-pointer"
+                                className="text-ink-3 hover:text-danger transition-colors flex items-center justify-center cursor-pointer"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleRemove(item.id);
                                 }}
                                 title="Remove"
                               >
-                                {"\u00D7"}
+                                <XIcon className="w-3.5 h-3.5 shrink-0" />
                               </button>
                             ) : (
                               <span />
@@ -783,7 +806,7 @@ function ServiceDetail({
               onClick={() => setTaskView("list")}
               title="List view"
             >
-              {"\u2630"}
+              <ListIcon className="w-3.5 h-3.5 shrink-0" />
             </button>
             <button
               className={`p-1.5 rounded border text-xs cursor-pointer transition-colors ${
@@ -794,7 +817,7 @@ function ServiceDetail({
               onClick={() => setTaskView("board")}
               title="Board view"
             >
-              {"\u2637"}
+              <KanbanIcon className="w-3.5 h-3.5 shrink-0" />
             </button>
           </div>
         </div>
@@ -1183,7 +1206,7 @@ function DraggableTaskCard({
           disabled={isReadOnly}
         >
           {task.status === "done" && (
-            <span className="text-[8px]">{"\u2713"}</span>
+            <CheckIcon className="w-2 h-2 shrink-0" />
           )}
         </button>
         <span
@@ -1193,14 +1216,14 @@ function DraggableTaskCard({
         </span>
         {!isReadOnly && (
           <button
-            className="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-danger text-sm transition-all cursor-pointer shrink-0"
+            className="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-danger transition-all cursor-pointer shrink-0 flex items-center"
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
             }}
             title="Delete task"
           >
-            {"\u00D7"}
+            <XIcon className="w-3.5 h-3.5 shrink-0" />
           </button>
         )}
       </div>
@@ -1265,7 +1288,7 @@ function InlineDurationCell({
         setEditing(true);
       }}
     >
-      {durationSecs ? formatDuration(durationSecs) : "\u2014"}
+      {durationSecs ? formatDuration(durationSecs) : "—"}
     </span>
   );
 }
@@ -1360,7 +1383,7 @@ function ExpandedItemDetail({
           >
             {ITEM_TYPES.map((t) => (
               <option key={t} value={t}>
-                {TYPE_GLYPHS[t]} {t.charAt(0).toUpperCase() + t.slice(1)}
+                {TYPE_LABELS[t]}
               </option>
             ))}
           </select>
@@ -1385,8 +1408,8 @@ function ExpandedItemDetail({
       {/* Assets */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] text-ink-3 font-medium">
-            {"\uD83D\uDCCE"} {item.asset_ids.length} asset
+          <span className="text-[11px] text-ink-3 font-medium inline-flex items-center gap-1">
+            <PaperclipIcon className="w-3.5 h-3.5 shrink-0" /> {item.asset_ids.length} asset
             {item.asset_ids.length !== 1 ? "s" : ""}
           </span>
           {!isReadOnly && (
@@ -1491,7 +1514,7 @@ function TaskRow({
         disabled={isReadOnly}
       >
         {task.status === "done" && (
-          <span className="text-[10px]">{"\u2713"}</span>
+          <CheckIcon className="w-2.5 h-2.5 shrink-0" />
         )}
       </button>
 
@@ -1552,11 +1575,11 @@ function TaskRow({
       {/* Delete button */}
       {!isReadOnly && (
         <button
-          className="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-danger text-sm transition-all cursor-pointer"
+          className="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-danger transition-all cursor-pointer flex items-center"
           onClick={onDelete}
           title="Delete task"
         >
-          {"\u00D7"}
+          <XIcon className="w-3.5 h-3.5 shrink-0" />
         </button>
       )}
     </div>
@@ -1648,7 +1671,7 @@ function ManualEventForm({
         >
           {ITEM_TYPES.map((t) => (
             <option key={t} value={t}>
-              {TYPE_GLYPHS[t]} {t.charAt(0).toUpperCase() + t.slice(1)}
+              {TYPE_LABELS[t]}
             </option>
           ))}
         </select>

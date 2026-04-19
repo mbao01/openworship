@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BookOpenIcon, CircleIcon, MusicIcon } from "lucide-react";
 import { invoke } from "../../lib/tauri";
 import { toastError } from "../../lib/toast";
 import { addItemToActiveProject } from "../../lib/commands/projects";
@@ -93,7 +94,7 @@ export function LibraryScreen() {
       <div className="flex flex-col border-r border-line overflow-hidden">
         <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
           <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
-            Content bank {"\u00B7"}{" "}
+            Content bank ·{" "}
             <strong className="text-ink-2 font-medium">
               {tab === "scripture" ? "scripture" : "songs"}
             </strong>
@@ -151,7 +152,7 @@ export function LibraryScreen() {
                 }`}
                 onClick={() => setSelected(i)}
               >
-                <span className="font-serif italic text-sm text-accent text-center">{"\u00A7"}</span>
+                <span className="text-accent flex items-center justify-center"><BookOpenIcon className="w-3.5 h-3.5 shrink-0" /></span>
                 <div>
                   <div className="font-serif italic text-sm">{v.reference}</div>
                   <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">{v.translation}</div>
@@ -170,7 +171,7 @@ export function LibraryScreen() {
                 }`}
                 onClick={() => setSelected(i)}
               >
-                <span className="font-serif italic text-sm text-accent text-center">{"\u266A"}</span>
+                <span className="text-accent flex items-center justify-center"><MusicIcon className="w-3.5 h-3.5 shrink-0" /></span>
                 <div>
                   <div className="font-serif italic text-sm">{s.title}</div>
                   <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">
@@ -185,8 +186,8 @@ export function LibraryScreen() {
 
       {/* Right: detail */}
       <div className="overflow-y-auto px-14 py-10">
-        <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase mb-6">
-          {"\u25CF"} DETAIL VIEW
+        <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase mb-6 inline-flex items-center gap-1">
+          <CircleIcon className="w-3.5 h-3.5 shrink-0" fill="currentColor" /> DETAIL VIEW
         </div>
         {tab === "scripture" && current ? (
           <div className="p-8 bg-bg-1 border border-line rounded-lg max-w-[700px]">
@@ -227,7 +228,7 @@ export function LibraryScreen() {
             </div>
             <div className="font-mono text-[10px] text-ink-3 tracking-[0.2em] uppercase mb-7">
               {currentSong.artist || "Unknown artist"}
-              {currentSong.ccli_number && ` \u00B7 CCLI ${currentSong.ccli_number}`}
+              {currentSong.ccli_number && ` · CCLI ${currentSong.ccli_number}`}
             </div>
             <div className="font-serif italic text-[16px] leading-[1.65] text-ink mb-5 whitespace-pre-wrap">
               {currentSong.lyrics}

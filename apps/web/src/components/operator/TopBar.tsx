@@ -119,7 +119,7 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
           <SearchIcon />
           Search
           <kbd className="font-mono text-[10px] px-1 py-px bg-bg-4 rounded-sm text-ink-3">
-            {"\u2318"}K
+            ⌘K
           </kbd>
         </button>
         <button
