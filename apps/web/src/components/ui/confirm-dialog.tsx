@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "./dialog";
 import { Button } from "./button";
+import { AlertTriangleIcon } from "lucide-react";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -21,20 +22,6 @@ interface ConfirmDialogProps {
   loading?: boolean;
 }
 
-/**
- * Reusable confirmation dialog built on the Radix Dialog primitive.
- *
- * @example
- * <ConfirmDialog
- *   open={showDelete}
- *   onOpenChange={setShowDelete}
- *   title="Delete service?"
- *   description="This will permanently remove the service and all its items."
- *   confirmLabel="Delete"
- *   variant="danger"
- *   onConfirm={handleDelete}
- * />
- */
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -48,14 +35,27 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm" showClose={false}>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          <div className="flex items-start gap-3">
+            {variant === "danger" && (
+              <div className="shrink-0 w-9 h-9 rounded-full bg-danger/10 flex items-center justify-center">
+                <AlertTriangleIcon className="w-4.5 h-4.5 text-danger" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-base">{title}</DialogTitle>
+              {description && (
+                <DialogDescription className="mt-1.5 text-[13px] leading-[1.5]">
+                  {description}
+                </DialogDescription>
+              )}
+            </div>
+          </div>
         </DialogHeader>
-        <DialogFooter>
+        <DialogFooter className="mt-5 gap-2">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => onOpenChange(false)}
             disabled={loading}

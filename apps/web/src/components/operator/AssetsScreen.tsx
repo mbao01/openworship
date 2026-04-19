@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ShareDialog } from "../ShareDialog";
+import { ConfirmDialog } from "../ui/confirm-dialog";
+import {
+  Modal,
+  ModalHeader,
+  ModalTitle,
+  ModalBody,
+  ModalFooter,
+} from "../ui/modal";
 import { invoke } from "../../lib/tauri";
 import type {
   ArtifactCategory,
@@ -37,6 +45,13 @@ import {
   MinusIcon,
   PlusIcon,
   RotateCcwIcon,
+  ExternalLinkIcon,
+  EyeIcon,
+  Share2Icon,
+  FolderInputIcon,
+  UploadCloudIcon,
+  PenLineIcon,
+  Trash2Icon,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -346,6 +361,7 @@ function ContextMenu({
   menu,
   syncInfo,
   onOpen,
+  onPreview,
   onShare,
   onMoveTo,
   onSyncNow,
@@ -357,6 +373,7 @@ function ContextMenu({
   menu: CtxMenu;
   syncInfo: CloudSyncInfo | null;
   onOpen: (e: ArtifactEntry) => void;
+  onPreview: (e: ArtifactEntry) => void;
   onShare: (e: ArtifactEntry) => void;
   onMoveTo: (e: ArtifactEntry) => void;
   onSyncNow: (e: ArtifactEntry) => void;
@@ -366,62 +383,106 @@ function ContextMenu({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const h = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, [onClose]);
 
-  const btnCls =
-    "block w-full text-left bg-transparent border-none font-sans text-[12px] text-ink px-[14px] py-[6px] cursor-pointer transition-colors hover:bg-bg-2 whitespace-nowrap";
-  const sep = <div className="h-px bg-line my-[3px] mx-2" />;
+  const item = (
+    icon: React.ReactNode,
+    label: string,
+    onClick: () => void,
+    shortcut?: string,
+    danger?: boolean,
+  ) => (
+    <button
+      className={`flex items-center gap-2.5 w-full text-left bg-transparent border-none font-sans text-[12px] px-3 py-1.5 cursor-pointer transition-colors whitespace-nowrap rounded-sm ${
+        danger
+          ? "text-ink hover:text-danger hover:bg-danger/10"
+          : "text-ink hover:bg-bg-2"
+      }`}
+      onClick={() => {
+        onClick();
+        onClose();
+      }}
+    >
+      <span className={danger ? "" : "text-ink-3"}>{icon}</span>
+      <span className="flex-1">{label}</span>
+      {shortcut && (
+        <span className="font-mono text-[10px] text-muted">{shortcut}</span>
+      )}
+    </button>
+  );
+
+  const sep = <div className="h-px bg-line my-1 mx-2" />;
+  const icn = "w-3.5 h-3.5 shrink-0";
 
   return (
     <div
       ref={ref}
       data-qa="artifacts-ctx-menu"
-      className="fixed z-[1000] bg-bg-2 border border-line-strong rounded-[5px] py-1 min-w-[160px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+      className="fixed z-[1000] bg-bg-1 border border-line-strong rounded-lg py-1.5 min-w-[200px] shadow-lg"
       style={{ top: menu.y, left: menu.x }}
     >
-      {!menu.entry.is_dir && (
-        <button className={btnCls} onClick={() => { onOpen(menu.entry); onClose(); }}>
-          Open
-        </button>
+      {!menu.entry.is_dir &&
+        item(
+          <ExternalLinkIcon className={icn} />,
+          "Open",
+          () => onOpen(menu.entry),
+          "⌘O",
+        )}
+      {!menu.entry.is_dir &&
+        item(
+          <EyeIcon className={icn} />,
+          "Preview",
+          () => onPreview(menu.entry),
+          "Space",
+        )}
+      {item(<Share2Icon className={icn} />, "Share…", () =>
+        onShare(menu.entry),
       )}
-      <button className={btnCls} onClick={() => { onShare(menu.entry); onClose(); }}>
-        Share...
-      </button>
-      <button className={btnCls} onClick={() => { onMoveTo(menu.entry); onClose(); }}>
-        Move to...
-      </button>
+      {item(<FolderInputIcon className={icn} />, "Move to…", () =>
+        onMoveTo(menu.entry),
+      )}
       {sep}
       {syncInfo?.sync_enabled
-        ? syncInfo.status !== "syncing" && (
-          <button className={btnCls} onClick={() => { onSyncNow(menu.entry); onClose(); }}>
-            Sync now
-          </button>
-        )
-        : (
-          <button className={btnCls} onClick={() => { onShare(menu.entry); onClose(); }}>
-            Sync to Cloud
-          </button>
-        )
-      }
-      <button className={btnCls} onClick={() => { onStar(menu.entry); onClose(); }}>
-        {menu.entry.starred ? "Unstar" : "Star"}
-      </button>
-      <button className={btnCls} onClick={() => { onRename(menu.entry); onClose(); }}>
-        Rename
-      </button>
+        ? syncInfo.status !== "syncing" &&
+          item(<CloudIcon className={icn} />, "Sync now", () =>
+            onSyncNow(menu.entry),
+          )
+        : item(<UploadCloudIcon className={icn} />, "Sync to Cloud", () =>
+            onShare(menu.entry),
+          )}
+      {item(
+        <StarIcon className={icn} />,
+        menu.entry.starred ? "Unstar" : "Star",
+        () => onStar(menu.entry),
+      )}
+      {item(
+        <PenLineIcon className={icn} />,
+        "Rename",
+        () => onRename(menu.entry),
+        "F2",
+      )}
       {sep}
-      <button
-        className={`${btnCls} hover:text-danger`}
-        onClick={() => { onDelete(menu.entry); onClose(); }}
-      >
-        Delete
-      </button>
+      {item(
+        <Trash2Icon className={icn} />,
+        "Delete",
+        () => onDelete(menu.entry),
+        "⌫",
+        true,
+      )}
     </div>
   );
 }
@@ -439,17 +500,13 @@ function RenameModal({
 }) {
   const [name, setName] = useState(entry.name);
   return (
-    <div
-      className="fixed inset-0 bg-black/65 flex items-center justify-center z-[900]"
-      onClick={onCancel}
-    >
-      <div
-        className="bg-bg-1 border border-line-strong rounded-lg p-5 w-[320px] flex flex-col gap-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="font-serif text-base text-ink m-0">Rename</p>
+    <Modal open={true} onClose={onCancel} className="max-w-sm">
+      <ModalHeader>
+        <ModalTitle>Rename</ModalTitle>
+      </ModalHeader>
+      <ModalBody className="px-6 py-4">
         <input
-          className="bg-bg-2 border border-line rounded-[3px] text-ink text-sm px-[10px] py-[6px] outline-none transition-colors focus:border-accent focus:outline-none"
+          className="bg-bg-2 border border-line rounded-[3px] text-ink text-sm px-[10px] py-[6px] w-full outline-none transition-colors focus:border-accent focus:outline-none"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -458,23 +515,23 @@ function RenameModal({
           }}
           autoFocus
         />
-        <div className="flex justify-end gap-2">
-          <button
-            className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-default"
-            onClick={() => onConfirm(name.trim())}
-            disabled={!name.trim() || name.trim() === entry.name}
-          >
-            Rename
-          </button>
-        </div>
-      </div>
-    </div>
+      </ModalBody>
+      <ModalFooter>
+        <button
+          className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+          onClick={() => onConfirm(name.trim())}
+          disabled={!name.trim() || name.trim() === entry.name}
+        >
+          Rename
+        </button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -487,17 +544,13 @@ function NewFolderModal({
 }) {
   const [name, setName] = useState("");
   return (
-    <div
-      className="fixed inset-0 bg-black/65 flex items-center justify-center z-[900]"
-      onClick={onCancel}
-    >
-      <div
-        className="bg-bg-1 border border-line-strong rounded-lg p-5 w-[320px] flex flex-col gap-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="font-serif text-base text-ink m-0">New Folder</p>
+    <Modal open={true} onClose={onCancel} className="max-w-sm">
+      <ModalHeader>
+        <ModalTitle>New Folder</ModalTitle>
+      </ModalHeader>
+      <ModalBody className="px-6 py-4">
         <input
-          className="bg-bg-2 border border-line rounded-[3px] text-ink text-sm px-[10px] py-[6px] outline-none transition-colors focus:border-accent focus:outline-none"
+          className="bg-bg-2 border border-line rounded-[3px] text-ink text-sm px-[10px] py-[6px] w-full outline-none transition-colors focus:border-accent focus:outline-none"
           placeholder="Folder name"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -507,23 +560,23 @@ function NewFolderModal({
           }}
           autoFocus
         />
-        <div className="flex justify-end gap-2">
-          <button
-            className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-default"
-            onClick={() => onConfirm(name.trim())}
-            disabled={!name.trim()}
-          >
-            Create
-          </button>
-        </div>
-      </div>
-    </div>
+      </ModalBody>
+      <ModalFooter>
+        <button
+          className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+          onClick={() => onConfirm(name.trim())}
+          disabled={!name.trim()}
+        >
+          Create
+        </button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -572,19 +625,17 @@ function MoveFolderModal({
   const destinationPath = selected ?? browsePath ?? `${entry.service_id ?? "_local"}`;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/65 flex items-center justify-center z-[900]"
-      onClick={onCancel}
-    >
-      <div
-        className="bg-bg-1 border border-line-strong rounded-lg p-5 w-[360px] flex flex-col gap-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="font-serif text-base text-ink m-0">Move to Folder</p>
-
+    <Modal open={true} onClose={onCancel} className="max-w-sm">
+      <ModalHeader>
+        <ModalTitle>Move to Folder</ModalTitle>
+      </ModalHeader>
+      <ModalBody className="px-6 py-4 flex flex-col gap-3">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1 text-[11px] text-ink-3 flex-wrap">
-          <button className="text-ink-3 hover:text-ink transition-colors" onClick={handleRoot}>
+          <button
+            className="text-ink-3 hover:text-ink transition-colors"
+            onClick={handleRoot}
+          >
             Root
           </button>
           {crumbs.map((c, i) => (
@@ -601,7 +652,9 @@ function MoveFolderModal({
           {browsePath && (
             <span className="flex items-center gap-1">
               <span className="text-line">/</span>
-              <span className="text-ink">{crumbs.length > 0 ? browsePath.split("/").pop() : browsePath}</span>
+              <span className="text-ink">
+                {crumbs.length > 0 ? browsePath.split("/").pop() : browsePath}
+              </span>
             </span>
           )}
         </div>
@@ -609,7 +662,9 @@ function MoveFolderModal({
         {/* Folder list */}
         <div className="bg-bg-2 border border-line rounded-[3px] min-h-[120px] max-h-[200px] overflow-y-auto">
           {folders.length === 0 ? (
-            <p className="text-[11px] text-line px-3 py-2 m-0">No sub-folders here.</p>
+            <p className="text-[11px] text-line px-3 py-2 m-0">
+              No sub-folders here.
+            </p>
           ) : (
             folders.map((f) => (
               <div
@@ -624,7 +679,10 @@ function MoveFolderModal({
                 </span>
                 <button
                   className="text-[10px] text-line hover:text-ink transition-colors ml-2 bg-transparent border-none cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); handleOpen(f); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpen(f);
+                  }}
                   title="Open folder"
                 >
                   <ChevronDownIcon className="w-3 h-3 -rotate-90" />
@@ -638,23 +696,22 @@ function MoveFolderModal({
           Moving <span className="text-ink">{entry.name}</span> to:{" "}
           <span className="text-accent font-mono">{destinationPath}</span>
         </p>
-
-        <div className="flex justify-end gap-2">
-          <button
-            className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer"
-            onClick={() => onConfirm(destinationPath)}
-          >
-            Move Here
-          </button>
-        </div>
-      </div>
-    </div>
+      </ModalBody>
+      <ModalFooter>
+        <button
+          className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer"
+          onClick={() => onConfirm(destinationPath)}
+        >
+          Move Here
+        </button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -875,7 +932,7 @@ export function AssetsScreen() {
   const [nav, setNav] = useState<Nav>({ kind: "all" });
   const [entries, setEntries] = useState<ArtifactEntry[]>([]);
   const [parentPath, setParentPath] = useState<string | null>(null);
-  const [crumbs, setCrumbs] = useState<Array<{ label: string; parent: string | null }>>([]);
+  const [crumbs, setCrumbs] = useState<Array<{ label: string; path: string | null }>>([]);
   const [filter, setFilter] = useState<ArtifactCategory | "all">("all");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -897,6 +954,9 @@ export function AssetsScreen() {
   const [movingEntry, setMovingEntry] = useState<ArtifactEntry | null>(null);
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
   const [cloudEntries, setCloudEntries] = useState<CloudSyncInfo[]>([]);
+
+  const [deleteConfirmEntry, setDeleteConfirmEntry] =
+    useState<ArtifactEntry | null>(null);
 
   const [zoom, setZoom] = useState(100);
   const MIN_ZOOM = 50;
@@ -1010,7 +1070,7 @@ export function AssetsScreen() {
 
   const handleNavigate = (e: ArtifactEntry) => {
     if (!e.is_dir) return;
-    setCrumbs((prev) => [...prev, { label: e.name, parent: parentPath }]);
+    setCrumbs((prev) => [...prev, { label: e.name, path: e.path }]);
     setParentPath(e.path);
     setSelected(null);
   };
@@ -1022,8 +1082,8 @@ export function AssetsScreen() {
       return;
     }
     const crumb = crumbs[idx];
-    setCrumbs((prev) => prev.slice(0, idx));
-    setParentPath(crumb.parent);
+    setCrumbs((prev) => prev.slice(0, idx + 1));
+    setParentPath(crumb.path);
   };
 
   const handleCtx = (e: React.MouseEvent, entry: ArtifactEntry) => {
@@ -1048,18 +1108,8 @@ export function AssetsScreen() {
     }
   };
 
-  const handleDelete = async (e: ArtifactEntry) => {
-    const msg = e.is_dir
-      ? `Delete folder "${e.name}" and all its contents? This cannot be undone.`
-      : `Delete "${e.name}"? This cannot be undone.`;
-    if (!window.confirm(msg)) return;
-    try {
-      await invoke("delete_artifact", { id: e.id });
-      if (selected?.id === e.id) setSelected(null);
-      await loadEntries();
-    } catch (err) {
-      setError(String(err));
-    }
+  const handleDelete = (e: ArtifactEntry) => {
+    setDeleteConfirmEntry(e);
   };
 
   const handleRename = async (newName: string) => {
@@ -1210,12 +1260,19 @@ export function AssetsScreen() {
         <div className="flex items-center gap-2 px-4 h-10 border-b border-line shrink-0 bg-bg-1">
           {/* Breadcrumb */}
           <div className="flex items-center gap-1 text-[12px] flex-1 min-w-0 overflow-hidden">
-            <span className="text-ink font-medium shrink-0">Assets</span>
+            <button
+              className="bg-transparent border-none text-ink font-medium font-sans text-[12px] shrink-0 cursor-pointer transition-colors hover:text-accent"
+              onClick={() => {
+                handleNav({ kind: "all" });
+              }}
+            >
+              Assets
+            </button>
             {nav.kind === "service" && (
               <>
                 <span className="text-muted mx-[2px]">/</span>
                 <button
-                  className="bg-transparent border-none text-ink-3 cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-ink whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px]"
+                  className="bg-transparent border-none text-ink-3 cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-accent whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px]"
                   onClick={() => handleCrumb(-1)}
                 >
                   {nav.name}
@@ -1226,7 +1283,7 @@ export function AssetsScreen() {
               <span key={i} className="flex items-center gap-[3px] shrink-0">
                 <span className="text-muted">/</span>
                 <button
-                  className="bg-transparent border-none text-ink cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-ink whitespace-nowrap"
+                  className="bg-transparent border-none text-ink cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-accent whitespace-nowrap"
                   onClick={() => handleCrumb(i)}
                 >
                   {c.label}
@@ -1714,6 +1771,7 @@ export function AssetsScreen() {
             menu={ctxMenu}
             syncInfo={syncInfoMap.get(ctxMenu.entry.id) ?? null}
             onOpen={handleOpen}
+            onPreview={(e) => setSelected(e)}
             onShare={handleShare}
             onMoveTo={handleMoveTo}
             onStar={handleStar}
@@ -1756,6 +1814,28 @@ export function AssetsScreen() {
             onCancel={() => setMovingEntry(null)}
           />
         )}
+        <ConfirmDialog
+          open={deleteConfirmEntry !== null}
+          onOpenChange={(open) => {
+            if (!open) setDeleteConfirmEntry(null);
+          }}
+          title="Delete file?"
+          description={`This will permanently delete "${deleteConfirmEntry?.name}". This cannot be undone.`}
+          confirmLabel="Delete"
+          variant="danger"
+          onConfirm={async () => {
+            if (!deleteConfirmEntry) return;
+            try {
+              await invoke("delete_artifact", { id: deleteConfirmEntry.id });
+              if (selected?.id === deleteConfirmEntry.id) setSelected(null);
+              setDeleteConfirmEntry(null);
+              await loadEntries();
+            } catch (err) {
+              setError(String(err));
+              setDeleteConfirmEntry(null);
+            }
+          }}
+        />
       </div>
     </div>
   );
