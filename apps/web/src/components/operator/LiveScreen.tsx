@@ -137,7 +137,7 @@ function LibraryPanel() {
           {tabs.map((t) => (
             <button
               key={t.id}
-              className={`px-3 py-2.5 font-mono text-[9.5px] tracking-[0.12em] uppercase mb-[-1px] border-b transition-colors ${
+              className={`px-3 py-2.5 font-mono text-[9.5px] tracking-[0.12em] uppercase mb-[-1px] border-b transition-colors cursor-pointer ${
                 tab === t.id
                   ? "text-ink border-accent"
                   : "text-ink-3 border-transparent hover:text-ink-2"
@@ -160,7 +160,7 @@ function LibraryPanel() {
         {/* Search */}
         <div className="px-3 py-2.5 border-b border-line">
           <input
-            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs focus:border-line-strong"
+            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs focus:border-line-strong"
             placeholder={placeholder}
             value={query}
             onChange={handleQueryChange}
@@ -168,7 +168,7 @@ function LibraryPanel() {
         </div>
 
         {/* Results */}
-        <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+        <div className="flex-1 overflow-y-auto">
           {tab === "scripture" &&
             scriptureResults.map((v, i) => (
               <div
@@ -245,7 +245,8 @@ function LibraryPanel() {
             ))}
 
           {tab === "slides" && slides.length === 0 && (
-            <div className="px-3.5 py-6 text-center text-xs text-muted">
+            <div className="px-3.5 py-6 flex flex-col items-center justify-center gap-2 text-xs text-muted">
+              <PresentationIcon className="w-5 h-5" />
               No slides loaded
             </div>
           )}
@@ -346,7 +347,7 @@ function AssetsPanel() {
           Assets
         </span>
         <button
-          className="text-ink-3 hover:text-ink transition-colors"
+          className="text-ink-3 hover:text-ink transition-colors cursor-pointer"
           onClick={() => setSearchOpen((v) => !v)}
         >
           <SearchIcon className="w-3.5 h-3.5" />
@@ -357,7 +358,7 @@ function AssetsPanel() {
       {searchOpen && (
         <div className="px-3 py-2.5 border-b border-line">
           <input
-            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs focus:border-line-strong"
+            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs focus:border-line-strong"
             placeholder="Filter assets..."
             value={assetQuery}
             onChange={(e) => setAssetQuery(e.target.value)}
@@ -367,7 +368,7 @@ function AssetsPanel() {
       )}
 
       {/* Asset grid */}
-      <div className="grid grid-cols-3 gap-1 p-2 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+      <div className="grid grid-cols-3 gap-1 p-2 overflow-y-auto">
         {filtered.map((asset) => (
           <div
             key={asset.id}
@@ -450,7 +451,7 @@ function StagePanel({ mode }: { mode: DetectionMode }) {
       {/* Stage toolbar */}
       <div className="flex items-center gap-2.5 px-4 py-2.5 border-t border-line bg-bg-1 h-[52px] shrink-0">
         <div className="flex gap-1">
-          <span className="relative inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-white bg-live border border-live rounded-[3px]">
+          <span className="relative inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-white bg-live border border-live rounded">
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-[blink_1.4s_infinite]" />
             LIVE
           </span>
@@ -471,7 +472,7 @@ function StagePanel({ mode }: { mode: DetectionMode }) {
           <StageBtn label="Clear" onClick={() => clearLive().catch(toastError("Failed to clear"))} />
         </div>
         <div className="flex-1" />
-        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-bg-2 border border-line rounded-[3px] font-mono text-[10px] tracking-[0.1em] uppercase text-ink-2">
+        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-bg-2 border border-line rounded font-mono text-[10px] tracking-[0.1em] uppercase text-ink-2">
           Translation
           <select
             className="bg-transparent border-0 text-accent font-mono text-[10px] tracking-[0.1em] uppercase p-0 outline-0 cursor-pointer"
@@ -610,15 +611,15 @@ function StageBtn({ label, kbd, primary, onClick, disabled, danger }: {
   disabled?: boolean;
   danger?: boolean;
 }) {
-  let cls = "inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase border rounded-[3px] transition-colors";
+  let cls = "inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase border rounded transition-colors cursor-pointer";
   if (primary) {
-    cls += " bg-accent text-[#1A0D00] border-accent font-semibold hover:bg-accent-hover";
+    cls += " bg-accent text-accent-foreground border-accent font-semibold hover:bg-accent-hover";
   } else if (danger) {
     cls += " text-danger border-danger bg-bg-2 hover:bg-bg-3";
   } else {
     cls += " text-ink-2 border-line bg-bg-2 hover:bg-bg-3 hover:text-ink hover:border-line-strong";
   }
-  if (disabled) cls += " opacity-40 pointer-events-none";
+  if (disabled) cls += " opacity-40 pointer-events-none cursor-not-allowed";
 
   return (
     <button className={cls} onClick={onClick} disabled={disabled}>
@@ -670,7 +671,7 @@ function QueueTranscriptPanel() {
 
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Queue items - equal third */}
-        <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {visible.map((item) => (
             <QueueItemCard
               key={item.id}
@@ -684,7 +685,8 @@ function QueueTranscriptPanel() {
             />
           ))}
           {visible.length === 0 && (
-            <div className="px-3.5 py-6 text-center text-xs text-muted">
+            <div className="px-3.5 py-6 flex flex-col items-center justify-center gap-2 text-xs text-muted">
+              <SearchIcon className="w-5 h-5" />
               No detections yet
             </div>
           )}
@@ -703,7 +705,7 @@ function QueueTranscriptPanel() {
           </span>
           <div className="flex items-center gap-2">
             <button
-              className={`px-2 py-0.5 font-mono text-[9px] tracking-[0.1em] uppercase border rounded-[3px] transition-colors ${
+              className={`px-2 py-0.5 font-mono text-[9px] tracking-[0.1em] uppercase border rounded transition-colors cursor-pointer ${
                 micActive
                   ? "text-live border-live/40 hover:bg-live/10"
                   : "text-ink-3 border-line hover:text-ink hover:border-line-strong"
@@ -867,7 +869,7 @@ function ContextPanel({ live }: { live: QueueItem | null }) {
       </div>
 
       {/* Context content */}
-      <div className="relative flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+      <div className="relative flex-1 min-h-0 overflow-y-auto">
         {live?.kind === "scripture" &&
           contextVerses.map((v, i) => {
             const isActive = live.reference === v.reference;
@@ -932,7 +934,8 @@ function ContextPanel({ live }: { live: QueueItem | null }) {
           ))}
 
         {(!live || (live.kind !== "scripture" && live.kind !== "song")) && (
-          <div className="px-3.5 py-6 text-center text-xs text-muted">
+          <div className="px-3.5 py-6 flex flex-col items-center justify-center gap-2 text-xs text-muted">
+            <CircleIcon className="w-5 h-5" />
             No content on screen
           </div>
         )}
@@ -946,19 +949,19 @@ function ContextPanel({ live }: { live: QueueItem | null }) {
             <div className="flex gap-1.5">
               <button
                 onClick={handlePushSelected}
-                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-accent text-[#1A0D00] bg-accent rounded-[3px] transition-colors hover:bg-accent-hover"
+                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-accent text-accent-foreground bg-accent rounded transition-colors hover:bg-accent-hover cursor-pointer"
               >
                 Push to live
               </button>
               <button
                 onClick={handleQueueSelected}
-                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-line text-ink-2 rounded-[3px] bg-bg-2 transition-colors hover:bg-bg-3 hover:text-ink"
+                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-line text-ink-2 rounded bg-bg-2 transition-colors hover:bg-bg-3 hover:text-ink cursor-pointer"
               >
                 Queue
               </button>
               <button
                 onClick={() => setSelectedIndices(new Set())}
-                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase text-ink-3 rounded-[3px] transition-colors hover:text-ink hover:bg-bg-2"
+                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase text-ink-3 rounded transition-colors hover:text-ink hover:bg-bg-2 cursor-pointer"
               >
                 Clear
               </button>
@@ -1021,13 +1024,13 @@ function QueueItemCard({ item, onApprove, onReject }: {
       {!isLive && (
         <div className="flex gap-1.5 mt-2">
           <button
-            className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-accent text-accent rounded-[3px] bg-bg-1 transition-colors hover:bg-accent hover:text-[#1A0D00]"
+            className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-accent text-accent rounded bg-bg-1 transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer"
             onClick={(e) => { e.stopPropagation(); onApprove(); }}
           >
             Push
           </button>
           <button
-            className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-line text-ink-2 rounded-[3px] bg-bg-1 transition-colors hover:bg-bg-3 hover:text-ink"
+            className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-line text-ink-2 rounded bg-bg-1 transition-colors hover:bg-bg-3 hover:text-ink cursor-pointer"
             onClick={(e) => { e.stopPropagation(); onReject(); }}
           >
             Reject
@@ -1069,7 +1072,7 @@ function TranscriptBody() {
   const nonEmpty = sentences.filter((s) => s.trim());
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3.5 font-serif text-[15px] leading-[1.55] text-ink-3 tracking-[-0.003em] [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+    <div className="flex-1 overflow-y-auto px-4 py-3.5 font-serif text-[15px] leading-[1.55] text-ink-3 tracking-[-0.003em]">
       {nonEmpty.map((sentence, i) => {
         const isLast =
           i === nonEmpty.length - 1 &&
@@ -1081,7 +1084,8 @@ function TranscriptBody() {
         );
       })}
       {nonEmpty.length === 0 && (
-        <div className="text-muted italic">
+        <div className="text-muted italic flex items-center gap-2 justify-center">
+          {micActive ? null : <MicOffIcon className="w-4 h-4" />}
           {"\u00B7"} {micActive ? "listening" : "mic off"} {"\u00B7"}
         </div>
       )}

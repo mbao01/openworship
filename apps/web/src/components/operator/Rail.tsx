@@ -19,7 +19,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
       {ITEMS.map((item) => (
         <button
           key={item.id}
-          className={`relative flex flex-col items-center gap-1 py-2.5 mx-2 rounded transition-all ${
+          className={`relative flex flex-col items-center gap-1 py-2.5 mx-2 rounded transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
             screen === item.id
               ? "text-ink bg-bg-3"
               : "text-ink-3 hover:text-ink hover:bg-bg-2"
@@ -27,7 +27,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
           onClick={() => onScreenChange(item.id)}
         >
           {screen === item.id && (
-            <span className="absolute left-[-8px] top-2.5 bottom-2.5 w-0.5 bg-accent" />
+            <span className="absolute left-[-8px] top-2.5 bottom-2.5 w-[3px] bg-accent" />
           )}
           <item.icon />
           <span className="font-mono text-[8.5px] tracking-[0.1em] uppercase">
@@ -38,7 +38,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
       <div className="flex-1" />
       <div className="h-px bg-line mx-3 my-2" />
       <button
-        className={`relative flex flex-col items-center gap-1 py-2.5 mx-2 rounded transition-all ${
+        className={`relative flex flex-col items-center gap-1 py-2.5 mx-2 rounded transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
           screen === "settings"
             ? "text-ink bg-bg-3"
             : "text-ink-3 hover:text-ink hover:bg-bg-2"
@@ -46,7 +46,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
         onClick={() => onScreenChange("settings")}
       >
         {screen === "settings" && (
-          <span className="absolute left-[-8px] top-2.5 bottom-2.5 w-0.5 bg-accent" />
+          <span className="absolute left-[-8px] top-2.5 bottom-2.5 w-[3px] bg-accent" />
         )}
         <SettingsIcon />
         <span className="font-mono text-[8.5px] tracking-[0.1em] uppercase">

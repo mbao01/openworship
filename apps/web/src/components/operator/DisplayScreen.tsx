@@ -105,7 +105,7 @@ export function DisplayScreen() {
       {/* Open on projector button */}
       <div className="max-w-[900px] mb-6">
         <button
-          className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00]"
+          className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer transition-[filter] hover:brightness-[1.1]"
           onClick={handleOpenOnProjector}
         >
           Open on projector
@@ -131,7 +131,7 @@ export function DisplayScreen() {
           description="Match your projector's native resolution for sharpest text."
           control={
             <select
-              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]"
+              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs min-w-[180px] cursor-pointer focus:border-accent focus:outline-none transition-colors"
               value={resolution}
               onChange={(e) => {
                 setResolution(e.target.value);
@@ -148,7 +148,7 @@ export function DisplayScreen() {
           description="Black keeps focus on text. Transparent lets you overlay video."
           control={
             <select
-              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs min-w-[180px]"
+              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs min-w-[180px] cursor-pointer focus:border-accent focus:outline-none transition-colors"
               value={background}
               onChange={(e) => {
                 setBackground(e.target.value);

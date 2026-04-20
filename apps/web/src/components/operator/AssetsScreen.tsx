@@ -224,7 +224,7 @@ function SharedCell({ info }: { info: CloudSyncInfo | undefined }) {
 
   if (info.cloud_key?.includes("public")) {
     return (
-      <span className="inline-flex items-center px-[6px] py-[2px] rounded-[3px] text-[10px] font-medium bg-accent-soft text-accent border border-accent/25">
+      <span className="inline-flex items-center px-[6px] py-[2px] rounded text-[10px] font-medium bg-accent-soft text-accent border border-accent/25">
         Public
       </span>
     );
@@ -507,7 +507,7 @@ function RenameModal({
       </ModalHeader>
       <ModalBody className="px-6 py-4">
         <input
-          className="bg-bg-2 border border-line rounded-[3px] text-ink text-sm px-[10px] py-[6px] w-full outline-none transition-colors focus:border-accent focus:outline-none"
+          className="bg-bg-2 border border-line rounded text-ink text-sm px-[10px] py-[6px] w-full outline-none transition-colors focus:border-accent focus:outline-none"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -519,13 +519,13 @@ function RenameModal({
       </ModalBody>
       <ModalFooter>
         <button
-          className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
           onClick={onCancel}
         >
           Cancel
         </button>
         <button
-          className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+          className="bg-accent text-accent-foreground border-none rounded font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           onClick={() => onConfirm(name.trim())}
           disabled={!name.trim() || name.trim() === entry.name}
         >
@@ -551,7 +551,7 @@ function NewFolderModal({
       </ModalHeader>
       <ModalBody className="px-6 py-4">
         <input
-          className="bg-bg-2 border border-line rounded-[3px] text-ink text-sm px-[10px] py-[6px] w-full outline-none transition-colors focus:border-accent focus:outline-none"
+          className="bg-bg-2 border border-line rounded text-ink text-sm px-[10px] py-[6px] w-full outline-none transition-colors focus:border-accent focus:outline-none"
           placeholder="Folder name"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -564,13 +564,13 @@ function NewFolderModal({
       </ModalBody>
       <ModalFooter>
         <button
-          className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
           onClick={onCancel}
         >
           Cancel
         </button>
         <button
-          className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+          className="bg-accent text-accent-foreground border-none rounded font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           onClick={() => onConfirm(name.trim())}
           disabled={!name.trim()}
         >
@@ -661,7 +661,7 @@ function MoveFolderModal({
         </div>
 
         {/* Folder list */}
-        <div className="bg-bg-2 border border-line rounded-[3px] min-h-[120px] max-h-[200px] overflow-y-auto">
+        <div className="bg-bg-2 border border-line rounded min-h-[120px] max-h-[200px] overflow-y-auto">
           {folders.length === 0 ? (
             <p className="text-[11px] text-line px-3 py-2 m-0">
               No sub-folders here.
@@ -700,13 +700,13 @@ function MoveFolderModal({
       </ModalBody>
       <ModalFooter>
         <button
-          className="bg-transparent text-ink-3 border border-line rounded-[3px] font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
           onClick={onCancel}
         >
           Cancel
         </button>
         <button
-          className="bg-accent text-[#1A0D00] border-none rounded-[3px] font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer"
+          className="bg-accent text-accent-foreground border-none rounded font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer"
           onClick={() => onConfirm(destinationPath)}
         >
           Move Here
@@ -872,7 +872,7 @@ function PreviewPanel({
           )}
         </div>
         <button
-          className="w-full bg-transparent border border-line rounded-[3px] text-ink-3 font-sans text-[11px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          className="w-full bg-transparent border border-line rounded text-ink-3 font-sans text-[11px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
           onClick={() => onShare(entry)}
         >
           Share...
@@ -931,7 +931,7 @@ function FilterDropdown({
   return (
     <div className="relative" ref={ref}>
       <button
-        className={`flex items-center gap-1.5 font-sans text-[11px] px-2.5 py-[5px] rounded-[3px] border cursor-pointer transition-colors ${
+        className={`flex items-center gap-1.5 font-sans text-[11px] px-2.5 py-[5px] rounded border cursor-pointer transition-colors ${
           !allSelected
             ? "text-accent border-accent/40 bg-accent-soft"
             : "text-ink-3 border-line hover:text-ink hover:border-line-strong"
@@ -949,8 +949,8 @@ function FilterDropdown({
             className="flex items-center gap-2.5 w-full text-left px-3 py-1.5 text-[12px] text-ink transition-colors hover:bg-bg-2 cursor-pointer"
             onClick={onToggleAll}
           >
-            <span className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center text-[9px] font-bold shrink-0 ${
-              allSelected ? "bg-accent border-accent text-[#1A0D00]" : "border-line-strong"
+            <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+              allSelected ? "bg-accent border-accent text-accent-foreground" : "border-line-strong"
             }`}>
               {allSelected ? "✓" : ""}
             </span>
@@ -963,8 +963,8 @@ function FilterDropdown({
               className="flex items-center gap-2.5 w-full text-left px-3 py-1.5 text-[12px] text-ink transition-colors hover:bg-bg-2 cursor-pointer"
               onClick={() => onToggle(cat)}
             >
-              <span className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                activeFilters.has(cat) ? "bg-accent border-accent text-[#1A0D00]" : "border-line-strong"
+              <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                activeFilters.has(cat) ? "bg-accent border-accent text-accent-foreground" : "border-line-strong"
               }`}>
                 {activeFilters.has(cat) ? "✓" : ""}
               </span>
@@ -1002,7 +1002,7 @@ function NewMenu({
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-[3px] z-[200] bg-bg-2 border border-line-strong rounded-[5px] py-1 min-w-[140px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+      className="absolute right-0 top-full mt-[3px] z-[200] bg-bg-2 border border-line-strong rounded-lg py-1 min-w-[140px] shadow-lg"
     >
       <button className={btnCls} onClick={() => { onNewFolder(); onClose(); }}>
         New Folder
@@ -1344,7 +1344,7 @@ export function AssetsScreen() {
 
   const viewBtnCls = (active: boolean) =>
     [
-      "bg-transparent border border-line text-ink-3 w-7 h-[26px] rounded-[3px] cursor-pointer",
+      "bg-transparent border border-line text-ink-3 w-7 h-[26px] rounded cursor-pointer",
       "flex items-center justify-center transition-colors hover:text-ink",
       active ? "border-accent/60 text-accent" : "",
     ].join(" ");
@@ -1414,7 +1414,7 @@ export function AssetsScreen() {
             {showSearch && (
               <input
                 data-qa="artifacts-search"
-                className="bg-bg-2 border border-line rounded-[3px] text-ink font-sans text-[11px] px-[8px] py-[4px] w-[160px] outline-none transition-colors focus:border-accent placeholder:text-muted"
+                className="bg-bg-2 border border-line rounded text-ink font-sans text-[11px] px-[8px] py-[4px] w-[160px] outline-none transition-colors focus:border-accent focus:outline-none placeholder:text-muted"
                 type="search"
                 placeholder="Search files..."
                 value={query}
@@ -1434,7 +1434,7 @@ export function AssetsScreen() {
             </button>
             <button
               className={[
-                "flex items-center gap-[5px] font-sans text-[11px] px-[10px] py-[5px] rounded-[3px] border cursor-pointer transition-colors",
+                "flex items-center gap-[5px] font-sans text-[11px] px-[10px] py-[5px] rounded border cursor-pointer transition-colors disabled:cursor-not-allowed",
                 syncing
                   ? "text-accent border-accent/40 bg-accent-soft"
                   : "text-ink-3 border-line hover:text-ink hover:border-line-strong",
@@ -1497,15 +1497,15 @@ export function AssetsScreen() {
 
                 {/* New + Upload */}
                 <div className="relative">
-                  <div className="flex rounded-[3px] overflow-hidden border border-accent/30">
+                  <div className="flex rounded overflow-hidden border border-accent/30">
                     <button
-                      className="flex items-center gap-[5px] bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-[10px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1] border-r border-accent/50"
+                      className="flex items-center gap-[5px] bg-accent text-accent-foreground font-sans text-[11px] font-semibold px-[10px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1] border-r border-accent/50"
                       onClick={() => setNewFolder(true)}
                     >
                       + New
                     </button>
                     <button
-                      className="bg-accent/90 text-[#1A0D00] px-[6px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1]"
+                      className="bg-accent/90 text-accent-foreground px-[6px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1]"
                       onClick={() => setShowNewMenu((v) => !v)}
                       title="More options"
                     >
@@ -1520,7 +1520,7 @@ export function AssetsScreen() {
                   )}
                 </div>
                 <button
-                  className="flex items-center gap-[5px] bg-transparent border border-line text-ink-3 font-sans text-[11px] px-[10px] py-[5px] rounded-[3px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+                  className="flex items-center gap-[5px] bg-transparent border border-line text-ink-3 font-sans text-[11px] px-[10px] py-[5px] rounded cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
                   onClick={handleUpload}
                   title="Upload files"
                 >
@@ -1552,9 +1552,10 @@ export function AssetsScreen() {
                   nav.kind === "cloud_shared") && (
                   <div className="flex-1 overflow-y-auto py-2">
                     {cloudEntries.length === 0 ? (
-                      <p className="text-center text-muted text-xs py-12">
-                        No synced files in this section.
-                      </p>
+                      <div className="flex flex-col items-center justify-center text-muted text-xs py-12 gap-2">
+                        <CloudIcon className="w-8 h-8 text-muted/50" />
+                        <p className="m-0">No synced files in this section.</p>
+                      </div>
                     ) : (
                       cloudEntries.map((info) => (
                         <div
@@ -1631,7 +1632,10 @@ export function AssetsScreen() {
                                   colSpan={6}
                                   className="text-center text-muted text-xs py-16"
                                 >
-                                  {query ? "No results." : "No files here yet."}
+                                  <div className="flex flex-col items-center gap-2">
+                                    {query ? <SearchIcon className="w-8 h-8 text-muted/50" /> : <FolderIcon className="w-8 h-8 text-muted/50" />}
+                                    <span>{query ? "No results." : "No files here yet."}</span>
+                                  </div>
                                 </td>
                               </tr>
                             ) : (
@@ -1720,9 +1724,10 @@ export function AssetsScreen() {
                         className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-4 p-4"
                       >
                         {visible.length === 0 ? (
-                          <p className="w-full text-center text-muted text-xs py-16">
-                            {query ? "No results." : "No files here yet."}
-                          </p>
+                          <div className="w-full flex flex-col items-center text-muted text-xs py-16 gap-2">
+                            {query ? <SearchIcon className="w-8 h-8 text-muted/50" /> : <FolderIcon className="w-8 h-8 text-muted/50" />}
+                            <span>{query ? "No results." : "No files here yet."}</span>
+                          </div>
                         ) : (
                           visible.map((e) => {
                             const sync = syncInfoMap.get(e.id);
@@ -1788,7 +1793,7 @@ export function AssetsScreen() {
                   <button
                     onClick={zoomOut}
                     disabled={zoom <= MIN_ZOOM}
-                    className="p-0.5 text-ink-3 hover:text-ink disabled:opacity-30 cursor-pointer"
+                    className="p-0.5 text-ink-3 hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <MinusIcon className="w-3.5 h-3.5" />
                   </button>
@@ -1804,7 +1809,7 @@ export function AssetsScreen() {
                   <button
                     onClick={zoomIn}
                     disabled={zoom >= MAX_ZOOM}
-                    className="p-0.5 text-ink-3 hover:text-ink disabled:opacity-30 cursor-pointer"
+                    className="p-0.5 text-ink-3 hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <PlusIcon className="w-3.5 h-3.5" />
                   </button>

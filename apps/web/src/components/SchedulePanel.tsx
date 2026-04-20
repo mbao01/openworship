@@ -125,7 +125,7 @@ function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void 
         autoComplete="off"
       />
       <button
-        className="font-sans text-[10px] font-medium tracking-[0.08em] text-[#1A0D00] bg-accent border-none rounded-sm px-[10px] py-1 cursor-pointer uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        className="font-sans text-[10px] font-medium tracking-[0.08em] text-accent-foreground bg-accent border-none rounded-sm px-[10px] py-1 cursor-pointer uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         type="submit"
         disabled={saving || !name.trim()}
       >
@@ -506,7 +506,7 @@ export function SchedulePanel() {
           <>
             <button
               data-qa="schedule-summarize-btn"
-              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-[#1A0D00] bg-danger border-none mr-0.5 transition-all hover:brightness-110"
+              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-accent-foreground bg-danger border-none mr-0.5 transition-all hover:brightness-110"
               onClick={() => handleCloseProject(true)}
               title="End service and generate AI summary"
             >
@@ -514,7 +514,7 @@ export function SchedulePanel() {
             </button>
             <button
               data-qa="schedule-end-btn"
-              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-[#1A0D00] bg-accent border-none transition-all hover:brightness-110"
+              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-accent-foreground bg-accent border-none transition-all hover:brightness-110"
               onClick={() => handleCloseProject(false)}
               title="End this service without summary"
             >

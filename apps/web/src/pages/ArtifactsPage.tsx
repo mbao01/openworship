@@ -620,7 +620,7 @@ function RenameModal({
             Cancel
           </button>
           <button
-            className="bg-accent text-[#1A0D00] border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
+            className="bg-accent text-accent-foreground border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
             onClick={() => onConfirm(name.trim())}
             disabled={!name.trim() || name.trim() === entry.name}
           >
@@ -669,7 +669,7 @@ function NewFolderModal({
             Cancel
           </button>
           <button
-            className="bg-accent text-[#1A0D00] border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
+            className="bg-accent text-accent-foreground border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12] disabled:opacity-40 disabled:cursor-default"
             onClick={() => onConfirm(name.trim())}
             disabled={!name.trim()}
           >
@@ -801,7 +801,7 @@ function MoveFolderModal({
             Cancel
           </button>
           <button
-            className="bg-accent text-[#1A0D00] border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12]"
+            className="bg-accent text-accent-foreground border-none rounded font-sans text-xs font-semibold px-[14px] py-[6px] cursor-pointer transition-[filter] hover:brightness-[1.12]"
             onClick={() => onConfirm(destinationPath)}
           >
             Move Here
@@ -1439,13 +1439,13 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
               <div className="relative">
                 <div className="flex rounded-[3px] overflow-hidden border border-line">
                   <button
-                    className="flex items-center gap-[5px] bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-[10px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1] border-r border-accent/50"
+                    className="flex items-center gap-[5px] bg-accent text-accent-foreground font-sans text-[11px] font-semibold px-[10px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1] border-r border-accent/50"
                     onClick={() => setNewFolder(true)}
                   >
                     + New
                   </button>
                   <button
-                    className="bg-accent/90 text-[#1A0D00] px-[6px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1]"
+                    className="bg-accent/90 text-accent-foreground px-[6px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1]"
                     onClick={() => setShowNewMenu((v) => !v)}
                     title="More options"
                   >
@@ -1486,7 +1486,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                 className={[
                   "font-sans text-[10px] font-medium tracking-[0.04em] uppercase rounded-full py-[3px] px-[10px] cursor-pointer transition-colors whitespace-nowrap shrink-0",
                   filter === f.value
-                    ? "text-[#1A0D00] bg-accent border border-accent"
+                    ? "text-accent-foreground bg-accent border border-accent"
                     : "bg-transparent border border-line text-ink-3 hover:text-ink hover:border-line-strong",
                 ].join(" ")}
                 onClick={() => setFilter(f.value)}

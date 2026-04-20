@@ -306,7 +306,7 @@ export function PlanScreen() {
             />
           ) : (
             <button
-              className="w-full px-3 py-2 text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00] cursor-pointer"
+              className="w-full px-3 py-2 text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer"
               onClick={() => setShowNewForm(true)}
             >
               + New service
@@ -331,7 +331,8 @@ export function PlanScreen() {
             setEmailSettingsState={setEmailSettingsState}
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-muted text-sm">
+          <div className="flex flex-col items-center justify-center h-full text-muted text-sm gap-2">
+            <ListIcon className="w-6 h-6 text-muted/60" />
             {projects.length === 0
               ? "No services yet. Create one to get started."
               : "Select a service from the list."}
@@ -510,7 +511,7 @@ function ServiceDetail({
           <div className="shrink-0 flex items-center gap-3 pt-1">
             <input
               type="datetime-local"
-              className="px-2 py-1 bg-bg-2 border border-line rounded-[3px] text-ink text-xs disabled:text-muted"
+              className="px-2 py-1 bg-bg-2 border border-line rounded text-ink text-xs disabled:text-muted disabled:cursor-not-allowed"
               value={(() => {
                 const ms = project.scheduled_at_ms ?? project.created_at_ms;
                 const d = new Date(ms);
@@ -562,7 +563,7 @@ function ServiceDetail({
               Translation
             </span>
             <select
-              className="px-1.5 py-0.5 bg-bg-2 border border-line rounded-[3px] text-ink text-[11px]"
+              className="px-1.5 py-0.5 bg-bg-2 border border-line rounded text-ink text-[11px]"
               value={activeTranslation}
               onChange={(e) => {
                 const value = e.target.value;
@@ -583,7 +584,7 @@ function ServiceDetail({
               Context
             </span>
             <select
-              className="px-1.5 py-0.5 bg-bg-2 border border-line rounded-[3px] text-ink text-[11px]"
+              className="px-1.5 py-0.5 bg-bg-2 border border-line rounded text-ink text-[11px]"
               value={audioSettings?.semantic_threshold_auto ?? 10}
               onChange={(e) => {
                 if (!audioSettings) return;
@@ -622,14 +623,14 @@ function ServiceDetail({
       </div>
 
       {/* Section 1: Order of Service */}
-      <section className="mb-10">
+      <section className="mb-6">
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="font-serif text-2xl font-normal tracking-[-0.015em] text-ink">
             Order of service
           </h2>
           {!isReadOnly && (
             <button
-              className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00] cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer"
               onClick={() => setShowAddItem((v) => !v)}
             >
               + Add item
@@ -792,14 +793,15 @@ function ServiceDetail({
             </SortableContext>
           </DndContext>
         ) : (
-          <div className="border border-line rounded-lg px-6 py-8 text-center text-sm text-muted">
+          <div className="border border-line rounded-lg px-6 py-8 text-center text-sm text-muted flex flex-col items-center gap-2">
+            <ListIcon className="w-5 h-5 text-muted/60" />
             No items yet. Add scripture or events to build the service order.
           </div>
         )}
       </section>
 
       {/* Section 2: Tasks */}
-      <section className="mb-10">
+      <section className="mb-6">
         <div className="flex items-center gap-3 mb-4">
           <h2 className="font-serif text-2xl font-normal tracking-[-0.015em] text-ink">
             Tasks
@@ -811,7 +813,7 @@ function ServiceDetail({
             <button
               className={`p-1.5 rounded border text-xs cursor-pointer transition-colors ${
                 taskView === "list"
-                  ? "bg-accent text-[#1A0D00] border-accent"
+                  ? "bg-accent text-accent-foreground border-accent"
                   : "bg-bg-2 text-ink-3 border-line hover:bg-bg-3"
               }`}
               onClick={() => setTaskView("list")}
@@ -822,7 +824,7 @@ function ServiceDetail({
             <button
               className={`p-1.5 rounded border text-xs cursor-pointer transition-colors ${
                 taskView === "board"
-                  ? "bg-accent text-[#1A0D00] border-accent"
+                  ? "bg-accent text-accent-foreground border-accent"
                   : "bg-bg-2 text-ink-3 border-line hover:bg-bg-3"
               }`}
               onClick={() => setTaskView("board")}
@@ -845,7 +847,7 @@ function ServiceDetail({
                     key={status}
                     className={`px-2.5 py-1 text-[11px] rounded-full border transition-colors cursor-pointer ${
                       isActive
-                        ? "bg-accent text-[#1A0D00] border-accent font-semibold"
+                        ? "bg-accent text-accent-foreground border-accent font-semibold"
                         : "bg-bg-2 text-ink-3 border-line hover:bg-bg-3"
                     }`}
                     onClick={() => setTaskFilter(status)}
@@ -873,7 +875,8 @@ function ServiceDetail({
                   />
                 ))
               ) : (
-                <div className="px-4 py-6 text-center text-sm text-muted">
+                <div className="px-4 py-6 text-center text-sm text-muted flex flex-col items-center gap-2">
+                  <KanbanIcon className="w-5 h-5 text-muted/60" />
                   {taskFilter === "all"
                     ? "No tasks yet."
                     : `No ${STATUS_LABELS[taskFilter as TaskStatus].toLowerCase()} tasks.`}
@@ -1389,7 +1392,7 @@ function ExpandedItemDetail({
             Duration (minutes)
           </label>
           <input
-            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs"
+            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs"
             value={durationMins}
             onChange={(e) => setDurationMins(e.target.value)}
             onBlur={handleDurationBlur}
@@ -1404,7 +1407,7 @@ function ExpandedItemDetail({
             Type
           </label>
           <select
-            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs"
+            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs"
             value={item.item_type}
             onChange={(e) => handleTypeChange(e.target.value)}
             disabled={isReadOnly}
@@ -1424,7 +1427,7 @@ function ExpandedItemDetail({
           Notes
         </label>
         <textarea
-          className="w-full px-2.5 py-2 bg-bg-2 border border-line rounded-[3px] text-ink text-xs resize-y min-h-[60px]"
+          className="w-full px-2.5 py-2 bg-bg-2 border border-line rounded text-ink text-xs resize-y min-h-[60px]"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           onBlur={handleNotesBlur}
@@ -1636,14 +1639,14 @@ function AddTaskForm({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
   return (
     <form className="flex gap-2 mt-3" onSubmit={handleSubmit}>
       <input
-        className="flex-1 px-3 py-2 bg-bg-2 border border-line rounded-[3px] text-ink text-sm"
+        className="flex-1 px-3 py-2 bg-bg-2 border border-line rounded text-ink text-sm"
         placeholder="Add a task..."
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
       <button
         type="submit"
-        className="px-3 py-2 bg-accent text-[#1A0D00] text-xs font-semibold rounded-[3px] cursor-pointer disabled:opacity-50"
+        className="px-3 py-2 bg-accent text-accent-foreground text-xs font-semibold rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={!title.trim() || submitting}
       >
         Add
@@ -1693,7 +1696,7 @@ function ManualEventForm({
       </div>
       <div className="flex gap-2 items-end">
         <select
-          className="px-2 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs"
+          className="px-2 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs"
           value={itemType}
           onChange={(e) => setItemType(e.target.value)}
         >
@@ -1704,20 +1707,20 @@ function ManualEventForm({
           ))}
         </select>
         <input
-          className="flex-1 px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs"
+          className="flex-1 px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs"
           placeholder="Event title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <input
-          className="w-16 px-2 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs"
+          className="w-16 px-2 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs"
           placeholder="min"
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
         />
         <button
           type="submit"
-          className="px-3 py-[7px] bg-accent text-[#1A0D00] text-xs font-semibold rounded-[3px] cursor-pointer disabled:opacity-50"
+          className="px-3 py-[7px] bg-accent text-accent-foreground text-xs font-semibold rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={!title.trim() || submitting}
         >
           Add
@@ -1768,7 +1771,7 @@ function AddItemSearch({
     <div>
       <input
         ref={inputRef}
-        className="w-full px-3 py-2 bg-bg-2 border border-line rounded-[3px] text-ink text-sm mb-2"
+        className="w-full px-3 py-2 bg-bg-2 border border-line rounded text-ink text-sm mb-2"
         placeholder="Search scripture\u2026"
         value={query}
         onChange={(e) => handleSearch(e.target.value)}
@@ -1828,7 +1831,7 @@ function NewServiceForm({
     >
       <input
         ref={inputRef}
-        className="w-full px-3 py-2 bg-bg-2 border border-line rounded-[3px] text-ink text-sm"
+        className="w-full px-3 py-2 bg-bg-2 border border-line rounded text-ink text-sm"
         placeholder="Untitled service"
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -1836,13 +1839,13 @@ function NewServiceForm({
       <div className="flex gap-2">
         <button
           type="submit"
-          className="flex-1 px-3 py-2 bg-accent text-[#1A0D00] text-xs font-semibold rounded-[3px] cursor-pointer"
+          className="flex-1 px-3 py-2 bg-accent text-accent-foreground text-xs font-semibold rounded cursor-pointer"
         >
           Create
         </button>
         <button
           type="button"
-          className="px-3 py-2 text-ink-3 text-xs rounded-[3px] border border-line hover:text-ink cursor-pointer"
+          className="px-3 py-2 text-ink-3 text-xs rounded border border-line hover:text-ink cursor-pointer"
           onClick={onCancel}
         >
           Cancel

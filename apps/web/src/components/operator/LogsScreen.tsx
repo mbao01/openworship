@@ -95,7 +95,7 @@ export function LogsScreen() {
             {projects.length}
           </span>
         </div>
-        <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+        <div className="flex-1 overflow-y-auto">
           {projects.map((p, i) => {
             const pSummary = summaries.find((s) => s.project_id === p.id);
             return (
@@ -134,7 +134,8 @@ export function LogsScreen() {
             );
           })}
           {projects.length === 0 && (
-            <div className="px-3.5 py-8 text-center text-xs text-muted">
+            <div className="px-3.5 py-8 text-center text-xs text-muted flex flex-col items-center gap-2">
+              <FileTextIcon className="w-5 h-5 text-muted/60" />
               No past services yet. Close an active service to archive it here.
             </div>
           )}
@@ -240,7 +241,7 @@ export function LogsScreen() {
                   <div className="flex gap-2.5 pt-4 border-t border-line">
                     {!currentSummary.email_sent && (
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00] disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => handlePublish(currentSummary.id)}
                         disabled={publishing}
                       >
@@ -248,7 +249,7 @@ export function LogsScreen() {
                       </button>
                     )}
                     <button
-                      className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => handleGenerate(current.id)}
                       disabled={generating}
                     >
@@ -262,7 +263,7 @@ export function LogsScreen() {
                     No recap has been generated for this service yet.
                   </div>
                   <button
-                    className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00] disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => handleGenerate(current.id)}
                     disabled={generating}
                   >
@@ -307,7 +308,8 @@ export function LogsScreen() {
             </div>
           </>
         ) : (
-          <div className="text-sm text-muted">
+          <div className="flex flex-col items-center justify-center h-full text-sm text-muted gap-2">
+            <BookOpenIcon className="w-6 h-6 text-muted/60" />
             Select a service to view artifacts
           </div>
         )}

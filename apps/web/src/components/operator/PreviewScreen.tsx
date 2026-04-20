@@ -195,9 +195,9 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
               onClick={() => toggle(c.k)}
             >
               <div
-                className={`w-[18px] h-[18px] rounded-[3px] mt-0.5 border flex items-center justify-center text-[11px] font-bold ${
+                className={`w-[18px] h-[18px] rounded mt-0.5 border flex items-center justify-center text-[11px] font-bold ${
                   checks[c.k]
-                    ? "bg-accent border-accent text-[#1A0D00]"
+                    ? "bg-accent border-accent text-accent-foreground"
                     : "bg-transparent border-line-strong"
                 }`}
               >
@@ -264,20 +264,20 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
 
         <div className="flex items-center gap-2.5 px-4 py-2.5 border-t border-line bg-bg-1 h-[52px] shrink-0">
           <div className="flex gap-1">
-            <span className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-accent bg-accent-soft border border-accent rounded-[3px]">
+            <span className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-accent bg-accent-soft border border-accent rounded">
               <CircleIcon className="w-3 h-3 shrink-0" /> PREVIEW
             </span>
           </div>
           <div className="flex gap-1 pl-2.5 ml-1.5 border-l border-line">
             <button
-              className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded-[3px] hover:bg-bg-3 disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded hover:bg-bg-3 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               disabled={previewIndex <= 0}
               onClick={stepBack}
             >
               Step back
             </button>
             <button
-              className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase bg-accent text-[#1A0D00] border border-accent rounded-[3px] font-semibold disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase bg-accent text-accent-foreground border border-accent rounded font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               disabled={items.length === 0 || previewIndex >= items.length - 1}
               onClick={stepForward}
             >
@@ -286,13 +286,13 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
           </div>
           <div className="flex gap-1 pl-2.5 ml-1.5 border-l border-line">
             <button
-              className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded-[3px] hover:bg-bg-3"
+              className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded hover:bg-bg-3 cursor-pointer"
               onClick={handleSimulate}
             >
               Simulate speech
             </button>
             <button
-              className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded-[3px] hover:bg-bg-3"
+              className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded hover:bg-bg-3 cursor-pointer"
               onClick={() => {
                 const now = Date.now();
                 const fiveMin = 5 * 60 * 1000;
@@ -306,7 +306,7 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
           </div>
           <div className="flex-1" />
           <button
-            className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase bg-accent text-[#1A0D00] border border-accent rounded-[3px] font-semibold"
+            className="inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase bg-accent text-accent-foreground border border-accent rounded font-semibold cursor-pointer"
             onClick={() => onGoLive?.()}
           >
             Go live →
@@ -327,13 +327,13 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
           </div>
           <div className="mb-4">
             <textarea
-              className="w-full h-24 bg-bg-1 border border-line rounded-[3px] p-2.5 font-serif text-sm leading-[1.6] text-ink-2 resize-none placeholder:text-muted placeholder:italic focus:outline-none focus:border-accent"
+              className="w-full h-24 bg-bg-1 border border-line rounded p-2.5 font-serif text-sm leading-[1.6] text-ink-2 resize-none placeholder:text-muted placeholder:italic focus:border-accent focus:outline-none"
               placeholder="Paste sermon notes here to preview matches..."
               value={simulateText}
               onChange={(e) => setSimulateText(e.target.value)}
             />
             <button
-              className="mt-1.5 w-full px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded-[3px] hover:bg-bg-3 disabled:opacity-40"
+              className="mt-1.5 w-full px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-ink-2 border border-line bg-bg-2 rounded hover:bg-bg-3 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               disabled={!simulateText.trim()}
               onClick={handleSimulate}
             >
@@ -348,7 +348,7 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
               </div>
               <div className="grid gap-1.5">
                 {detections.map((d) => (
-                  <div key={d.id} className="p-2.5 bg-bg-1 border border-line rounded-[3px]">
+                  <div key={d.id} className="p-2.5 bg-bg-1 border border-line rounded">
                     <div className="font-mono text-[10px] text-accent tracking-[0.06em] uppercase mb-1">
                       {d.reference} · {d.translation}
                       {d.confidence != null && (
@@ -365,7 +365,7 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
           <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase mb-2.5 inline-flex items-center gap-1">
             <CircleIcon className="w-3 h-3 shrink-0" fill="currentColor" /> ROOM
           </div>
-          <div className="p-3.5 bg-bg-1 border border-line rounded-[3px] grid gap-2.5">
+          <div className="p-3.5 bg-bg-1 border border-line rounded grid gap-2.5">
             <RoomRow label="Mic level" value={micLevelDb} valueColor="text-ink-2" />
             <RoomRow label="Projector" value={projectorStatus.text} valueColor={projectorStatus.color} />
             <RoomRow label="Volunteers online" value="—" valueColor="text-ink-3" />

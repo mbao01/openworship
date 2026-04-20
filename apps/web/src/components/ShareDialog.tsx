@@ -242,7 +242,7 @@ export function ShareDialog({
               Enable cloud sync to share with other branches
             </span>
             <button
-              className="shrink-0 bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
+              className="shrink-0 bg-accent text-accent-foreground font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
               onClick={handleSyncToggle}
             >
               Enable Sync
@@ -269,7 +269,7 @@ export function ShareDialog({
             <PermSelect value={newPerm} onChange={setNewPerm} />
             <button
               data-qa="share-add-btn"
-              className="bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-4 py-[6px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default whitespace-nowrap shrink-0"
+              className="bg-accent text-accent-foreground font-sans text-[11px] font-semibold px-4 py-[6px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default whitespace-nowrap shrink-0"
               onClick={handleShare}
               disabled={!searchQuery.trim()}
             >
@@ -386,7 +386,7 @@ export function ShareDialog({
                 Cancel
               </button>
               <button
-                className="bg-accent text-[#1A0D00] font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
+                className="bg-accent text-accent-foreground font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
                 onClick={handleConfirmSyncAndCopy}
               >
                 Enable &amp; Copy
@@ -417,7 +417,7 @@ export function ShareDialog({
 
           <button
             data-qa="share-done-btn"
-            className="bg-accent text-[#1A0D00] border-none rounded-[4px] font-sans text-[12px] font-semibold px-5 py-[7px] cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default"
+            className="bg-accent text-accent-foreground border-none rounded-[4px] font-sans text-[12px] font-semibold px-5 py-[7px] cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default"
             onClick={handleSave}
             disabled={saving}
           >

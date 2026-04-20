@@ -40,7 +40,7 @@ function SegmentedControl<T extends string>({
             "border-r border-line last:border-r-0",
             "transition-all duration-100",
             value === opt.value
-              ? "bg-accent text-[#1A0D00] font-semibold"
+              ? "bg-accent text-accent-foreground font-semibold"
               : "text-ink-3 hover:text-ink hover:bg-bg-3",
           )}
         >

@@ -159,7 +159,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
           <span className="text-accent flex items-center"><SearchIcon className="w-5 h-5 shrink-0" /></span>
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent border-0 font-serif text-[22px] text-ink tracking-[-0.01em] placeholder:text-ink-3 placeholder:italic"
+            className="flex-1 bg-transparent border-0 font-serif text-[22px] text-ink tracking-[-0.01em] placeholder:text-ink-3 placeholder:italic outline-none focus:ring-0"
             placeholder="Search scripture, lyrics, slides, or commands\u2026"
             value={query}
             onChange={handleChange}
@@ -181,7 +181,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                 return (
                   <div
                     key={`${g.group}-${idx}`}
-                    className={`grid grid-cols-[28px_1fr_auto] gap-3.5 px-[22px] py-2.5 cursor-pointer items-center ${
+                    className={`grid grid-cols-[28px_1fr_auto] gap-3.5 px-[22px] py-2.5 cursor-pointer items-center transition-colors ${
                       idx === selected ? "bg-accent-soft" : "hover:bg-accent-soft"
                     }`}
                     onClick={item.onSelect}

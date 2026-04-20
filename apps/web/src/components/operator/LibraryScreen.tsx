@@ -107,7 +107,7 @@ export function LibraryScreen() {
         {/* Tab switcher */}
         <div className="flex border-b border-line bg-bg-1">
           <button
-            className={`flex-1 px-3 py-1.5 text-[11px] font-mono tracking-[0.08em] uppercase transition-colors ${
+            className={`flex-1 px-3 py-1.5 text-[11px] font-mono tracking-[0.08em] uppercase transition-colors cursor-pointer ${
               tab === "scripture"
                 ? "text-accent border-b-2 border-accent"
                 : "text-ink-3 hover:text-ink-2"
@@ -117,7 +117,7 @@ export function LibraryScreen() {
             Scripture
           </button>
           <button
-            className={`flex-1 px-3 py-1.5 text-[11px] font-mono tracking-[0.08em] uppercase transition-colors ${
+            className={`flex-1 px-3 py-1.5 text-[11px] font-mono tracking-[0.08em] uppercase transition-colors cursor-pointer ${
               tab === "songs"
                 ? "text-accent border-b-2 border-accent"
                 : "text-ink-3 hover:text-ink-2"
@@ -130,7 +130,7 @@ export function LibraryScreen() {
 
         <div className="px-3 py-2.5 border-b border-line">
           <input
-            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded-[3px] text-ink text-xs focus:border-line-strong"
+            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs focus:border-accent focus:outline-none"
             placeholder={
               tab === "scripture"
                 ? "Search 31,000 verses across 50 translations\u2026"
@@ -140,7 +140,7 @@ export function LibraryScreen() {
             onChange={handleQueryChange}
           />
         </div>
-        <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]">
+        <div className="flex-1 overflow-y-auto">
           {tab === "scripture" &&
             results.map((v, i) => (
               <div
@@ -202,19 +202,19 @@ export function LibraryScreen() {
             </div>
             <div className="flex gap-2.5 pt-5 border-t border-line mt-5">
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00]"
+                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer"
                 onClick={() => handlePush(current)}
               >
                 Push to display
               </button>
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong"
+                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong cursor-pointer"
                 onClick={() => handleQueue(current)}
               >
                 Queue next
               </button>
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong"
+                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong cursor-pointer"
                 onClick={() => handleCopy(current.text)}
               >
                 {copied ? "Copied!" : "Copy"}
@@ -235,13 +235,13 @@ export function LibraryScreen() {
             </div>
             <div className="flex gap-2.5 pt-5 border-t border-line mt-5">
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00]"
+                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer"
                 onClick={() => handleSongClick(currentSong)}
               >
                 Push to display
               </button>
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong"
+                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong cursor-pointer"
                 onClick={() => handleCopy(currentSong.lyrics)}
               >
                 {copied ? "Copied!" : "Copy"}
@@ -249,10 +249,18 @@ export function LibraryScreen() {
             </div>
           </div>
         ) : (
-          <div className="text-sm text-muted">
-            {tab === "scripture"
-              ? "Select a verse to view details"
-              : "Search for a song to view details"}
+          <div className="flex flex-col items-center justify-center h-full text-sm text-muted gap-2">
+            {tab === "scripture" ? (
+              <>
+                <BookOpenIcon className="w-6 h-6 text-muted/60" />
+                Select a verse to view details
+              </>
+            ) : (
+              <>
+                <MusicIcon className="w-6 h-6 text-muted/60" />
+                Search for a song to view details
+              </>
+            )}
           </div>
         )}
       </div>

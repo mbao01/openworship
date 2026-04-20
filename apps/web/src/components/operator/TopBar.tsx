@@ -94,9 +94,9 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
           {MODES.map((m) => (
             <button
               key={m.value}
-              className={`px-3.5 py-[7px] font-mono text-[10px] tracking-[0.12em] uppercase transition-all border-r border-line last:border-r-0 ${
+              className={`px-3.5 py-1.5 font-mono text-[10px] tracking-[0.12em] uppercase transition-all border-r border-line last:border-r-0 cursor-pointer ${
                 mode === m.value
-                  ? "bg-accent text-[#1A0D00] font-semibold"
+                  ? "bg-accent text-accent-foreground font-semibold"
                   : "text-ink-3 hover:text-ink hover:bg-bg-3"
               }`}
               onClick={() => handleModeChange(m.value)}
@@ -127,7 +127,7 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
       {/* Right */}
       <div className="flex items-center gap-1.5">
         <button
-          className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs text-ink-2 rounded border border-line bg-bg-2 transition-all hover:text-ink hover:border-line-strong hover:bg-bg-3"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-ink-2 rounded border border-line bg-bg-2 transition-all hover:text-ink hover:border-line-strong hover:bg-bg-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={onOpenCmdK}
         >
           <SearchIcon />
@@ -137,7 +137,7 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
           </kbd>
         </button>
         <button
-          className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00] transition-all hover:bg-accent-hover"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground transition-all hover:bg-accent-hover cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={onPush}
         >
           Push

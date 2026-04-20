@@ -24,9 +24,10 @@
   --color-muted: #5E574D;
 
   /* Accent — default copper; overridden at runtime via CSS var */
-  --color-accent:       #C9A76A;
-  --color-accent-soft:  rgba(201,167,106,0.12);
-  --color-accent-hover: #D9B879;
+  --color-accent:            #C9A76A;
+  --color-accent-soft:       rgba(201,167,106,0.12);
+  --color-accent-hover:      #D9B879;
+  --color-accent-foreground: #1A0D00;
 
   /* Semantic */
   --color-danger:  #D26060;
@@ -206,6 +207,14 @@ html[data-app-theme="light"] {
 
   input:focus {
     outline: none;
+  }
+
+  /* Consistent thin scrollbars across the app */
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .overflow-auto {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-bg-3) transparent;
   }
 }
 
