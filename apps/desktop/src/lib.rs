@@ -443,6 +443,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::delete_announcement,
             commands::push_announcement_to_display,
             commands::push_custom_slide,
+            commands::push_artifact_to_display,
             // ── Countdown timers ───────────────────────────────────────────
             commands::start_countdown,
             // ── Sermon notes ───────────────────────────────────────────────

@@ -1,8 +1,37 @@
 import { useEffect, useState } from "react";
-import { CircleIcon } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { CircleIcon, PaperclipIcon } from "lucide-react";
 import { useQueue } from "../../hooks/use-queue";
 import { getObsDisplayUrl, openDisplayWindow } from "../../lib/commands/display-window";
 import { Toggle } from "../ui/toggle";
+
+const IMG_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"]);
+const VID_EXTS = new Set(["mp4", "webm", "mov"]);
+
+function AssetPreview({ artifactRef, filename }: { artifactRef: string; filename?: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const artifactId = artifactRef.replace("artifact:", "");
+  const ext = (filename || "").split(".").pop()?.toLowerCase() || "";
+
+  useEffect(() => {
+    let revoked = false;
+    let url: string | null = null;
+    invoke<number[]>("read_artifact_bytes", { id: artifactId })
+      .then((bytes) => {
+        if (revoked) return;
+        const blob = new Blob([new Uint8Array(bytes)]);
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      })
+      .catch(() => setSrc(null));
+    return () => { revoked = true; if (url) URL.revokeObjectURL(url); };
+  }, [artifactId]);
+
+  if (!src) return <PaperclipIcon className="w-10 h-10 text-ink-3" />;
+  if (IMG_EXTS.has(ext)) return <img src={src} alt="" className="max-w-full max-h-full object-contain" />;
+  if (VID_EXTS.has(ext)) return <video src={src} controls className="max-w-full max-h-full" />;
+  return <PaperclipIcon className="w-10 h-10 text-ink-3" />;
+}
 
 export function DisplayScreen() {
   const { live } = useQueue();
@@ -50,12 +79,20 @@ export function DisplayScreen() {
           </div>
           {live ? (
             <>
-              <div className="font-mono text-[10.5px] tracking-[0.22em] uppercase text-accent mb-5">
-                {live.reference} · {live.translation}
-              </div>
-              <div className="font-serif italic text-[clamp(22px,2.8vw,38px)] leading-[1.35] tracking-[-0.01em] max-w-[36ch]">
-                &ldquo;{live.text}&rdquo;
-              </div>
+              {live.image_url?.startsWith("artifact:") ? (
+                <div className="w-full h-full flex items-center justify-center p-4">
+                  <AssetPreview artifactRef={live.image_url} filename={live.reference} />
+                </div>
+              ) : (
+                <>
+                  <div className="font-mono text-[10.5px] tracking-[0.22em] uppercase text-accent mb-5">
+                    {live.reference} · {live.translation}
+                  </div>
+                  <div className="font-serif italic text-[clamp(22px,2.8vw,38px)] leading-[1.35] tracking-[-0.01em] max-w-[36ch]">
+                    &ldquo;{live.text}&rdquo;
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-center w-full text-[#3A332C]">

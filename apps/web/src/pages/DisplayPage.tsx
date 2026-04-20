@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 
 interface ContentEvent {
   kind: string;
@@ -52,6 +53,52 @@ function splitLyrics(lyrics: string): string[] {
   }
   if (current.length > 0) chunks.push(current.join("\n"));
   return chunks.filter((c) => c.trim() !== "");
+}
+
+const DISPLAY_IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"]);
+const DISPLAY_VIDEO_EXTS = new Set(["mp4", "webm", "mov"]);
+const DISPLAY_AUDIO_EXTS = new Set(["mp3", "wav", "ogg"]);
+
+function ArtifactMedia({ artifactRef, filename, className }: { artifactRef: string; filename?: string; className?: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const artifactId = artifactRef.replace("artifact:", "");
+  const ext = (filename || artifactId).split(".").pop()?.toLowerCase() || "";
+
+  useEffect(() => {
+    let revoked = false;
+    let url: string | null = null;
+    invoke<number[]>("read_artifact_bytes", { id: artifactId })
+      .then((bytes) => {
+        if (revoked) return;
+        const blob = new Blob([new Uint8Array(bytes)]);
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      })
+      .catch(() => setSrc(null));
+    return () => { revoked = true; if (url) URL.revokeObjectURL(url); };
+  }, [artifactId]);
+
+  if (!src) return null;
+
+  if (DISPLAY_IMAGE_EXTS.has(ext)) {
+    return <img className={className || "max-w-[40vw] max-h-[35vh] object-contain rounded-sm mb-2"} src={src} alt="" />;
+  }
+  if (DISPLAY_VIDEO_EXTS.has(ext)) {
+    return <video src={src} controls className={className || "max-w-[60vw] max-h-[50vh] rounded-sm mb-2"} />;
+  }
+  if (DISPLAY_AUDIO_EXTS.has(ext)) {
+    return (
+      <div className="flex flex-col items-center gap-4 mb-2">
+        <span className="font-sans text-lg text-ink-3">{artifactId}</span>
+        <audio src={src} controls />
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-center gap-2 text-ink-3 mb-2">
+      <span className="font-sans text-lg">{artifactId}</span>
+    </div>
+  );
 }
 
 export function DisplayPage() {
@@ -284,13 +331,15 @@ export function DisplayPage() {
             </div>
           ) : isAnnouncement ? (
             <div className="flex flex-col gap-4">
-              {content.image_url && (
+              {content.image_url?.startsWith("artifact:") ? (
+                <ArtifactMedia artifactRef={content.image_url} filename={content.reference} />
+              ) : content.image_url ? (
                 <img
                   className="max-w-[40vw] max-h-[35vh] object-contain rounded-sm mb-2"
                   src={content.image_url}
                   alt=""
                 />
-              )}
+              ) : null}
               <span className="font-sans text-[clamp(1.5rem,3vw,3rem)] font-semibold tracking-[0.08em] text-accent">
                 {content.reference}
               </span>

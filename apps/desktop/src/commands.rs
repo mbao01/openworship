@@ -2001,14 +2001,68 @@ pub fn push_custom_slide(
     let ev = ContentEvent::custom_slide(title.clone(), body.clone(), image_url.clone());
     let _ = state.display_tx.send(ev);
 
-    let mut item =
-        ow_core::QueueItem::new_custom_slide(title, body, image_url);
-    item.status = ow_core::QueueStatus::Live;
+    // Retire previous live items and add new one
     {
         let mut q = state.queue.lock().map_err(|e| e.to_string())?;
-        q.push_back(item);
+        for item in q.iter_mut() {
+            if item.status == ow_core::QueueStatus::Live {
+                item.status = ow_core::QueueStatus::Dismissed;
+            }
+        }
+        let mut new_item =
+            ow_core::QueueItem::new_custom_slide(title, body, image_url);
+        new_item.status = ow_core::QueueStatus::Live;
+        q.push_back(new_item);
+        let snapshot: Vec<ow_core::QueueItem> = q.iter().cloned().collect();
+        drop(q);
+        let _ = app.emit("detection://queue-updated", snapshot);
     }
-    let _ = app.emit("detection://queue-updated", ());
+    Ok(())
+}
+
+/// Push an artifact (image/media) to the main display and queue.
+#[tauri::command]
+pub fn push_artifact_to_display(
+    artifact_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    // Load artifact from DB
+    let entry = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        db.get_by_id(&artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("artifact not found: {artifact_id}"))?
+    };
+
+    // Send to display with artifact: prefix in image_url
+    let ev = ContentEvent::custom_slide(
+        entry.name.clone(),
+        String::new(),
+        Some(format!("artifact:{artifact_id}")),
+    );
+    let _ = state.display_tx.send(ev);
+
+    // Retire previous live items and add new one
+    {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        for item in q.iter_mut() {
+            if item.status == ow_core::QueueStatus::Live {
+                item.status = ow_core::QueueStatus::Dismissed;
+            }
+        }
+        let mut new_item = ow_core::QueueItem::new_custom_slide(
+            entry.name,
+            String::new(),
+            Some(format!("artifact:{artifact_id}")),
+        );
+        new_item.status = ow_core::QueueStatus::Live;
+        q.push_back(new_item);
+        let snapshot: Vec<ow_core::QueueItem> = q.iter().cloned().collect();
+        drop(q);
+        let _ = app.emit("detection://queue-updated", snapshot);
+    }
+
     Ok(())
 }
 

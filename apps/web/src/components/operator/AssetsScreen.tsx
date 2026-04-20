@@ -52,6 +52,7 @@ import {
   UploadCloudIcon,
   PenLineIcon,
   Trash2Icon,
+  FilterIcon,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -883,14 +884,99 @@ function PreviewPanel({
 
 // ─── Filter pills ─────────────────────────────────────────────────────────────
 
-const FILTERS: Array<{ label: string; value: ArtifactCategory | "all" }> = [
-  { label: "All", value: "all" },
-  { label: "Images", value: "image" },
-  { label: "Videos", value: "video" },
-  { label: "Audio", value: "audio" },
-  { label: "Documents", value: "document" },
-  { label: "Slides", value: "slide" },
-];
+// ─── Filter dropdown ─────────────────────────────────────────────────────────
+
+const CATEGORY_LABELS: Record<string, string> = {
+  image: "Images",
+  video: "Videos",
+  audio: "Audio",
+  document: "Documents",
+  slide: "Slides",
+};
+
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  image: <ImageIcon className={iconCls} />,
+  video: <VideoIcon className={iconCls} />,
+  audio: <Music2Icon className={iconCls} />,
+  document: <FileTextIcon className={iconCls} />,
+  slide: <PresentationIcon className={iconCls} />,
+};
+
+function FilterDropdown({
+  activeFilters,
+  allSelected,
+  onToggle,
+  onToggleAll,
+}: {
+  activeFilters: Set<ArtifactCategory>;
+  allSelected: boolean;
+  onToggle: (cat: ArtifactCategory) => void;
+  onToggleAll: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const count = activeFilters.size;
+  const label = allSelected ? "All types" : `${count} type${count !== 1 ? "s" : ""}`;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        className={`flex items-center gap-1.5 font-sans text-[11px] px-2.5 py-[5px] rounded-[3px] border cursor-pointer transition-colors ${
+          !allSelected
+            ? "text-accent border-accent/40 bg-accent-soft"
+            : "text-ink-3 border-line hover:text-ink hover:border-line-strong"
+        }`}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <FilterIcon className="w-3 h-3 shrink-0" />
+        {label}
+        <ChevronDownIcon className={`w-3 h-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-[200] bg-bg-1 border border-line-strong rounded-lg py-1 min-w-[180px] shadow-lg">
+          <button
+            className="flex items-center gap-2.5 w-full text-left px-3 py-1.5 text-[12px] text-ink transition-colors hover:bg-bg-2 cursor-pointer"
+            onClick={onToggleAll}
+          >
+            <span className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+              allSelected ? "bg-accent border-accent text-[#1A0D00]" : "border-line-strong"
+            }`}>
+              {allSelected ? "✓" : ""}
+            </span>
+            <span className="font-medium">All types</span>
+          </button>
+          <div className="h-px bg-line my-1 mx-2" />
+          {(Object.entries(CATEGORY_LABELS) as [ArtifactCategory, string][]).map(([cat, catLabel]) => (
+            <button
+              key={cat}
+              className="flex items-center gap-2.5 w-full text-left px-3 py-1.5 text-[12px] text-ink transition-colors hover:bg-bg-2 cursor-pointer"
+              onClick={() => onToggle(cat)}
+            >
+              <span className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                activeFilters.has(cat) ? "bg-accent border-accent text-[#1A0D00]" : "border-line-strong"
+              }`}>
+                {activeFilters.has(cat) ? "✓" : ""}
+              </span>
+              <span className="text-ink-3">{CATEGORY_ICONS[cat]}</span>
+              {catLabel}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── New menu ─────────────────────────────────────────────────────────────────
 
@@ -933,7 +1019,23 @@ export function AssetsScreen() {
   const [entries, setEntries] = useState<ArtifactEntry[]>([]);
   const [parentPath, setParentPath] = useState<string | null>(null);
   const [crumbs, setCrumbs] = useState<Array<{ label: string; path: string | null }>>([]);
-  const [filter, setFilter] = useState<ArtifactCategory | "all">("all");
+  const ALL_CATEGORIES: ArtifactCategory[] = ["image", "video", "audio", "document", "slide"];
+  const [activeFilters, setActiveFilters] = useState<Set<ArtifactCategory>>(new Set(ALL_CATEGORIES));
+  const allSelected = ALL_CATEGORIES.every((c) => activeFilters.has(c));
+
+  const toggleFilter = (cat: ArtifactCategory) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allSelected) setActiveFilters(new Set());
+    else setActiveFilters(new Set(ALL_CATEGORIES));
+  };
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
@@ -1029,7 +1131,22 @@ export function AssetsScreen() {
         list = await invoke<ArtifactEntry[]>("list_starred_artifacts");
       } else {
         const svcId = nav.kind === "service" ? nav.id : null;
-        list = await invoke<ArtifactEntry[]>("list_artifacts", { serviceId: svcId, parentPath });
+        if (nav.kind === "all" && parentPath === null) {
+          // "All Assets" root: show both root-level folders (parent_path=NULL) and _local bucket files
+          const [rootItems, localItems] = await Promise.all([
+            invoke<ArtifactEntry[]>("list_artifacts", { serviceId: null, parentPath: null }),
+            invoke<ArtifactEntry[]>("list_artifacts", { serviceId: null, parentPath: "_local" }),
+          ]);
+          // Merge and deduplicate by id
+          const seen = new Set<string>();
+          list = [...rootItems, ...localItems].filter((e) => {
+            if (seen.has(e.id)) return false;
+            seen.add(e.id);
+            return true;
+          });
+        } else {
+          list = await invoke<ArtifactEntry[]>("list_artifacts", { serviceId: svcId, parentPath });
+        }
       }
       setEntries(list);
       await loadSyncInfo(list);
@@ -1063,7 +1180,7 @@ export function AssetsScreen() {
     setCrumbs([]);
     setQuery("");
     setDebouncedQuery("");
-    setFilter("all");
+    setActiveFilters(new Set(ALL_CATEGORIES));
     setSelected(null);
     if (n.kind !== "cloud_branch" && n.kind !== "cloud_shared") setCloudEntries([]);
   };
@@ -1217,7 +1334,7 @@ export function AssetsScreen() {
   const visible = entries
     .filter(
       (e) =>
-        filter === "all" || (!e.is_dir && mimeCategory(e.mime_type) === filter),
+        e.is_dir || allSelected || activeFilters.has(mimeCategory(e.mime_type)),
     )
     .filter(
       (e) => e.name !== "_thumbnails" && !e.path.includes("/_thumbnails/"),
@@ -1369,7 +1486,16 @@ export function AssetsScreen() {
                 )}
               </div>
 
-              <div className="flex items-center gap-[6px] shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* Filter dropdown */}
+                <FilterDropdown
+                  activeFilters={activeFilters}
+                  allSelected={allSelected}
+                  onToggle={toggleFilter}
+                  onToggleAll={toggleAll}
+                />
+
+                {/* New + Upload */}
                 <div className="relative">
                   <div className="flex rounded-[3px] overflow-hidden border border-accent/30">
                     <button
@@ -1409,25 +1535,6 @@ export function AssetsScreen() {
                   onChange={handleFileInput}
                 />
               </div>
-            </div>
-
-            {/* Filter pills */}
-            <div className="flex gap-[5px] px-5 py-[8px] border-b border-line shrink-0 overflow-x-auto scrollbar-none">
-              {FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  data-qa={`artifacts-filter-${f.value}`}
-                  className={[
-                    "font-sans text-[10px] font-medium tracking-[0.04em] uppercase rounded-full py-[3px] px-[10px] cursor-pointer transition-colors whitespace-nowrap shrink-0",
-                    filter === f.value
-                      ? "bg-accent text-[#1A0D00] border border-accent"
-                      : "bg-bg-2 text-ink-3 border border-line hover:text-ink hover:border-line-strong",
-                  ].join(" ")}
-                  onClick={() => setFilter(f.value)}
-                >
-                  {f.label}
-                </button>
-              ))}
             </div>
 
             {error && (

@@ -332,11 +332,7 @@ function AssetsPanel() {
 
   const handlePushAsset = async (asset: ArtifactEntry) => {
     try {
-      await invoke("push_custom_slide", {
-        title: asset.name,
-        body: "",
-        imageUrl: null,
-      });
+      await invoke("push_artifact_to_display", { artifactId: asset.id });
     } catch (e) {
       toastError("Failed to push asset")(e);
     }
@@ -492,6 +488,54 @@ function StagePanel({ mode }: { mode: DetectionMode }) {
   );
 }
 
+const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"]);
+const VIDEO_EXTS = new Set(["mp4", "webm", "mov"]);
+const AUDIO_EXTS = new Set(["mp3", "wav", "ogg"]);
+
+function AssetRenderer({ artifactRef, filename }: { artifactRef: string; filename?: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const artifactId = artifactRef.replace("artifact:", "");
+  const ext = (filename || artifactId).split(".").pop()?.toLowerCase() || "";
+
+  useEffect(() => {
+    let revoked = false;
+    let url: string | null = null;
+    invoke<number[]>("read_artifact_bytes", { id: artifactId })
+      .then((bytes) => {
+        if (revoked) return;
+        const blob = new Blob([new Uint8Array(bytes)]);
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      })
+      .catch(() => setSrc(null));
+    return () => { revoked = true; if (url) URL.revokeObjectURL(url); };
+  }, [artifactId]);
+
+  if (!src) return null;
+
+  if (IMAGE_EXTS.has(ext)) {
+    return <img src={src} alt="" className="max-w-full max-h-full object-contain" />;
+  }
+  if (VIDEO_EXTS.has(ext)) {
+    return <video src={src} controls className="max-w-full max-h-full" />;
+  }
+  if (AUDIO_EXTS.has(ext)) {
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <MusicIcon className="w-12 h-12 text-accent" />
+        <audio src={src} controls />
+      </div>
+    );
+  }
+  // PDF or other — show filename with icon
+  return (
+    <div className="flex flex-col items-center gap-2 text-ink-2">
+      <PaperclipIcon className="w-10 h-10" />
+      <span className="font-mono text-xs">{artifactId}</span>
+    </div>
+  );
+}
+
 function DisplayScreen({ label, labelColor, item, dimmed }: {
   label: string;
   labelColor: string;
@@ -524,7 +568,11 @@ function DisplayScreen({ label, labelColor, item, dimmed }: {
 
       {item ? (
         <>
-          {!isSong && (
+          {item.image_url?.startsWith("artifact:") ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <AssetRenderer artifactRef={item.image_url} filename={item.reference} />
+            </div>
+          ) : !isSong ? (
             <>
               <div className="font-mono text-[10.5px] tracking-[0.22em] uppercase text-accent mb-3" style={dimmed ? { color: "rgba(201,167,106,0.6)" } : undefined}>
                 {item.reference} · {item.translation}
@@ -539,8 +587,7 @@ function DisplayScreen({ label, labelColor, item, dimmed }: {
                 &ldquo;{item.text}&rdquo;
               </div>
             </>
-          )}
-          {isSong && (
+          ) : (
             <div className="font-serif text-center w-full" style={{ fontSize: "clamp(15px, 1.7vw, 22px)" }}>
               <div>{item.reference}</div>
             </div>
