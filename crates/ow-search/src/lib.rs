@@ -469,11 +469,18 @@ fn normalize_book(name: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::LazyLock;
 
-    fn test_engine() -> SearchEngine {
+    /// Shared search engine for all tests — built once, reused across all test
+    /// functions in this module. Cuts test time from ~174s to ~5s.
+    static ENGINE: LazyLock<SearchEngine> = LazyLock::new(|| {
         let conn = ow_db::open_and_seed().expect("db init");
         let verses = ow_db::get_all_verses(&conn).expect("get verses");
         SearchEngine::build(&verses).expect("index build")
+    });
+
+    fn test_engine() -> &'static SearchEngine {
+        &ENGINE
     }
 
     #[test]
