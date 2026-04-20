@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { test, expect, type Page } from "@playwright/test";
 
 // Go through onboarding to reach the operator page.

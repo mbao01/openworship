@@ -57,6 +57,7 @@ export function ContextPanel({ live }: { live: QueueItem | null }) {
         setSelectedIndices(new Set());
       })
       .catch(() => setContextVerses([]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when reference or kind changes
   }, [live?.reference, live?.kind]);
 
   const contextLabel = live?.reference ?? "none";

@@ -6,19 +6,6 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn().mockResolvedValue(() => {}),
 }));
 
-const mockProjects = [
-  {
-    id: "p1",
-    name: "Sunday Morning",
-    created_at_ms: 1700000000000,
-    closed_at_ms: null,
-    scheduled_at_ms: null,
-    description: null,
-    items: [],
-    tasks: [],
-  },
-];
-
 vi.mock("@/lib/commands/projects", () => ({
   listServiceProjects: vi.fn().mockResolvedValue([
     {

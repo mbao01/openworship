@@ -58,6 +58,7 @@ export function PreviewPanel({
       revoked = true;
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mime_type is derived from entry, recalculated on id change
   }, [entry.id, fileExt, isImage, isVideo, isAudio, isPdf]);
 
   useEffect(() => {
