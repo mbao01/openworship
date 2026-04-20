@@ -258,4 +258,62 @@ mod tests {
         assert_eq!(back.role, BranchRole::Hq);
         assert_eq!(back.invite_code, Some("ABC1234500004000".into()));
     }
+
+    #[test]
+    fn invite_code_is_16_char_alphanumeric() {
+        let code = derive_invite_code("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+        assert_eq!(code.len(), 16);
+        assert!(
+            code.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()),
+            "code should be uppercase alphanumeric, got: {code}"
+        );
+    }
+
+    #[test]
+    fn invite_code_deterministic_same_input_same_output() {
+        let church_id = "aaaabbbb-cccc-dddd-eeee-ffffffffffff";
+        let code1 = derive_invite_code(church_id);
+        let code2 = derive_invite_code(church_id);
+        let code3 = derive_invite_code(church_id);
+        assert_eq!(code1, code2);
+        assert_eq!(code2, code3);
+    }
+
+    #[test]
+    fn different_church_ids_produce_different_codes() {
+        let code_a = derive_invite_code("11111111-2222-3333-4444-555555555555");
+        let code_b = derive_invite_code("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        assert_ne!(code_a, code_b);
+    }
+
+    #[test]
+    fn uuid_v4_produces_valid_format() {
+        let id = uuid_v4();
+        // UUID format: 8-4-4-4-12
+        assert_eq!(id.len(), 36);
+        let parts: Vec<&str> = id.split('-').collect();
+        assert_eq!(parts.len(), 5);
+        assert_eq!(parts[0].len(), 8);
+        assert_eq!(parts[1].len(), 4);
+        assert_eq!(parts[2].len(), 4);
+        assert_eq!(parts[3].len(), 4);
+        assert_eq!(parts[4].len(), 12);
+        // All chars are hex digits or hyphens
+        assert!(id.chars().all(|c| c.is_ascii_hexdigit() || c == '-'));
+        // Version nibble = 4
+        assert!(parts[2].starts_with('4'));
+        // Variant bits: first char of parts[3] must be 8, 9, a, or b
+        let variant_char = parts[3].chars().next().unwrap();
+        assert!(
+            "89ab".contains(variant_char),
+            "variant nibble should be 8/9/a/b, got: {variant_char}"
+        );
+    }
+
+    #[test]
+    fn uuid_v4_generates_unique_ids() {
+        let a = uuid_v4();
+        let b = uuid_v4();
+        assert_ne!(a, b);
+    }
 }

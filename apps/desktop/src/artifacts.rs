@@ -673,4 +673,77 @@ mod tests {
         db.delete("d1").unwrap();
         assert!(db.list(None, None).unwrap().is_empty());
     }
+
+    // ── safe_name tests ──────────────────────────────────────────────────
+
+    #[test]
+    fn safe_name_accepts_normal_names() {
+        assert!(safe_name("photo.jpg").is_ok());
+        assert!(safe_name("my-file_2024.pdf").is_ok());
+        assert!(safe_name("sermon notes.docx").is_ok());
+    }
+
+    #[test]
+    fn safe_name_rejects_forward_slash() {
+        assert!(safe_name("path/file.txt").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_backslash() {
+        assert!(safe_name("path\\file.txt").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_dot_dot_traversal() {
+        assert!(safe_name("../etc/passwd").is_err());
+        assert!(safe_name("foo..bar").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_null_bytes() {
+        assert!(safe_name("file\0name.txt").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_empty_string() {
+        assert!(safe_name("").is_err());
+        assert!(safe_name("   ").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_names_over_255_chars() {
+        let long_name = "a".repeat(256);
+        assert!(safe_name(&long_name).is_err());
+        // Exactly 255 should be ok
+        let ok_name = "a".repeat(255);
+        assert!(safe_name(&ok_name).is_ok());
+    }
+
+    // ── assert_within_base tests ─────────────────────────────────────────
+
+    #[test]
+    fn assert_within_base_rejects_path_traversal() {
+        // Create real directories so canonicalize resolves the paths
+        let base = std::env::temp_dir().join("ow_traversal_test_base");
+        std::fs::create_dir_all(&base).unwrap();
+        // An evil path that resolves outside base (e.g. /tmp itself)
+        let evil = base.join("..").join("ow_traversal_evil_target");
+        std::fs::create_dir_all(&evil).unwrap();
+        let result = assert_within_base(&base, &evil);
+        assert!(result.is_err(), "path traversal should be rejected");
+        let _ = std::fs::remove_dir_all(&base);
+        let _ = std::fs::remove_dir_all(&evil);
+    }
+
+    #[test]
+    fn assert_within_base_accepts_child_path() {
+        // Use temp dir so canonicalize works
+        let base = std::env::temp_dir().join("ow_base_test");
+        let child = base.join("subdir").join("file.txt");
+        std::fs::create_dir_all(base.join("subdir")).ok();
+        std::fs::write(&child, b"test").ok();
+        let result = assert_within_base(&base, &child);
+        assert!(result.is_ok(), "child path should be accepted: {:?}", result);
+        let _ = std::fs::remove_dir_all(&base);
+    }
 }

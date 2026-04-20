@@ -236,3 +236,174 @@ pub fn save_session_memory(mem: &SessionMemory) -> Result<()> {
     std::fs::rename(&tmp, &path)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    // Serialize tests that mutate HOME so they don't race each other.
+    static HOME_LOCK: Mutex<()> = Mutex::new(());
+
+    fn with_temp_home<F: FnOnce()>(f: F) {
+        let _guard = HOME_LOCK.lock().unwrap();
+        let dir = std::env::temp_dir().join(format!("ow_test_{}", new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let prev = std::env::var("HOME").ok();
+        unsafe { std::env::set_var("HOME", &dir); }
+        f();
+        // Restore HOME
+        match prev {
+            Some(h) => unsafe { std::env::set_var("HOME", h) },
+            None => unsafe { std::env::remove_var("HOME") },
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn new_id_generates_unique_ids() {
+        let a = new_id();
+        let b = new_id();
+        assert_ne!(a, b);
+        // Should be 24 hex chars: 16 (timestamp) + 8 (counter)
+        assert_eq!(a.len(), 24);
+        assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn now_ms_returns_reasonable_timestamp() {
+        let ts = now_ms();
+        // Should be after 2020-01-01 and positive
+        assert!(ts > 1_577_836_800_000);
+        assert!(ts > 0);
+    }
+
+    #[test]
+    fn save_and_load_projects_round_trip() {
+        with_temp_home(|| {
+            let projects = vec![ServiceProject {
+                id: "p1".into(),
+                name: "Sunday Service".into(),
+                created_at_ms: 1000,
+                closed_at_ms: None,
+                scheduled_at_ms: None,
+                description: Some("Test service".into()),
+                items: vec![ProjectItem {
+                    id: "i1".into(),
+                    reference: "John 3:16".into(),
+                    text: "For God so loved".into(),
+                    translation: "KJV".into(),
+                    position: 0,
+                    added_at_ms: 1000,
+                    item_type: "scripture".into(),
+                    duration_secs: None,
+                    notes: None,
+                    asset_ids: vec![],
+                }],
+                tasks: vec![],
+            }];
+            save_projects(&projects).unwrap();
+            let loaded = load_projects();
+            assert_eq!(loaded.len(), 1);
+            assert_eq!(loaded[0].name, "Sunday Service");
+            assert_eq!(loaded[0].items.len(), 1);
+            assert_eq!(loaded[0].items[0].reference, "John 3:16");
+        });
+    }
+
+    #[test]
+    fn load_projects_returns_empty_when_no_file() {
+        with_temp_home(|| {
+            let loaded = load_projects();
+            assert!(loaded.is_empty());
+        });
+    }
+
+    #[test]
+    fn save_and_load_content_bank_round_trip() {
+        with_temp_home(|| {
+            let bank = vec![ContentBankEntry {
+                id: "cb1".into(),
+                reference: "Romans 8:28".into(),
+                text: "And we know".into(),
+                translation: "KJV".into(),
+                last_used_ms: 2000,
+                use_count: 3,
+            }];
+            save_content_bank(&bank).unwrap();
+            let loaded = load_content_bank();
+            assert_eq!(loaded.len(), 1);
+            assert_eq!(loaded[0].reference, "Romans 8:28");
+            assert_eq!(loaded[0].use_count, 3);
+        });
+    }
+
+    #[test]
+    fn load_content_bank_returns_empty_when_no_file() {
+        with_temp_home(|| {
+            let loaded = load_content_bank();
+            assert!(loaded.is_empty());
+        });
+    }
+
+    #[test]
+    fn save_and_load_session_memory_round_trip() {
+        with_temp_home(|| {
+            let mem = SessionMemory {
+                preferred_translation: Some("WEB".into()),
+            };
+            save_session_memory(&mem).unwrap();
+            let loaded = load_session_memory();
+            assert_eq!(loaded.preferred_translation, Some("WEB".into()));
+        });
+    }
+
+    #[test]
+    fn load_session_memory_returns_default_when_no_file() {
+        with_temp_home(|| {
+            let loaded = load_session_memory();
+            assert!(loaded.preferred_translation.is_none());
+        });
+    }
+
+    #[test]
+    fn atomic_write_temp_file_does_not_persist_on_success() {
+        with_temp_home(|| {
+            save_projects(&[]).unwrap();
+            let path = projects_path().unwrap();
+            let tmp = path.with_extension("json.tmp");
+            assert!(!tmp.exists(), "temp file should be removed after rename");
+            assert!(path.exists(), "final file should exist");
+        });
+    }
+
+    #[test]
+    fn service_project_is_open_when_not_closed() {
+        let p = ServiceProject {
+            id: "x".into(),
+            name: "Test".into(),
+            created_at_ms: 0,
+            closed_at_ms: None,
+            scheduled_at_ms: None,
+            description: None,
+            items: vec![],
+            tasks: vec![],
+        };
+        assert!(p.is_open());
+    }
+
+    #[test]
+    fn service_project_is_not_open_when_closed() {
+        let p = ServiceProject {
+            id: "x".into(),
+            name: "Test".into(),
+            created_at_ms: 0,
+            closed_at_ms: Some(1000),
+            scheduled_at_ms: None,
+            description: None,
+            items: vec![],
+            tasks: vec![],
+        };
+        assert!(!p.is_open());
+    }
+}

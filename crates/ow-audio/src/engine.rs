@@ -319,3 +319,77 @@ impl Default for AudioMonitor {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn diff_new_words_returns_only_new_words() {
+        let result = diff_new_words("hello world", "hello world foo bar");
+        assert_eq!(result, "foo bar");
+    }
+
+    #[test]
+    fn diff_new_words_handles_empty_previous() {
+        let result = diff_new_words("", "hello world");
+        assert_eq!(result, "hello world");
+    }
+
+    #[test]
+    fn diff_new_words_handles_identical_strings() {
+        let result = diff_new_words("hello world", "hello world");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn diff_new_words_handles_both_empty() {
+        let result = diff_new_words("", "");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn diff_new_words_handles_completely_different() {
+        let result = diff_new_words("alpha beta", "gamma delta");
+        assert_eq!(result, "gamma delta");
+    }
+
+    #[test]
+    fn diff_new_words_handles_partial_overlap() {
+        let result = diff_new_words("the quick", "the quick brown fox");
+        assert_eq!(result, "brown fox");
+    }
+
+    #[test]
+    fn audio_monitor_new_starts_not_running() {
+        let monitor = AudioMonitor::new();
+        assert!(!monitor.is_running());
+        assert_eq!(monitor.level_rms(), 0.0);
+    }
+
+    #[test]
+    fn audio_monitor_default_starts_not_running() {
+        let monitor = AudioMonitor::default();
+        assert!(!monitor.is_running());
+    }
+
+    #[test]
+    fn stt_engine_new_starts_stopped() {
+        let (engine, _rx) = SttEngine::new();
+        assert_eq!(engine.status(), SttStatus::Stopped);
+        assert_eq!(engine.audio_level_rms(), 0.0);
+    }
+
+    #[test]
+    fn stt_engine_default_starts_stopped() {
+        let engine = SttEngine::default();
+        assert_eq!(engine.status(), SttStatus::Stopped);
+    }
+
+    #[test]
+    fn stt_status_variants_are_distinct() {
+        assert_ne!(SttStatus::Stopped, SttStatus::Running);
+        assert_ne!(SttStatus::Stopped, SttStatus::Error("test".into()));
+        assert_ne!(SttStatus::Running, SttStatus::Error("test".into()));
+    }
+}

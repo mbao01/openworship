@@ -749,4 +749,55 @@ mod tests {
         // Exact reference lookup: score field must be populated (non-negative).
         assert!(results[0].score >= 0.0);
     }
+
+    // ── Additional parse_range_reference tests ───────────────────────────
+
+    #[test]
+    fn parse_range_reference_romans_8_38_39() {
+        let result = parse_range_reference("Romans 8:38-39");
+        assert_eq!(result, Some(("Romans".into(), 8, 38, 39)));
+    }
+
+    #[test]
+    fn parse_range_reference_1_john_3_16_18() {
+        let result = parse_range_reference("1 John 3:16-18");
+        assert_eq!(result, Some(("1 John".into(), 3, 16, 18)));
+    }
+
+    #[test]
+    fn parse_range_reference_returns_none_for_non_range() {
+        assert_eq!(parse_range_reference("John 3:16"), None);
+        assert_eq!(parse_range_reference("hello world"), None);
+        assert_eq!(parse_range_reference("Psalm 23"), None);
+        assert_eq!(parse_range_reference(""), None);
+    }
+
+    #[test]
+    fn parse_range_reference_handles_en_dash() {
+        let result = parse_range_reference("Genesis 1:1\u{2013}5");
+        assert_eq!(result, Some(("Genesis".into(), 1, 1, 5)));
+    }
+
+    #[test]
+    fn parse_range_reference_handles_em_dash() {
+        let result = parse_range_reference("Genesis 1:1\u{2014}5");
+        assert_eq!(result, Some(("Genesis".into(), 1, 1, 5)));
+    }
+
+    #[test]
+    fn parse_range_reference_rejects_inverted_range() {
+        assert_eq!(parse_range_reference("Romans 8:39-38"), None);
+    }
+
+    #[test]
+    fn parse_reference_handles_abbreviations() {
+        assert_eq!(
+            parse_reference("Matt 5:3"),
+            Some(("Matthew".into(), 5, Some(3)))
+        );
+        assert_eq!(
+            parse_reference("Rev 22:21"),
+            Some(("Revelation".into(), 22, Some(21)))
+        );
+    }
 }

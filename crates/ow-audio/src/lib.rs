@@ -76,7 +76,7 @@ mod tests {
     fn test_audio_config_defaults() {
         let cfg = AudioConfig::default();
         assert_eq!(cfg.sample_rate, 16_000, "Whisper requires 16 kHz");
-        assert_eq!(cfg.chunk_ms, 2000);
+        assert_eq!(cfg.chunk_ms, 200);
         assert_eq!(cfg.context_window_secs, 10);
     }
 
