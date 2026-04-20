@@ -252,11 +252,22 @@ pub async fn run_loop(
                                 DetectionMode::Airplane => unreachable!(),
                             }
                             q.push_back(item);
+
+                            // Clean up old dismissed items — keep queue lean
+                            let now_ms = crate::service::now_ms() as u64;
+                            q.retain(|item| {
+                                if item.status == QueueStatus::Dismissed {
+                                    let age_ms = now_ms.saturating_sub(item.detected_at_ms);
+                                    age_ms < 30_000
+                                } else {
+                                    true
+                                }
+                            });
                             while q.len() > QUEUE_CAP {
                                 if let Some(pos) = q.iter().position(|i| i.status == QueueStatus::Dismissed) {
                                     q.remove(pos);
                                 } else {
-                                    q.pop_front();
+                                    break;
                                 }
                             }
                             q.iter().cloned().collect::<Vec<_>>()
@@ -517,13 +528,27 @@ fn enqueue_song_ref(
         }
     }
     q.push_back(item);
+
+    // Clean up old dismissed items — keep queue lean
+    let now_ms = crate::service::now_ms() as u64;
+    q.retain(|item| {
+        if item.status == QueueStatus::Dismissed {
+            // Remove dismissed items older than 30 seconds
+            let age_ms = now_ms.saturating_sub(item.detected_at_ms);
+            age_ms < 30_000
+        } else {
+            true
+        }
+    });
+    // Also enforce a hard cap
     while q.len() > QUEUE_CAP {
         if let Some(pos) = q.iter().position(|i| i.status == QueueStatus::Dismissed) {
             q.remove(pos);
         } else {
-            q.pop_front();
+            break;
         }
     }
+
     q.iter().cloned().collect()
 }
 
@@ -567,12 +592,26 @@ fn enqueue_item_inner(
         }
     }
     q.push_back(item);
+
+    // Clean up old dismissed items — keep queue lean
+    let now_ms = crate::service::now_ms() as u64;
+    q.retain(|item| {
+        if item.status == QueueStatus::Dismissed {
+            // Remove dismissed items older than 30 seconds
+            let age_ms = now_ms.saturating_sub(item.detected_at_ms);
+            age_ms < 30_000
+        } else {
+            true
+        }
+    });
+    // Also enforce a hard cap
     while q.len() > QUEUE_CAP {
         if let Some(pos) = q.iter().position(|i| i.status == QueueStatus::Dismissed) {
             q.remove(pos);
         } else {
-            q.pop_front();
+            break;
         }
     }
+
     q.iter().cloned().collect()
 }

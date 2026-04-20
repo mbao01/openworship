@@ -25,6 +25,10 @@ export function TranscriptBody() {
         if (/[.?!]$/.test(evt.text.trim())) {
           updated.push("");
         }
+        // Cap at 200 sentences to prevent unbounded memory growth
+        if (updated.length > 200) {
+          return updated.slice(updated.length - 200);
+        }
         return updated;
       });
     }).then((fn) => { unlisten = fn; });

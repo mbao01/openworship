@@ -26,7 +26,7 @@ pub struct ChurchIdentity {
     pub branch_id: String,
     pub branch_name: String,
     pub role: BranchRole,
-    /// 8-char alphanumeric invite code, present only for HQ branches.
+    /// 16-char alphanumeric invite code, present only for HQ branches.
     pub invite_code: Option<String>,
 }
 
@@ -54,15 +54,16 @@ impl ChurchIdentity {
     }
 }
 
-/// Generate an 8-char uppercase alphanumeric invite code from a church UUID.
+/// Generate a 16-char uppercase alphanumeric invite code from a church UUID.
 ///
-/// Takes the first 8 hex chars of the UUID (stripping hyphens) and uppercases
+/// Takes the first 16 hex chars of the UUID (stripping hyphens) and uppercases
 /// them. Deterministic: same church_id always produces the same code.
+/// 16 hex chars = 64 bits of entropy (vs. 32 bits with the old 8-char code).
 pub fn derive_invite_code(church_id: &str) -> String {
     church_id
         .chars()
         .filter(|c| c.is_ascii_alphanumeric())
-        .take(8)
+        .take(16)
         .collect::<String>()
         .to_uppercase()
 }
@@ -123,8 +124,9 @@ pub fn join_church(
     state: tauri::State<'_, crate::state::AppState>,
 ) -> Result<ChurchIdentity, String> {
     let code = invite_code.trim().to_uppercase();
-    if code.len() != 8 || !code.chars().all(|c| c.is_ascii_alphanumeric()) {
-        return Err("Invite code must be exactly 8 alphanumeric characters.".into());
+    // Validate code format: 16 alphanumeric characters
+    if code.len() != 16 || !code.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err("Invalid invite code format".into());
     }
 
     // Derive the church_id from the invite code: the code IS the first 8 chars
@@ -213,10 +215,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn invite_code_is_8_chars_uppercase() {
+    fn invite_code_is_16_chars_uppercase() {
         let church_id = "3f8a1b2c-dead-beef-cafe-123456789abc";
         let code = derive_invite_code(church_id);
-        assert_eq!(code.len(), 8);
+        assert_eq!(code.len(), 16);
         assert!(code.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()));
     }
 
@@ -248,12 +250,12 @@ mod tests {
             branch_id: "abc12345-0000-4000-8000-000000000002".into(),
             branch_name: "Main Campus".into(),
             role: BranchRole::Hq,
-            invite_code: Some("ABC12345".into()),
+            invite_code: Some("ABC1234500004000".into()),
         };
         let json = serde_json::to_string(&id).unwrap();
         let back: ChurchIdentity = serde_json::from_str(&json).unwrap();
         assert_eq!(back.church_name, "Grace Church");
         assert_eq!(back.role, BranchRole::Hq);
-        assert_eq!(back.invite_code, Some("ABC12345".into()));
+        assert_eq!(back.invite_code, Some("ABC1234500004000".into()));
     }
 }
