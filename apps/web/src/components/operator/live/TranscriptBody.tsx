@@ -1,0 +1,57 @@
+import { useEffect, useRef, useState } from "react";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { MicOffIcon } from "lucide-react";
+import type { TranscriptEvent } from "../../../lib/types";
+
+export function TranscriptBody() {
+  const [sentences, setSentences] = useState<string[]>([""]);
+  const [micActive, setMicActive] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [sentences]);
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+    listen<TranscriptEvent>("stt://transcript", (event) => {
+      const evt = event.payload;
+      setMicActive(evt.mic_active);
+      setSentences((prev) => {
+        const updated = [...prev];
+        const lastIdx = updated.length - 1;
+        updated[lastIdx] = (updated[lastIdx] + " " + evt.text).trim();
+        // If the text ends with sentence-ending punctuation, start a new sentence
+        if (/[.?!]$/.test(evt.text.trim())) {
+          updated.push("");
+        }
+        return updated;
+      });
+    }).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
+  }, []);
+
+  const nonEmpty = sentences.filter((s) => s.trim());
+
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-3.5 font-serif text-[15px] leading-[1.55] text-ink-3 tracking-[-0.003em]">
+      {nonEmpty.map((sentence, i) => {
+        const isLast =
+          i === nonEmpty.length - 1 &&
+          sentences[sentences.length - 1].trim() !== "";
+        return (
+          <p key={i} className={`mb-2.5 ${isLast ? "text-ink italic" : ""}`}>
+            {sentence}
+          </p>
+        );
+      })}
+      {nonEmpty.length === 0 && (
+        <div className="text-muted italic flex items-center gap-2 justify-center">
+          {micActive ? null : <MicOffIcon className="w-4 h-4" />}
+          {"\u00B7"} {micActive ? "listening" : "mic off"} {"\u00B7"}
+        </div>
+      )}
+      <div ref={bottomRef} />
+    </div>
+  );
+}
