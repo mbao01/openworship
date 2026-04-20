@@ -49,9 +49,12 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
     // ── STT engine ────────────────────────────────────────────────────────────
     let (stt_engine, detect_rx) = SttEngine::new();
 
-    let detection_mode = Arc::new(RwLock::new(DetectionMode::default()));
     let queue = Arc::new(Mutex::new(VecDeque::<QueueItem>::new()));
     let audio_settings = Arc::new(RwLock::new(AudioSettings::load()));
+    // Load persisted detection mode from settings (defaults to Copilot)
+    let detection_mode = Arc::new(RwLock::new(
+        audio_settings.read().map(|s| s.detection_mode).unwrap_or_default()
+    ));
     let display_settings = Arc::new(RwLock::new(DisplaySettings::load()));
 
     // ── Church identity ───────────────────────────────────────────────────────

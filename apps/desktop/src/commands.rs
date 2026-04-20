@@ -524,7 +524,7 @@ pub fn detect_in_transcript(
     Ok(q.iter().cloned().collect())
 }
 
-/// Set the current detection mode.
+/// Set the current detection mode and persist to settings.
 #[tauri::command]
 pub fn set_detection_mode(
     mode: DetectionMode,
@@ -532,6 +532,11 @@ pub fn set_detection_mode(
 ) -> Result<(), String> {
     let mut m = state.detection_mode.write().map_err(|e| e.to_string())?;
     *m = mode;
+    drop(m);
+    // Persist to disk so it survives restart
+    let mut settings = state.audio_settings.write().map_err(|e| e.to_string())?;
+    settings.detection_mode = mode;
+    settings.save().map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -785,7 +790,7 @@ pub fn clear_live(state: State<'_, AppState>, app: AppHandle) -> Result<(), Stri
     {
         let mut q = state.queue.lock().map_err(|e| e.to_string())?;
         for item in q.iter_mut() {
-            if item.status == QueueStatus::Live {
+            if item.status == QueueStatus::Live || item.status == QueueStatus::Pending {
                 item.status = QueueStatus::Dismissed;
             }
         }

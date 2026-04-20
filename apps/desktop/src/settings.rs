@@ -8,6 +8,7 @@
 //! Display settings are persisted separately in `~/.openworship/display_settings.json`.
 
 use anyhow::Result;
+use ow_core::DetectionMode;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -73,6 +74,9 @@ pub struct AudioSettings {
     /// UI colour scheme preference. Default: `System`.
     #[serde(default)]
     pub theme: ThemeMode,
+    /// Detection mode persisted across restarts. Default: Copilot.
+    #[serde(default)]
+    pub detection_mode: DetectionMode,
 }
 
 impl Default for AudioSettings {
@@ -87,6 +91,7 @@ impl Default for AudioSettings {
             lyrics_threshold_copilot: 0.78,
             audio_input_device: None,
             theme: ThemeMode::System,
+            detection_mode: DetectionMode::default(),
         }
     }
 }
@@ -107,6 +112,8 @@ struct AudioSettingsFile {
     audio_input_device: Option<String>,
     #[serde(default)]
     theme: ThemeMode,
+    #[serde(default)]
+    detection_mode: Option<DetectionMode>,
 }
 
 impl AudioSettings {
@@ -171,6 +178,7 @@ impl AudioSettings {
                 .unwrap_or(defaults.lyrics_threshold_copilot),
             audio_input_device: file.audio_input_device,
             theme: file.theme,
+            detection_mode: file.detection_mode.unwrap_or(defaults.detection_mode),
         })
     }
 
