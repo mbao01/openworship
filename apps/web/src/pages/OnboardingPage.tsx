@@ -221,14 +221,14 @@ function JoinFlow({
             id="invite-code"
             className="bg-transparent border-0 border-b border-b-line outline-none py-2 font-mono tracking-[0.15em] text-[16px] text-ink transition-[border-color] duration-150 ease-linear placeholder:text-muted focus:border-b-accent focus:shadow-[0_2px_0_-1px_rgba(201,168,76,0.12)]"
             type="text"
-            placeholder="ABC12345"
-            maxLength={8}
+            placeholder="ABCDEF1234567890"
+            maxLength={16}
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
             autoFocus
           />
           <p className="text-[11px] text-muted m-0 leading-[1.4]">
-            8-character code from your HQ branch.
+            16-character code from your HQ branch.
           </p>
         </div>
         <div className="flex flex-col gap-2">
@@ -264,7 +264,7 @@ function JoinFlow({
             type="submit"
             className="font-sans text-[11px] font-medium tracking-[0.08em] text-accent-foreground bg-accent border-0 rounded px-5 py-[7px] cursor-pointer transition-[filter] duration-150 ease-out uppercase hover:not-disabled:brightness-115 disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={
-              inviteCode.trim().length !== 8 ||
+              inviteCode.trim().length !== 16 ||
               !branchName.trim() ||
               loading
             }

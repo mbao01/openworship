@@ -63,7 +63,7 @@ describe("OnboardingPage", () => {
       branch_id: "b1",
       branch_name: "Main",
       role: "hq",
-      invite_code: "ABC12345",
+      invite_code: "ABCDEF1234567890",
     };
     mockInvoke.mockResolvedValue(identity);
 
@@ -101,13 +101,13 @@ describe("OnboardingPage", () => {
     render(<OnboardingPage onComplete={onComplete} />);
 
     await user.click(screen.getByText("Join an existing church"));
-    await user.type(screen.getByLabelText(/Invite code/i), "ABC12345");
+    await user.type(screen.getByLabelText(/Invite code/i), "ABCDEF1234567890");
     await user.type(screen.getByLabelText(/Branch name/i), "North");
     await user.click(screen.getByText("Join Church"));
 
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("join_church", {
-        inviteCode: "ABC12345",
+        inviteCode: "ABCDEF1234567890",
         branchName: "North",
       });
     });

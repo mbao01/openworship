@@ -15,7 +15,7 @@ import { test, expect, type Page } from "@playwright/test";
 // We inject a minimal stub via addInitScript that makes create_church
 // return a valid identity object.
 
-async function goToOperator(page: Page) {
+async function injectStubs(page: Page) {
   await page.addInitScript(() => {
     const mockId = {
       church_id: "c1", church_name: "Test", branch_id: "b1",
@@ -70,9 +70,12 @@ async function goToOperator(page: Page) {
       listeners: {},
     };
   });
+}
 
+async function goToOperator(page: Page) {
+  await injectStubs(page);
   await page.goto("/");
-  // Go through onboarding
+  // Go through onboarding via create flow
   await page.getByText("Create a new church").click();
   await page.getByPlaceholder("Grace Community Church").fill("Test");
   await page.getByPlaceholder("Main Campus").fill("Main");
@@ -159,5 +162,58 @@ test.describe("Settings", () => {
     await goToOperator(page);
     await page.getByText("Set", { exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
+  });
+});
+
+// ─── Join Flow ────────────────────────────────────────────────────────────────
+
+async function goToOperatorViaJoin(page: Page) {
+  await injectStubs(page);
+  await page.goto("/");
+  // Choose "Join an existing church"
+  await page.getByText("Join an existing church").click();
+  // Fill invite code (16 chars)
+  await page.getByPlaceholder("ABCDEF1234567890").fill("E2E0TEST1234ABCD");
+  // Fill branch name
+  await page.getByPlaceholder("North Campus").fill("Westside Campus");
+  // Submit
+  await page.getByRole("button", { name: /join church/i }).click();
+  // Wait for operator page
+  await expect(page.locator("[data-qa='operator-root']")).toBeVisible({ timeout: 10000 });
+}
+
+test.describe("Join Church Flow", () => {
+  test("join flow leads to operator page", async ({ page }) => {
+    await goToOperatorViaJoin(page);
+    await expect(page.locator("[data-qa='operator-root']")).toBeVisible();
+  });
+
+  test("operator page works after joining", async ({ page }) => {
+    await goToOperatorViaJoin(page);
+    // Should have full Rail navigation
+    await expect(page.getByText("Plan", { exact: true })).toBeVisible();
+    await expect(page.getByText("Live", { exact: true })).toBeVisible();
+  });
+
+  test("can switch screens after joining", async ({ page }) => {
+    await goToOperatorViaJoin(page);
+    await page.getByText("Live", { exact: true }).click();
+    await expect(page.getByText("Scripture")).toBeVisible();
+    await expect(page.getByText("Queue")).toBeVisible();
+  });
+
+  test("join form validates 16-char code", async ({ page }) => {
+    await injectStubs(page);
+    await page.goto("/");
+    await page.getByText("Join an existing church").click();
+    // Type only 8 chars — too short
+    await page.getByPlaceholder("ABCDEF1234567890").fill("SHORT123");
+    await page.getByPlaceholder("North Campus").fill("Test");
+    // Submit should be disabled
+    await expect(page.getByRole("button", { name: /join church/i })).toBeDisabled();
+    // Type full 16 chars
+    await page.getByPlaceholder("ABCDEF1234567890").fill("ABCDEF1234567890");
+    // Now submit should be enabled
+    await expect(page.getByRole("button", { name: /join church/i })).toBeEnabled();
   });
 });
