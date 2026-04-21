@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DisplayContent, type DisplayContentEvent } from "@/components/display/DisplayContent";
+import { DisplayContent, REF_WIDTH, REF_HEIGHT, type DisplayContentEvent } from "@/components/display/DisplayContent";
 
 interface ContentEvent extends DisplayContentEvent {
   line_index?: number;
@@ -159,16 +159,27 @@ export function DisplayPage() {
   const currentChunk =
     isSong && lyricChunks.length > 0 ? lyricChunks[chunkIndex] ?? "" : null;
 
+  // Scale to fill the entire viewport — stretch independently on X and Y
+  // so the content covers the full display regardless of aspect ratio.
+  const [scaleX, setScaleX] = useState(() => window.innerWidth / REF_WIDTH);
+  const [scaleY, setScaleY] = useState(() => window.innerHeight / REF_HEIGHT);
+
+  useEffect(() => {
+    const update = () => {
+      setScaleX(window.innerWidth / REF_WIDTH);
+      setScaleY(window.innerHeight / REF_HEIGHT);
+    };
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   return (
-    <div data-qa="display-root" className="fixed inset-0 overflow-hidden font-sans">
-      {/*
-        The DisplayContent renders at 1920×1080 reference size.
-        On the fullscreen display, we scale it to fill the viewport.
-      */}
+    <div data-qa="display-root" className="fixed inset-0 overflow-hidden font-sans bg-[#050403]">
       <div
-        className="w-full h-full origin-top-left"
         style={{
-          transform: `scale(${window.innerWidth / 1920})`,
+          width: REF_WIDTH,
+          height: REF_HEIGHT,
+          transform: `scale(${scaleX}, ${scaleY})`,
           transformOrigin: "top left",
         }}
       >
