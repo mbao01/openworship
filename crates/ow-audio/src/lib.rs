@@ -11,13 +11,21 @@
 
 mod capture;
 mod deepgram;
+mod deepgram_provider;
 mod engine;
 pub mod event;
+pub mod provider;
+mod registry;
 pub(crate) mod transcribe;
+mod whisper_provider;
 
 pub use capture::{AudioConfig, AudioInputDevice, list_input_devices};
 pub use engine::{AudioMonitor, SttEngine, SttStatus};
 pub use event::TranscriptEvent;
+pub use provider::{
+    ConfigField, ConfigOption, ModelInfo, ProviderInfo, ProviderStatus, SttProvider,
+};
+pub use registry::ProviderRegistry;
 pub use transcribe::Transcriber;
 #[cfg(feature = "whisper")]
 pub use transcribe::{

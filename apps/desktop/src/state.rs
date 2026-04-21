@@ -6,7 +6,7 @@ use crate::settings::{AudioSettings, DisplaySettings};
 use crate::slides::{AnnouncementItem, SermonNote};
 use crate::songs::{SongSemanticIndex, SongsDb};
 use crate::summaries::{EmailSettings, EmailSubscriber, ServiceSummary};
-use ow_audio::{AudioMonitor, SttEngine, SttStatus};
+use ow_audio::{AudioMonitor, ProviderRegistry, SttEngine, SttStatus};
 use ow_core::{DetectionMode, QueueItem, SongRef};
 use ow_display::ContentEvent;
 use ow_embed::{Embedder, SemanticIndex};
@@ -20,6 +20,8 @@ pub struct AppState {
     pub search: Arc<SearchEngine>,
     pub display_tx: broadcast::Sender<ContentEvent>,
     pub stt: Mutex<SttEngine>,
+    /// Registry of available STT providers (Whisper, Deepgram, etc.).
+    pub provider_registry: ProviderRegistry,
     /// Lightweight audio-only capture for VU meter / mic check.
     /// Independent of the STT engine — works without a transcriber.
     pub audio_monitor: AudioMonitor,

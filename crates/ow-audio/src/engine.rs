@@ -112,7 +112,7 @@ impl SttEngine {
     ///   current thread via a dedicated keeper thread.
     /// - A separate worker thread reads from the internal channel and calls the
     ///   transcriber, keeping the transcription latency independent of capture.
-    pub fn start<T: Transcriber>(&mut self, transcriber: T, config: AudioConfig) -> Result<()> {
+    pub fn start(&mut self, transcriber: Box<dyn Transcriber>, config: AudioConfig) -> Result<()> {
         if *self.status.lock().unwrap() == SttStatus::Running {
             return Ok(());
         }

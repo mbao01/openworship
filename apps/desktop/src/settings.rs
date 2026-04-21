@@ -10,6 +10,7 @@
 use anyhow::Result;
 use ow_core::DetectionMode;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// UI colour scheme preference.
@@ -107,6 +108,10 @@ pub struct AudioSettings {
     /// Which Whisper model to use for local STT.
     #[serde(default)]
     pub whisper_model: WhisperModel,
+    /// Per-provider configuration blobs. Key = provider ID, value = provider-specific JSON.
+    /// Example: `{ "whisper": { "model": "small" }, "deepgram": {} }`
+    #[serde(default)]
+    pub provider_config: HashMap<String, serde_json::Value>,
 }
 
 impl Default for AudioSettings {
@@ -123,7 +128,45 @@ impl Default for AudioSettings {
             theme: ThemeMode::System,
             detection_mode: DetectionMode::default(),
             whisper_model: WhisperModel::default(),
+            provider_config: HashMap::new(),
         }
+    }
+}
+
+impl AudioSettings {
+    /// Get the provider config for a given provider ID, merging legacy fields.
+    /// This ensures backward compatibility: old `whisper_model` and `deepgram_api_key`
+    /// fields are reflected in provider_config.
+    pub fn provider_config_for(&self, provider_id: &str) -> serde_json::Value {
+        let mut config = self
+            .provider_config
+            .get(provider_id)
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+
+        // Merge legacy fields if not already in provider_config
+        match provider_id {
+            "whisper" => {
+                if config.get("model").is_none() {
+                    let model = match self.whisper_model {
+                        WhisperModel::Tiny => "tiny",
+                        WhisperModel::Base => "base",
+                        WhisperModel::Small => "small",
+                        WhisperModel::Medium => "medium",
+                    };
+                    config["model"] = serde_json::Value::String(model.into());
+                }
+            }
+            "deepgram" => {
+                if config.get("api_key").is_none() && !self.deepgram_api_key.is_empty() {
+                    config["api_key"] =
+                        serde_json::Value::String(self.deepgram_api_key.clone());
+                }
+            }
+            _ => {}
+        }
+
+        config
     }
 }
 
@@ -147,6 +190,8 @@ struct AudioSettingsFile {
     detection_mode: Option<DetectionMode>,
     #[serde(default)]
     whisper_model: Option<WhisperModel>,
+    #[serde(default)]
+    provider_config: Option<HashMap<String, serde_json::Value>>,
 }
 
 impl AudioSettings {
@@ -213,6 +258,7 @@ impl AudioSettings {
             theme: file.theme,
             detection_mode: file.detection_mode.unwrap_or(defaults.detection_mode),
             whisper_model: file.whisper_model.unwrap_or(defaults.whisper_model),
+            provider_config: file.provider_config.unwrap_or_default(),
         })
     }
 

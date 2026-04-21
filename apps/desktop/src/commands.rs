@@ -244,7 +244,7 @@ fn start_stt_with_settings(
             match DeepgramTranscriber::new(&settings.deepgram_api_key) {
                 Ok(t) => {
                     eprintln!("[stt] starting Deepgram online transcriber");
-                    return engine.start(t, config);
+                    return engine.start(Box::new(t), config);
                 }
                 Err(e) => {
                     eprintln!("[stt] Deepgram init failed ({e}), falling back to Whisper");
@@ -267,7 +267,7 @@ fn start_stt_with_settings(
         match model_path.and_then(|p| WhisperTranscriber::new(&p)) {
             Ok(t) => {
                 eprintln!("[stt] starting Whisper.cpp offline transcriber");
-                return engine.start(t, config);
+                return engine.start(Box::new(t), config);
             }
             Err(e) => {
                 eprintln!("[stt] Whisper model unavailable: {e}");
@@ -409,6 +409,202 @@ pub fn stop_stt(state: State<'_, AppState>) {
 #[tauri::command]
 pub fn get_stt_status(state: State<'_, AppState>) -> SttStatus {
     state.stt_status()
+}
+
+// ─── STT Provider commands ───────────────────────────────────────────────────
+
+/// List all available STT providers with their metadata and config field definitions.
+#[tauri::command]
+pub fn list_stt_providers(
+    state: State<'_, AppState>,
+) -> Vec<ow_audio::ProviderInfo> {
+    state
+        .provider_registry
+        .list()
+        .into_iter()
+        .map(|p| p.info())
+        .collect()
+}
+
+/// Get the readiness status of a specific STT provider.
+#[tauri::command]
+pub fn get_provider_status(
+    provider_id: String,
+    state: State<'_, AppState>,
+) -> Result<ow_audio::ProviderStatus, String> {
+    let provider = state
+        .provider_registry
+        .get(&provider_id)
+        .ok_or_else(|| format!("Unknown provider: {provider_id}"))?;
+    let settings = state.audio_settings.read().map_err(|e| e.to_string())?;
+    let config = settings.provider_config_for(&provider_id);
+    // Hydrate secrets from keychain
+    let config = hydrate_provider_secrets(&provider.info(), config);
+    Ok(provider.check_status(&config))
+}
+
+/// Check if a specific model is installed for a provider.
+#[tauri::command]
+pub fn check_provider_model(
+    provider_id: String,
+    model_id: String,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let provider = state
+        .provider_registry
+        .get(&provider_id)
+        .ok_or_else(|| format!("Unknown provider: {provider_id}"))?;
+    Ok(provider.is_model_installed(&model_id))
+}
+
+/// Get available models for a provider.
+#[tauri::command]
+pub fn get_provider_models(
+    provider_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<ow_audio::ModelInfo>, String> {
+    let provider = state
+        .provider_registry
+        .get(&provider_id)
+        .ok_or_else(|| format!("Unknown provider: {provider_id}"))?;
+    Ok(provider.available_models())
+}
+
+/// Download a model for a provider. Emits progress events.
+#[tauri::command]
+pub async fn download_provider_model(
+    app: AppHandle,
+    provider_id: String,
+    model_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    use reqwest::header::CONTENT_LENGTH;
+    use tokio::io::AsyncWriteExt;
+
+    let provider = state
+        .provider_registry
+        .get(&provider_id)
+        .ok_or_else(|| format!("Unknown provider: {provider_id}"))?;
+
+    let models = provider.available_models();
+    let model = models
+        .iter()
+        .find(|m| m.id == model_id)
+        .ok_or_else(|| format!("Unknown model: {model_id}"))?;
+
+    let dest = provider
+        .model_path(&model_id)
+        .ok_or_else(|| format!("Provider {provider_id} does not support local models"))?;
+
+    if let Some(parent) = dest.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("Failed to create models directory: {e}"))?;
+    }
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&model.download_url)
+        .send()
+        .await
+        .map_err(|e| format!("Download request failed: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Download failed with HTTP {}", response.status()));
+    }
+
+    let total_bytes: Option<u64> = response
+        .headers()
+        .get(CONTENT_LENGTH)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok());
+
+    let tmp = dest.with_extension("bin.tmp");
+    let mut file = tokio::fs::File::create(&tmp)
+        .await
+        .map_err(|e| format!("Failed to create temp file: {e}"))?;
+
+    let mut downloaded: u64 = 0;
+    let mut stream = response.bytes_stream();
+
+    use futures_util::StreamExt;
+    while let Some(chunk) = stream.next().await {
+        let bytes = chunk.map_err(|e| format!("Download stream error: {e}"))?;
+        file.write_all(&bytes)
+            .await
+            .map_err(|e| format!("File write error: {e}"))?;
+        downloaded += bytes.len() as u64;
+        let percent = total_bytes.map(|t| downloaded as f32 / t as f32 * 100.0);
+        let _ = app.emit(
+            "stt://model-download-progress",
+            serde_json::json!({
+                "downloaded_bytes": downloaded,
+                "total_bytes": total_bytes,
+                "percent": percent,
+                "provider": &provider_id,
+                "model": &model_id,
+            }),
+        );
+    }
+
+    file.flush()
+        .await
+        .map_err(|e| format!("File flush error: {e}"))?;
+    drop(file);
+
+    tokio::fs::rename(&tmp, &dest)
+        .await
+        .map_err(|e| format!("Failed to finalise model file: {e}"))?;
+
+    let _ = app.emit(
+        "stt://model-download-complete",
+        serde_json::json!({
+            "provider": &provider_id,
+            "model": &model_id,
+            "path": dest.to_string_lossy(),
+        }),
+    );
+    eprintln!(
+        "[stt] Model {model_id} for {provider_id} downloaded to {}",
+        dest.display()
+    );
+    Ok(())
+}
+
+/// Hydrate secret fields from the OS keychain into a provider config.
+fn hydrate_provider_secrets(
+    info: &ow_audio::ProviderInfo,
+    mut config: serde_json::Value,
+) -> serde_json::Value {
+    for field in &info.config_fields {
+        if field.is_secret {
+            let account = format!("stt_{}_{}", info.id, field.key);
+            if let Some(secret) = crate::keychain::get_secret(&account) {
+                config[&field.key] = serde_json::Value::String(secret);
+            }
+            // Also check legacy keychain entries for backward compatibility
+            if config.get(&field.key).and_then(|v| v.as_str()).unwrap_or("").is_empty()
+                && info.id == "deepgram"
+                && field.key == "api_key"
+            {
+                if let Some(key) = crate::keychain::get_deepgram_api_key() {
+                    config[&field.key] = serde_json::Value::String(key);
+                }
+            }
+        }
+    }
+    config
+}
+
+/// Save a secret field for a provider to the OS keychain.
+#[tauri::command]
+pub fn set_provider_secret(
+    provider_id: String,
+    key: String,
+    value: String,
+) -> Result<(), String> {
+    let account = format!("stt_{provider_id}_{key}");
+    crate::keychain::set_secret(&account, &value).map_err(|e| format!("Keychain error: {e}"))
 }
 
 // ─── Audio settings commands ──────────────────────────────────────────────────
