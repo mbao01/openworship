@@ -81,7 +81,8 @@ export function DisplayScreen() {
         >
           <div className="absolute top-0 left-0 right-0 px-5 py-2.5 flex justify-between font-mono text-[9.5px] tracking-[0.18em] uppercase text-[rgba(245,239,223,0.5)]">
             <span className="inline-flex items-center gap-1">
-              <CircleIcon className="w-3 h-3 shrink-0" fill="currentColor" /> LIVE · ON SCREEN
+              <CircleIcon className="w-3 h-3 shrink-0" fill="currentColor" />{" "}
+              LIVE · ON SCREEN
             </span>
             <span>openworship</span>
           </div>
@@ -89,7 +90,10 @@ export function DisplayScreen() {
             <>
               {live.image_url?.startsWith("artifact:") ? (
                 <div className="w-full h-full flex items-center justify-center p-4">
-                  <AssetPreview artifactRef={live.image_url} filename={live.reference} />
+                  <AssetPreview
+                    artifactRef={live.image_url}
+                    filename={live.reference}
+                  />
                 </div>
               ) : (
                 <>
@@ -103,11 +107,12 @@ export function DisplayScreen() {
               )}
             </>
           ) : (
-            <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-center w-full text-[#3A332C]">
+            <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-center w-full text-primary">
               — no content on screen —
             </div>
           )}
         </div>
+        xxx
       </div>
 
       {/* Status + action buttons */}
@@ -117,9 +122,7 @@ export function DisplayScreen() {
             <div className="inline-flex items-center gap-2 px-3 py-2 bg-success/10 border border-success/30 rounded text-xs text-success font-medium">
               <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
               Projecting
-              {selectedMonitorLabel
-                ? ` to ${selectedMonitorLabel}`
-                : ""}
+              {selectedMonitorLabel ? ` to ${selectedMonitorLabel}` : ""}
             </div>
             <button
               className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-line bg-bg-2 text-ink-2 cursor-pointer transition-colors hover:bg-bg-3 hover:text-ink"
@@ -169,7 +172,8 @@ export function DisplayScreen() {
               <option value="__primary__">Primary monitor</option>
               {monitors.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name} ({m.is_primary ? "Built-in" : "External"}) — {m.width}×{m.height}
+                  {m.name} ({m.is_primary ? "Built-in" : "External"}) —{" "}
+                  {m.width}×{m.height}
                 </option>
               ))}
             </select>

@@ -99,11 +99,25 @@ export function DisplayContent({
       {backgroundValue && (
         <div className="absolute inset-0 z-0">
           {backgroundValue.startsWith("data:video/") ? (
-            <video src={backgroundValue} autoPlay loop muted className="w-full h-full object-cover" />
-          ) : backgroundValue.startsWith("data:image/") || backgroundValue.startsWith("blob:") ? (
-            <img src={backgroundValue} alt="" className="w-full h-full object-cover" />
+            <video
+              src={backgroundValue}
+              autoPlay
+              loop
+              muted
+              className="w-full h-full object-cover"
+            />
+          ) : backgroundValue.startsWith("data:image/") ||
+            backgroundValue.startsWith("blob:") ? (
+            <img
+              src={backgroundValue}
+              alt=""
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <div className="w-full h-full" style={{ background: backgroundValue }} />
+            <div
+              className="w-full h-full"
+              style={{ background: backgroundValue }}
+            />
           )}
         </div>
       )}
@@ -112,16 +126,23 @@ export function DisplayContent({
       <div
         className="absolute inset-0 z-10 flex flex-col justify-center"
         style={{
-          padding: "65px 154px", /* ~6% / ~8% of 1920×1080 */
-          textShadow: "0 2px 4px rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.9)",
+          padding: "65px 154px" /* ~6% / ~8% of 1920×1080 */,
+          textShadow:
+            "0 2px 4px rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.9)",
           WebkitTextStroke: "0.5px rgba(0,0,0,0.3)",
         }}
       >
         {content ? (
           <>
             {content.image_url?.startsWith("artifact:") ? (
-              <div className="absolute inset-0 flex items-center justify-center" style={{ padding: 43 }}>
-                <ArtifactImage artifactRef={content.image_url} filename={content.reference} />
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ padding: 43 }}
+              >
+                <ArtifactImage
+                  artifactRef={content.image_url}
+                  filename={content.reference}
+                />
               </div>
             ) : isSong ? (
               <>
@@ -142,13 +163,23 @@ export function DisplayContent({
                   {(currentChunk ?? "").split("\n").map((line, i) => {
                     const isHeader =
                       /^\[.*\]$/.test(line.trim()) ||
-                      /^(verse|chorus|bridge|pre-chorus|prechorus|intro|outro|tag)\b/i.test(line.trim());
+                      /^(verse|chorus|bridge|pre-chorus|prechorus|intro|outro|tag)\b/i.test(
+                        line.trim(),
+                      );
                     return isHeader ? (
-                      <p key={i} className="m-0 font-sans font-medium tracking-[0.18em] uppercase text-muted" style={{ fontSize: 15 }}>
+                      <p
+                        key={i}
+                        className="m-0 font-sans font-medium tracking-[0.18em] uppercase text-muted"
+                        style={{ fontSize: 15 }}
+                      >
                         {line || "\u00A0"}
                       </p>
                     ) : (
-                      <p key={i} className="m-0 font-serif font-semibold leading-[1.2] text-[#F5EFDF]" style={{ fontSize: 72 }}>
+                      <p
+                        key={i}
+                        className="m-0 font-serif font-semibold leading-[1.2] text-[#F5EFDF]"
+                        style={{ fontSize: 72 }}
+                      >
                         {line || "\u00A0"}
                       </p>
                     );
@@ -166,13 +197,18 @@ export function DisplayContent({
             ) : isCountdown ? (
               <div className="flex flex-col" style={{ gap: 22 }}>
                 {content.reference && (
-                  <span className="font-mono tracking-[0.22em] uppercase text-accent" style={{ fontSize: 18 }}>
+                  <span
+                    className="font-mono tracking-[0.22em] uppercase text-accent"
+                    style={{ fontSize: 18 }}
+                  >
                     {content.reference}
                   </span>
                 )}
                 <span
                   className={`font-mono font-semibold leading-none tracking-[0.05em] transition-colors duration-500 ${
-                    (countdownSecs ?? 0) <= 10 ? "text-danger" : "text-[#F5EFDF]"
+                    (countdownSecs ?? 0) <= 10
+                      ? "text-danger"
+                      : "text-[#F5EFDF]"
                   }`}
                   style={{ fontSize: 220 }}
                 >
@@ -182,10 +218,18 @@ export function DisplayContent({
             ) : (
               /* Scripture / announcement */
               <div className="flex flex-col" style={{ gap: 16 }}>
-                <div className="font-mono tracking-[0.22em] uppercase text-accent" style={{ fontSize: 18 }}>
+                <div
+                  className="font-mono tracking-[0.22em] uppercase text-accent"
+                  style={{ fontSize: 18 }}
+                >
                   {content.reference}
                   {content.translation && (
-                    <span className="text-[#F5EFDF]/50" style={{ marginLeft: 8 }}>· {content.translation}</span>
+                    <span
+                      className="text-[#F5EFDF]/50"
+                      style={{ marginLeft: 8 }}
+                    >
+                      · {content.translation}
+                    </span>
                   )}
                 </div>
                 <div
@@ -198,7 +242,10 @@ export function DisplayContent({
             )}
           </>
         ) : (
-          <div className="font-mono tracking-[0.2em] uppercase text-center w-full text-[#3A332C]" style={{ fontSize: 14 }}>
+          <div
+            className="font-mono tracking-[0.2em] uppercase text-center w-full text-primary"
+            style={{ fontSize: 14 }}
+          >
             — no content on screen —
           </div>
         )}
