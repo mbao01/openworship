@@ -991,7 +991,7 @@ pub fn create_service_project(
 pub fn list_service_projects(state: State<'_, AppState>) -> Result<Vec<ServiceProject>, String> {
     let projects = state.projects.read().map_err(|e| e.to_string())?;
     let mut list: Vec<ServiceProject> = projects.iter().cloned().collect();
-    list.sort_by(|a, b| b.created_at_ms.cmp(&a.created_at_ms));
+    list.sort_by_key(|b| std::cmp::Reverse(b.created_at_ms));
     Ok(list)
 }
 
