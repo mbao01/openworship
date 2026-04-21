@@ -11,6 +11,7 @@ interface ContentEvent {
   duration_secs?: number;
   slide_index?: number;
   total_slides?: number;
+  background_url?: string;
 }
 
 const WS_URL = "ws://127.0.0.1:9000";
@@ -107,6 +108,7 @@ export function DisplayPage() {
   const [lyricChunks, setLyricChunks] = useState<string[]>([]);
   const [chunkIndex, setChunkIndex] = useState(0);
   const [countdownSecs, setCountdownSecs] = useState<number | null>(null);
+  const [backgroundValue, setBackgroundValue] = useState<string | null>(null);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -160,6 +162,16 @@ export function DisplayPage() {
       ws.onmessage = (evt) => {
         try {
           const event = JSON.parse(evt.data as string) as ContentEvent;
+
+          if (event.kind === "set_background") {
+            // Background change — does not affect content.
+            // The backend resolves preset IDs to CSS gradients and
+            // artifact IDs to base64 data URLs, so the value is
+            // directly usable here.
+            const bgUrl = event.background_url || null;
+            setBackgroundValue(bgUrl);
+            return;
+          }
 
           if (event.kind === "song") {
             // New song — parse lyrics and start from first chunk.
@@ -248,8 +260,42 @@ export function DisplayPage() {
 
   return (
     <div data-qa="display-root" className="fixed inset-0 bg-bg overflow-hidden font-sans">
+      {/* Background layer — behind all content */}
+      {backgroundValue && (
+        <div className="absolute inset-0 z-0">
+          {backgroundValue.startsWith("data:video/") ? (
+            <video
+              src={backgroundValue}
+              autoPlay
+              loop
+              muted
+              className="w-full h-full object-cover"
+            />
+          ) : backgroundValue.startsWith("data:image/") ? (
+            <img
+              src={backgroundValue}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            /* CSS gradient or solid color */
+            <div
+              className="w-full h-full"
+              style={{ background: backgroundValue }}
+            />
+          )}
+        </div>
+      )}
+
       {content ? (
-        <>
+        <div
+          className="absolute inset-0 z-10"
+          style={{
+            textShadow:
+              "0 2px 4px rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.9)",
+            WebkitTextStroke: "0.5px rgba(0,0,0,0.3)",
+          }}
+        >
           {isSong ? (
             <>
               {/* Song title header — fixed at top-left per reference */}
@@ -368,7 +414,7 @@ export function DisplayPage() {
           )}
         </div>
           )}
-        </>
+        </div>
       ) : (
         <div data-qa="display-idle" className="hidden" aria-hidden={connected} />
       )}

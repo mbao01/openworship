@@ -290,6 +290,8 @@ pub struct DisplaySettings {
     pub selected_monitor_index: Option<usize>,
     /// When `true`, open the display window on every connected monitor.
     pub multi_output: bool,
+    /// Current background artifact ID or preset ID. `None` = solid black.
+    pub background_id: Option<String>,
 }
 
 impl DisplaySettings {

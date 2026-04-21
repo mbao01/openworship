@@ -2279,6 +2279,151 @@ pub fn push_artifact_to_display(
     Ok(())
 }
 
+// ─── Display background ─────────────────────────────────────────────────────
+
+/// Set the display background. Pass an artifact ID, preset ID, or null to clear.
+///
+/// For presets (e.g. "preset:dark_gradient"), resolves to the CSS gradient value.
+/// For artifacts (e.g. "artifact:abc123"), resolves to a base64 data URL so the
+/// display page (which may run in a browser/OBS without Tauri invoke) can render it.
+#[tauri::command]
+pub fn set_display_background(
+    background_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    // Resolve the background_id to a display-ready value
+    let ev = match &background_id {
+        Some(id) => {
+            let resolved = resolve_background_value(id, &state)?;
+            ContentEvent::set_background(resolved)
+        }
+        None => ContentEvent::clear_background(),
+    };
+    let _ = state.display_tx.send(ev);
+
+    // Persist the ID (not the resolved value) to settings
+    let mut settings = state
+        .display_settings
+        .write()
+        .map_err(|e| e.to_string())?;
+    settings.background_id = background_id;
+    settings.save().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Resolve a background ID to a display-ready value:
+/// - "preset:xyz" → CSS gradient string
+/// - "artifact:abc" → "data:image/...;base64,..." data URL
+fn resolve_background_value(id: &str, state: &AppState) -> Result<String, String> {
+    if let Some(preset_key) = id.strip_prefix("preset:") {
+        // Look up the CSS gradient from presets
+        let presets = crate::backgrounds::list_presets();
+        let preset = presets
+            .iter()
+            .find(|p| p.id == id || p.id.ends_with(preset_key))
+            .ok_or_else(|| format!("Unknown preset: {id}"))?;
+        Ok(preset.value.clone())
+    } else if let Some(artifact_id) = id.strip_prefix("artifact:") {
+        // Read artifact bytes and encode as base64 data URL
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        let entry = db
+            .get_by_id(artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("Artifact not found: {artifact_id}"))?;
+        let abs_path = db.abs_path(&entry.path);
+        let bytes = std::fs::read(&abs_path)
+            .map_err(|e| format!("Failed to read artifact: {e}"))?;
+        let mime = entry
+            .mime_type
+            .as_deref()
+            .unwrap_or("image/jpeg");
+        use base64::Engine;
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+        Ok(format!("data:{mime};base64,{b64}"))
+    } else {
+        // Assume it's already a CSS value
+        Ok(id.to_string())
+    }
+}
+
+/// Get the current display background ID (artifact or preset).
+#[tauri::command]
+pub fn get_display_background(
+    state: State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    let settings = state
+        .display_settings
+        .read()
+        .map_err(|e| e.to_string())?;
+    Ok(settings.background_id.clone())
+}
+
+/// List preset backgrounds (CSS gradients).
+#[tauri::command]
+pub fn list_preset_backgrounds() -> Vec<crate::backgrounds::BackgroundInfo> {
+    crate::backgrounds::list_presets()
+}
+
+/// List uploaded custom backgrounds from the _backgrounds artifact folder.
+#[tauri::command]
+pub fn list_uploaded_backgrounds(
+    state: State<'_, AppState>,
+) -> Result<Vec<crate::backgrounds::BackgroundInfo>, String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entries = db
+        .list(None, Some("_backgrounds"))
+        .map_err(|e| e.to_string())?;
+    Ok(entries
+        .into_iter()
+        .filter(|e| !e.is_dir)
+        .map(|e| {
+            let is_video = e
+                .mime_type
+                .as_deref()
+                .is_some_and(|m: &str| m.starts_with("video/"));
+            crate::backgrounds::BackgroundInfo {
+                id: format!("artifact:{}", e.id),
+                name: e.name,
+                source: "uploaded".into(),
+                value: format!("artifact:{}", e.id),
+                bg_type: if is_video { "video".into() } else { "image".into() },
+            }
+        })
+        .collect())
+}
+
+/// Upload a background image/video to the _backgrounds folder.
+#[tauri::command]
+pub fn upload_background(
+    name: String,
+    bytes: Vec<u8>,
+    state: State<'_, AppState>,
+) -> Result<crate::backgrounds::BackgroundInfo, String> {
+    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = crate::artifacts::write_artifact_bytes(
+        &mut db,
+        None,
+        Some("_backgrounds".into()),
+        name,
+        bytes,
+    )
+    .map_err(|e| e.to_string())?;
+
+    let is_video = entry
+        .mime_type
+        .as_deref()
+        .is_some_and(|m: &str| m.starts_with("video/"));
+
+    Ok(crate::backgrounds::BackgroundInfo {
+        id: format!("artifact:{}", entry.id),
+        name: entry.name,
+        source: "uploaded".into(),
+        value: format!("artifact:{}", entry.id),
+        bg_type: if is_video { "video".into() } else { "image".into() },
+    })
+}
+
 // ─── Countdown timers ─────────────────────────────────────────────────────────
 
 /// Push a countdown timer to the main display.

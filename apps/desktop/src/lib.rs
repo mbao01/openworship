@@ -1,4 +1,5 @@
 mod artifacts;
+mod backgrounds;
 mod branch_sync;
 mod claude_api;
 mod cloud_sync;
@@ -454,6 +455,11 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::push_announcement_to_display,
             commands::push_custom_slide,
             commands::push_artifact_to_display,
+            commands::set_display_background,
+            commands::get_display_background,
+            commands::list_preset_backgrounds,
+            commands::list_uploaded_backgrounds,
+            commands::upload_background,
             // ── Countdown timers ───────────────────────────────────────────
             commands::start_countdown,
             // ── Sermon notes ───────────────────────────────────────────────
