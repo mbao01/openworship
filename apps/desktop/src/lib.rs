@@ -36,6 +36,9 @@ pub fn run() {
 }
 
 fn try_run() -> Result<(), Box<dyn std::error::Error>> {
+    // Prefetch display names in background (system_profiler is slow ~3s)
+    display_window::prefetch_display_names();
+
     // ── Scripture DB + search index ────────────────────────────────────────────
     let db = ow_db::open_and_seed().map_err(|e| { eprintln!("[startup] Bible DB: {e}"); e })?;
     let verses = ow_db::get_all_verses(&db)?;

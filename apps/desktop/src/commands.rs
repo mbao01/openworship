@@ -834,7 +834,7 @@ pub fn clear_queue(state: State<'_, AppState>, app: AppHandle) -> Result<(), Str
 // ─── Queue navigation commands ────────────────────────────────────────────────
 
 /// Build the appropriate `ContentEvent` for a queue item based on its `kind`.
-fn content_event_for_item(item: &QueueItem) -> ow_display::ContentEvent {
+pub(crate) fn content_event_for_item(item: &QueueItem) -> ow_display::ContentEvent {
     use ow_core::content_kind;
     match item.kind.as_str() {
         content_kind::SONG => {

@@ -21,11 +21,14 @@ export interface UseDisplayWindowReturn {
   close: () => Promise<void>;
 }
 
+/** Poll interval for detecting display hot-plug changes (ms). */
+const MONITOR_POLL_MS = 3000;
+
 /**
  * Manages the external display output window.
  *
  * Provides monitor listing and window open/close controls.
- * Used by DisplaySection in Settings and the stage toolbar.
+ * Polls for monitor changes every 3 seconds to detect hot-plug.
  */
 export function useDisplayWindow(): UseDisplayWindowReturn {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,17 +36,30 @@ export function useDisplayWindow(): UseDisplayWindowReturn {
   const [obsUrl, setObsUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      getDisplayWindowOpen(),
-      listMonitors(),
-      getObsDisplayUrl(),
-    ])
-      .then(([open, mons, url]) => {
-        setIsOpen(open);
-        setMonitors(mons.map((m, i) => ({ ...m, id: i })));
-        setObsUrl(url);
-      })
-      .catch((e) => console.error("[use-display-window] load failed:", e));
+    let active = true;
+
+    const refresh = () => {
+      Promise.all([
+        getDisplayWindowOpen(),
+        listMonitors(),
+        getObsDisplayUrl(),
+      ])
+        .then(([open, mons, url]) => {
+          if (!active) return;
+          setIsOpen(open);
+          setMonitors(mons.map((m, i) => ({ ...m, id: i })));
+          setObsUrl(url);
+        })
+        .catch((e) => console.error("[use-display-window] refresh failed:", e));
+    };
+
+    refresh();
+    const interval = setInterval(refresh, MONITOR_POLL_MS);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const openOn = useCallback(async (monitorId?: number) => {

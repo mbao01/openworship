@@ -25,9 +25,9 @@ export function DisplaySection() {
                 className="flex items-center justify-between py-2 border-b border-line last:border-b-0"
               >
                 <div className="space-y-0.5">
-                  <div className="text-sm text-ink-2">{m.name}</div>
+                  <div className="text-sm text-ink-2">{m.name} ({m.is_primary ? "Built-in" : "External"})</div>
                   <div className="font-mono text-[10px] text-ink-3">
-                    {m.width}×{m.height}{m.is_primary ? " · Primary" : ""}
+                    {m.width}×{m.height}
                   </div>
                 </div>
                 <Button

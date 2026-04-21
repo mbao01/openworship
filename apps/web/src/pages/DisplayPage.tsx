@@ -225,31 +225,8 @@ export function DisplayPage() {
 
   const isSong = content?.kind === "song";
   const isCountdown = content?.kind === "countdown";
-  const isAnnouncement =
-    content?.kind === "announcement" || content?.kind === "custom_slide";
   const currentChunk =
     isSong && lyricChunks.length > 0 ? lyricChunks[chunkIndex] ?? "" : null;
-
-  // Lyric context lines for opacity hierarchy (Stitch design: past=30%, adjacent=50%, active=100%)
-  function lyricContentLines(chunk: string): string[] {
-    return chunk.split("\n").filter((l) => {
-      const t = l.trim();
-      return (
-        t !== "" &&
-        !/^\[.*\]$/.test(t) &&
-        !/^(verse|chorus|bridge|pre-chorus|prechorus|intro|outro|tag)\b/i.test(t)
-      );
-    });
-  }
-  const prevContextLine = (() => {
-    if (!isSong || chunkIndex <= 0) return null;
-    const lines = lyricContentLines(lyricChunks[chunkIndex - 1] ?? "");
-    return lines.length > 0 ? lines[lines.length - 1]! : null;
-  })();
-  const nextContextLine =
-    isSong && chunkIndex < lyricChunks.length - 1
-      ? lyricContentLines(lyricChunks[chunkIndex + 1] ?? "")[0] ?? null
-      : null;
 
   // Format mm:ss for countdown
   const fmtCountdown = (secs: number) => {
@@ -289,130 +266,90 @@ export function DisplayPage() {
 
       {content ? (
         <div
-          className="absolute inset-0 z-10"
+          className="absolute inset-0 z-10 flex flex-col justify-center px-[8vw] py-[6vh]"
           style={{
             textShadow:
               "0 2px 4px rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.9)",
             WebkitTextStroke: "0.5px rgba(0,0,0,0.3)",
           }}
         >
-          {isSong ? (
+          {content.image_url?.startsWith("artifact:") ? (
+            /* Artifact centered, preserving aspect ratio — matches live preview */
+            <div className="absolute inset-0 flex items-center justify-center p-[4vh]">
+              <ArtifactMedia
+                artifactRef={content.image_url}
+                filename={content.reference}
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+          ) : isSong ? (
             <>
-              {/* Song title header — fixed at top-left per reference */}
-              <div className="absolute top-[8vh] left-[10%]">
-                <span className="block font-sans text-sm font-medium tracking-[0.2em] text-accent uppercase">
-                  {content.reference}
-                </span>
-              </div>
-
-              {/* Lyric stack with opacity hierarchy */}
+              {/* Song: title + lyrics centered */}
               <div
                 data-qa="display-content"
-                className="absolute top-[25%] left-[10%] w-[60vw] flex flex-col gap-4 cursor-pointer outline-none"
+                className="flex flex-col gap-[2vh] cursor-pointer outline-none"
                 onClick={() => advanceLyric(lyricChunks, chunkIndex)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === " " && advanceLyric(lyricChunks, chunkIndex)}
                 aria-label="Next lyric"
               >
-                {/* Previous context line — 30% opacity */}
-                {prevContextLine && (
-                  <p className="m-0 font-serif text-[2.4rem] leading-[1.2] text-ink text-left opacity-30 select-none">
-                    {prevContextLine}
-                  </p>
-                )}
-
-                {/* Active chunk lines — full opacity, large */}
+                <div className="font-mono text-[clamp(0.8rem,1.5vw,1.2rem)] tracking-[0.22em] uppercase text-accent mb-[1vh]">
+                  {content.reference}
+                </div>
                 {(currentChunk ?? "").split("\n").map((line, i) => {
                   const isHeader =
                     /^\[.*\]$/.test(line.trim()) ||
-                    /^(verse|chorus|bridge|pre-chorus|prechorus|intro|outro|tag)\b/i.test(
-                      line.trim()
-                    );
+                    /^(verse|chorus|bridge|pre-chorus|prechorus|intro|outro|tag)\b/i.test(line.trim());
                   return isHeader ? (
-                    <p key={i} className="m-0 font-sans text-[0.85rem] font-medium tracking-[0.18em] uppercase text-muted">
+                    <p key={i} className="m-0 font-sans text-[clamp(0.7rem,1.2vw,1rem)] font-medium tracking-[0.18em] uppercase text-muted">
                       {line || "\u00A0"}
                     </p>
                   ) : (
-                    <p key={i} className="m-0 font-serif text-[clamp(2.8rem,5vw,5rem)] font-semibold leading-[1.2] text-ink text-left">
+                    <p key={i} className="m-0 font-serif text-[clamp(2rem,4.5vw,5rem)] font-semibold leading-[1.2] text-[#F5EFDF]">
                       {line || "\u00A0"}
                     </p>
                   );
                 })}
-
-                {/* Next context line — 50% opacity */}
-                {nextContextLine && (
-                  <p className="m-0 font-serif text-[2.4rem] leading-[1.2] text-ink text-left opacity-50 select-none">
-                    {nextContextLine}
-                  </p>
-                )}
               </div>
-
-              {/* Progress indicator */}
               {lyricChunks.length > 1 && (
-                <span
-                  className="absolute bottom-6 right-[10%] font-sans text-[0.7rem] tracking-[0.12em] text-muted opacity-60"
-                  aria-hidden="true"
-                >
+                <span className="absolute bottom-[3vh] right-[8vw] font-mono text-[clamp(0.6rem,1vw,0.8rem)] tracking-[0.12em] text-muted opacity-60">
                   {chunkIndex + 1} / {lyricChunks.length}
                 </span>
               )}
             </>
-          ) : (
-        <div data-qa="display-content" className="absolute top-[18%] left-[10%] max-w-[80vw]">
-          {isCountdown ? (
-            <div className="flex flex-col items-start gap-4">
+          ) : isCountdown ? (
+            /* Countdown timer */
+            <div data-qa="display-content" className="flex flex-col gap-[2vh]">
               {content.reference && (
-                <span className="font-sans text-xl font-medium tracking-[0.12em] [font-variant:small-caps] text-accent">
+                <span className="font-mono text-[clamp(0.8rem,1.5vw,1.2rem)] tracking-[0.22em] uppercase text-accent">
                   {content.reference}
                 </span>
               )}
               <span
                 className={`font-mono text-[clamp(6rem,14vw,14rem)] font-semibold leading-none tracking-[0.05em] transition-colors duration-500 ${
-                  (countdownSecs ?? 0) <= 10 ? "text-danger" : "text-ink"
+                  (countdownSecs ?? 0) <= 10 ? "text-danger" : "text-[#F5EFDF]"
                 }`}
               >
                 {fmtCountdown(countdownSecs ?? 0)}
               </span>
             </div>
-          ) : isAnnouncement ? (
-            <div className="flex flex-col gap-4">
-              {content.image_url?.startsWith("artifact:") ? (
-                <ArtifactMedia artifactRef={content.image_url} filename={content.reference} />
-              ) : content.image_url ? (
-                <img
-                  className="max-w-[40vw] max-h-[35vh] object-contain rounded-sm mb-2"
-                  src={content.image_url}
-                  alt=""
-                />
-              ) : null}
-              <span className="font-sans text-[clamp(1.5rem,3vw,3rem)] font-semibold tracking-[0.08em] text-accent">
-                {content.reference}
-              </span>
-              {content.text && (
-                <p className="m-0 font-sans text-[clamp(1.8rem,3.5vw,4rem)] font-normal leading-[1.3] text-ink">
-                  {content.text}
-                </p>
-              )}
-            </div>
           ) : (
-            <>
-              <div className="mb-8">
-                <span className="block font-sans text-sm font-medium tracking-[0.2em] text-accent uppercase">
-                  {content.reference}
-                </span>
+            /* Scripture / announcement — matches live preview exactly */
+            <div data-qa="display-content" className="flex flex-col gap-[1.5vh]">
+              <div className="font-mono text-[clamp(0.8rem,1.5vw,1.2rem)] tracking-[0.22em] uppercase text-accent">
+                {content.reference}
                 {content.translation && (
-                  <span className="block font-sans text-xs tracking-[0.16em] text-ink-3/70 font-normal mt-1 uppercase">
-                    {content.translation}
-                  </span>
+                  <span className="text-[#F5EFDF]/50 ml-2">· {content.translation}</span>
                 )}
               </div>
-              <p className="m-0 font-serif text-[clamp(3rem,5.5vw,5.5rem)] font-semibold leading-[1.18] text-ink text-left">
-                {content.text}
-              </p>
-            </>
-          )}
-        </div>
+              <div
+                className="font-serif italic leading-[1.35] tracking-[-0.01em] max-w-[70vw] text-[#F5EFDF]"
+                style={{ fontSize: "clamp(2rem,4.5vw,5rem)" }}
+              >
+                &ldquo;{content.text}&rdquo;
+              </div>
+            </div>
           )}
         </div>
       ) : (

@@ -93,9 +93,10 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
       .catch(() => {})
       .finally(() => setLoading(false));
 
+    const urls = blobUrls.current;
     return () => {
       // Revoke all blob URLs on unmount
-      for (const url of blobUrls.current) {
+      for (const url of urls) {
         URL.revokeObjectURL(url);
       }
     };

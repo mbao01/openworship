@@ -1,6 +1,5 @@
 import {
   useTheme,
-  type AccentName,
   type ContentType,
   type LayoutMode,
   type UIDensity,
@@ -9,14 +8,9 @@ import { Section, SettingRow } from "@/components/ui/section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/cn";
+import { THEME_PRESETS } from "@/lib/themes";
 import type { ThemeMode } from "@/lib/types";
-
-const ACCENT_COLORS: { name: AccentName; hex: string; label: string }[] = [
-  { name: "copper", hex: "#C9A76A", label: "Copper" },
-  { name: "crimson", hex: "#B66A66", label: "Crimson" },
-  { name: "sage", hex: "#8AB67B", label: "Sage" },
-  { name: "indigo", hex: "#7C8BB5", label: "Indigo" },
-];
+import { CheckIcon } from "lucide-react";
 
 type SegOption<T extends string> = { value: T; label: string };
 
@@ -52,20 +46,70 @@ function SegmentedControl<T extends string>({
 }
 
 /**
+ * Mini preview swatch showing a theme's colors at a glance.
+ * Shows bg, accent bar, text lines, and a button-like accent element.
+ */
+function ThemePreview({
+  bg,
+  accent,
+  ink,
+  ink2,
+}: {
+  bg: string;
+  accent: string;
+  ink: string;
+  ink2: string;
+}) {
+  return (
+    <div
+      className="w-full aspect-[16/10] rounded-sm overflow-hidden p-2 flex flex-col justify-between"
+      style={{ backgroundColor: bg }}
+    >
+      {/* Top accent bar */}
+      <div className="flex items-center gap-1.5">
+        <div
+          className="w-1 h-1 rounded-full"
+          style={{ backgroundColor: accent }}
+        />
+        <div
+          className="h-[3px] w-8 rounded-full"
+          style={{ backgroundColor: ink2, opacity: 0.5 }}
+        />
+      </div>
+      {/* Text lines */}
+      <div className="flex flex-col gap-1">
+        <div
+          className="h-[3px] w-12 rounded-full"
+          style={{ backgroundColor: ink, opacity: 0.7 }}
+        />
+        <div
+          className="h-[3px] w-8 rounded-full"
+          style={{ backgroundColor: ink2, opacity: 0.4 }}
+        />
+      </div>
+      {/* Accent button */}
+      <div className="flex justify-end">
+        <div
+          className="h-2 w-6 rounded-sm"
+          style={{ backgroundColor: accent }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
  * Appearance & Preferences settings section.
  *
- * **Appearance tab**: theme, layout, window chrome, density, accent.
+ * **Appearance tab**: preset theme, light/dark mode, layout, density.
  * **Preferences tab**: display content type, queue confidence threshold.
- *
- * All settings are applied immediately via `useTheme()` and persisted
- * to localStorage + AudioSettings backend.
  */
 export function AppearanceSection() {
   const {
     appTheme,
     setAppTheme,
-    accent,
-    setAccent,
+    preset,
+    setPreset,
     layoutMode,
     setLayoutMode,
     density,
@@ -75,6 +119,15 @@ export function AppearanceSection() {
     confThreshold,
     setConfThreshold,
   } = useTheme();
+
+  // Determine resolved mode for preview rendering
+  const resolvedMode =
+    appTheme === "system"
+      ? typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      : appTheme;
 
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-0">
@@ -102,26 +155,45 @@ export function AppearanceSection() {
             />
           </Section>
 
-          <Section title="Accent colour" separator>
-            <div className="flex gap-2">
-              {ACCENT_COLORS.map(({ name, hex, label }) => (
-                <button
-                  key={name}
-                  title={label}
-                  onClick={() => setAccent(name)}
-                  className={cn(
-                    "w-8 h-8 rounded-full transition-transform",
-                    accent === name
-                      ? "ring-2 ring-offset-2 ring-offset-bg-3 scale-110"
-                      : "hover:scale-105",
-                  )}
-                  style={{
-                    backgroundColor: hex,
-                    // ring color uses inline style since it depends on the accent hex
-                    ...(accent === name ? { outlineColor: hex } : {}),
-                  }}
-                />
-              ))}
+          <Section title="Theme" separator>
+            <div className="grid grid-cols-3 gap-2.5">
+              {THEME_PRESETS.map((theme) => {
+                const isSelected = preset === theme.id;
+                const tokens =
+                  resolvedMode === "dark" ? theme.dark : theme.light;
+                return (
+                  <button
+                    key={theme.id}
+                    onClick={() => setPreset(theme.id)}
+                    className={cn(
+                      "relative flex flex-col rounded-lg border-2 p-1.5 transition-all cursor-pointer",
+                      isSelected
+                        ? "border-accent ring-1 ring-accent/30 scale-[1.02]"
+                        : "border-line hover:border-line-strong hover:scale-[1.01]",
+                    )}
+                  >
+                    <ThemePreview
+                      bg={tokens.bg}
+                      accent={tokens.accent}
+                      ink={tokens.ink}
+                      ink2={tokens.ink2}
+                    />
+                    <span
+                      className={cn(
+                        "mt-1.5 text-[10px] font-mono tracking-[0.08em]",
+                        isSelected ? "text-accent font-semibold" : "text-ink-3",
+                      )}
+                    >
+                      {theme.name}
+                    </span>
+                    {isSelected && (
+                      <div className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
+                        <CheckIcon className="w-2.5 h-2.5 text-accent-foreground" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </Section>
 

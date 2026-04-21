@@ -22,7 +22,7 @@ export async function listMonitors(): Promise<MonitorInfo[]> {
  * Pass null to use the saved monitor preference.
  */
 export async function openDisplayWindow(monitorIndex: number | null): Promise<void> {
-  return invoke("open_display_window", { monitorIndex });
+  return invoke("open_display_window", { monitor_index: monitorIndex });
 }
 
 /**

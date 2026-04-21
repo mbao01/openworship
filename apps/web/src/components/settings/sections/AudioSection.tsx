@@ -26,9 +26,15 @@ export function AudioSection() {
   const [micTesting, setMicTesting] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
 
+  // Poll for audio device changes every 3s to detect hot-plug
   useEffect(() => {
-    listAudioInputDevices().then(setDevices).catch(() => {});
+    const refresh = () => {
+      listAudioInputDevices().then(setDevices).catch(() => {});
+    };
+    refresh();
     listSttProviders().then(setProviders).catch(() => {});
+    const interval = setInterval(refresh, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   // Auto-start audio monitor on mount, stop on unmount

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { CircleIcon, PaperclipIcon } from "lucide-react";
+import { CircleIcon, MonitorIcon, PaperclipIcon } from "lucide-react";
 import { useQueue } from "../../hooks/use-queue";
-import { getObsDisplayUrl, openDisplayWindow } from "../../lib/commands/display-window";
+import { useDisplayWindow } from "../../hooks/use-display-window";
+import { getObsDisplayUrl } from "../../lib/commands/display-window";
 import { Toggle } from "../ui/toggle";
 
 const IMG_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"]);
@@ -35,18 +36,26 @@ function AssetPreview({ artifactRef, filename }: { artifactRef: string; filename
 
 export function DisplayScreen() {
   const { live } = useQueue();
-  const [displayUrl, setDisplayUrl] = useState("http://localhost:7411/display");
-  const [resolution, setResolution] = useState("1920 × 1080");
-  const [background, setBackground] = useState("Solid black");
+  const { isOpen, monitors, obsUrl: hookObsUrl, openOn, close } = useDisplayWindow();
+  const [displayUrl, setDisplayUrl] = useState("http://localhost:1420/display");
+  const [selectedMonitor, setSelectedMonitor] = useState<number | null>(null);
   const [safeArea, setSafeArea] = useState(true);
 
   useEffect(() => {
     getObsDisplayUrl().then(setDisplayUrl).catch(() => {});
   }, []);
 
-  const handleOpenOnProjector = () => {
-    openDisplayWindow(null).catch(() => {});
+  // Use hook's OBS URL if available
+  const obsDisplayUrl = hookObsUrl ?? displayUrl;
+
+  const handleOpenOnProjector = async () => {
+    await openOn(selectedMonitor ?? undefined);
   };
+
+  const selectedMonitorInfo = selectedMonitor !== null
+    ? monitors.find((m) => m.id === selectedMonitor)
+    : monitors.find((m) => m.is_primary) ?? monitors[0];
+  const selectedMonitorLabel = selectedMonitorInfo?.name ?? null;
 
   return (
     <div className="flex-1 overflow-y-auto px-14 py-10 bg-bg">
@@ -56,10 +65,9 @@ export function DisplayScreen() {
       <p className="text-ink-3 text-sm mb-8 max-w-[56ch]">
         One source of truth. The display runs on{" "}
         <code className="font-mono bg-bg-2 px-1.5 py-px rounded-sm text-xs">
-          {displayUrl}
+          {obsDisplayUrl}
         </code>{" "}
-        — open it on any screen, or drop it into OBS as a Browser
-        Source.
+        — open it on any screen, or drop it into OBS as a Browser Source.
       </p>
 
       {/* Live display preview */}
@@ -102,14 +110,33 @@ export function DisplayScreen() {
         </div>
       </div>
 
-      {/* Open on projector button */}
-      <div className="max-w-[900px] mb-6">
-        <button
-          className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer transition-[filter] hover:brightness-[1.1]"
-          onClick={handleOpenOnProjector}
-        >
-          Open on projector
-        </button>
+      {/* Status + action buttons */}
+      <div className="max-w-[900px] mb-6 flex items-center gap-3">
+        {isOpen ? (
+          <>
+            <div className="inline-flex items-center gap-2 px-3 py-2 bg-success/10 border border-success/30 rounded text-xs text-success font-medium">
+              <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              Projecting
+              {selectedMonitorLabel
+                ? ` to ${selectedMonitorLabel}`
+                : ""}
+            </div>
+            <button
+              className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-line bg-bg-2 text-ink-2 cursor-pointer transition-colors hover:bg-bg-3 hover:text-ink"
+              onClick={close}
+            >
+              Close display
+            </button>
+          </>
+        ) : (
+          <button
+            className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer transition-[filter] hover:brightness-[1.1]"
+            onClick={handleOpenOnProjector}
+          >
+            <MonitorIcon className="w-4 h-4" />
+            Open on projector
+          </button>
+        )}
       </div>
 
       {/* Output settings */}
@@ -117,47 +144,45 @@ export function DisplayScreen() {
         <h2 className="font-serif text-2xl font-normal tracking-[-0.015em] mb-4 pb-3 border-b border-line">
           Output settings
         </h2>
+
+        {/* Monitor selector */}
+        <SettingRow
+          label="Display output"
+          description={
+            monitors.length === 0
+              ? "No external displays detected."
+              : `${monitors.length} display${monitors.length > 1 ? "s" : ""} detected.`
+          }
+          control={
+            <select
+              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs min-w-[220px] cursor-pointer focus:border-accent focus:outline-none transition-colors"
+              value={selectedMonitor ?? "__primary__"}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "__primary__") {
+                  setSelectedMonitor(null);
+                } else {
+                  setSelectedMonitor(Number(val));
+                }
+              }}
+            >
+              <option value="__primary__">Primary monitor</option>
+              {monitors.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.is_primary ? "Built-in" : "External"}) — {m.width}×{m.height}
+                </option>
+              ))}
+            </select>
+          }
+        />
+
         <SettingRow
           label="Display URL"
           description="Copy this to OBS or open on the projector machine."
           control={
             <span className="font-mono text-[11px] text-accent">
-              {displayUrl}
+              {obsDisplayUrl}
             </span>
-          }
-        />
-        <SettingRow
-          label="Resolution"
-          description="Match your projector's native resolution for sharpest text."
-          control={
-            <select
-              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs min-w-[180px] cursor-pointer focus:border-accent focus:outline-none transition-colors"
-              value={resolution}
-              onChange={(e) => {
-                setResolution(e.target.value);
-              }}
-            >
-              <option>1920 × 1080</option>
-              <option>2560 × 1440</option>
-              <option>3840 × 2160</option>
-            </select>
-          }
-        />
-        <SettingRow
-          label="Background"
-          description="Black keeps focus on text. Transparent lets you overlay video."
-          control={
-            <select
-              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs min-w-[180px] cursor-pointer focus:border-accent focus:outline-none transition-colors"
-              value={background}
-              onChange={(e) => {
-                setBackground(e.target.value);
-              }}
-            >
-              <option>Solid black</option>
-              <option>Transparent</option>
-              <option>Custom image</option>
-            </select>
           }
         />
         <SettingRow

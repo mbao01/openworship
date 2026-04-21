@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { getAudioSettings, setAudioSettings } from "@/lib/commands/settings";
+import { getPreset, applyThemeTokens } from "@/lib/themes";
 import type { ThemeMode } from "@/lib/types";
 
-export type AccentName = "copper" | "crimson" | "sage" | "indigo";
 export type LayoutMode = "cinematic" | "dense";
 export type UIDensity = "normal" | "compact";
 export type ContentType = "scripture" | "lyrics" | "slide" | "black";
@@ -10,8 +10,8 @@ export type ContentType = "scripture" | "lyrics" | "slide" | "black";
 export interface DisplayPrefs {
   /** Light/dark/system theme. Maps to data-app-theme attribute. */
   appTheme: ThemeMode;
-  /** Named accent colour applied at runtime via CSS vars. */
-  accent: AccentName;
+  /** Preset theme ID (e.g. "parchment", "midnight"). */
+  preset: string;
   /** Stage layout density. */
   layoutMode: LayoutMode;
   /** UI information density. */
@@ -22,19 +22,12 @@ export interface DisplayPrefs {
   confThreshold: number;
 }
 
-const ACCENT_MAP: Record<AccentName, { c: string; hover: string; soft: string }> = {
-  copper:  { c: "#C9A76A", hover: "#D9B879", soft: "rgba(201,167,106,0.12)" },
-  crimson: { c: "#B66A66", hover: "#C57C78", soft: "rgba(182,106,102,0.12)" },
-  sage:    { c: "#8AB67B", hover: "#9EC58F", soft: "rgba(138,182,123,0.12)" },
-  indigo:  { c: "#7C8BB5", hover: "#8E9CC2", soft: "rgba(124,139,181,0.12)" },
-};
-
 const PREFS_KEY = "ow-ui-prefs";
 const THEME_KEY = "ow-theme-fallback";
 
 const DEFAULTS: DisplayPrefs = {
   appTheme: "dark",
-  accent: "copper",
+  preset: "parchment",
   layoutMode: "cinematic",
   density: "normal",
   contentType: "scripture",
@@ -44,7 +37,14 @@ const DEFAULTS: DisplayPrefs = {
 function loadPrefs(): DisplayPrefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Migration: old prefs had "accent" field, no "preset"
+      if (!parsed.preset && parsed.accent) {
+        parsed.preset = "parchment";
+      }
+      return { ...DEFAULTS, ...parsed };
+    }
   } catch {
     // ignore
   }
@@ -73,7 +73,7 @@ function resolveTheme(mode: ThemeMode): "dark" | "light" {
 
 /**
  * Applies all display preferences to the DOM immediately.
- * Uses data-attribute based theming (NOT .dark class).
+ * Looks up the preset, selects light/dark tokens, and sets all CSS vars.
  */
 function applyPrefs(prefs: DisplayPrefs): void {
   const root = document.documentElement;
@@ -83,23 +83,22 @@ function applyPrefs(prefs: DisplayPrefs): void {
   root.setAttribute("data-layout-mode", prefs.layoutMode);
   root.setAttribute("data-density", prefs.density);
 
-  // Also keep .dark class for shadcn compatibility
+  // Keep .dark class for shadcn compatibility
   if (resolved === "dark") {
     root.classList.add("dark");
   } else {
     root.classList.remove("dark");
   }
 
-  // Apply accent CSS vars
-  const a = ACCENT_MAP[prefs.accent] ?? ACCENT_MAP.copper;
-  root.style.setProperty("--color-accent", a.c);
-  root.style.setProperty("--color-accent-hover", a.hover);
-  root.style.setProperty("--color-accent-soft", a.soft);
+  // Apply full theme preset tokens
+  const preset = getPreset(prefs.preset);
+  const tokens = resolved === "dark" ? preset.dark : preset.light;
+  applyThemeTokens(tokens);
 }
 
 export interface UseThemeReturn extends DisplayPrefs {
   setAppTheme: (v: ThemeMode) => void;
-  setAccent: (v: AccentName) => void;
+  setPreset: (v: string) => void;
   setLayoutMode: (v: LayoutMode) => void;
   setDensity: (v: UIDensity) => void;
   setContentType: (v: ContentType) => void;
@@ -107,14 +106,11 @@ export interface UseThemeReturn extends DisplayPrefs {
 }
 
 /**
- * Manages all display preferences: theme, accent, layout, density, content type.
+ * Manages all display preferences: theme, preset, layout, density, content type.
  *
  * Applies settings immediately via DOM attributes and CSS vars.
  * Persists to localStorage for FOUC prevention and to AudioSettings backend
  * for cross-session persistence.
- *
- * Theme switching uses data-app-theme attribute — NOT .dark class toggle.
- * (.dark class is also kept in sync for shadcn compatibility only.)
  */
 export function useTheme(): UseThemeReturn {
   const [prefs, setPrefs] = useState<DisplayPrefs>(loadPrefs);
@@ -154,7 +150,7 @@ export function useTheme(): UseThemeReturn {
       applyPrefs(next);
       savePrefs(next);
 
-      // Persist theme to backend
+      // Persist theme mode to backend
       if (patch.appTheme !== undefined) {
         try {
           const s = await getAudioSettings();
@@ -170,7 +166,7 @@ export function useTheme(): UseThemeReturn {
   return {
     ...prefs,
     setAppTheme: (v) => update({ appTheme: v }),
-    setAccent: (v) => update({ accent: v }),
+    setPreset: (v) => update({ preset: v }),
     setLayoutMode: (v) => update({ layoutMode: v }),
     setDensity: (v) => update({ density: v }),
     setContentType: (v) => update({ contentType: v }),
