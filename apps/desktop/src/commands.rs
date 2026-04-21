@@ -3130,7 +3130,7 @@ pub fn get_storage_usage(state: State<'_, AppState>) -> Result<crate::cloud_sync
 #[cfg(test)]
 mod tests {
     use super::content_event_for_item;
-    use ow_core::{QueueItem, content_kind};
+    use ow_core::QueueItem;
 
     #[test]
     fn content_event_scripture_kind() {

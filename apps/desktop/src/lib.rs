@@ -16,7 +16,7 @@ mod state;
 mod summaries;
 
 use ow_audio::SttEngine;
-use ow_core::{DetectionMode, QueueItem, SongRef};
+use ow_core::{QueueItem, SongRef};
 use ow_embed::SemanticIndex;
 use tauri::Manager;
 use settings::{AudioSettings, DisplaySettings};
