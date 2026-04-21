@@ -34,6 +34,8 @@ interface DisplayContentProps {
   chunkIndex?: number;
   countdownSecs?: number | null;
   onAdvanceLyric?: () => void;
+  /** When true, shows "no content" placeholder when content is null. */
+  showEmptyState?: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -86,6 +88,7 @@ export function DisplayContent({
   chunkIndex = 0,
   countdownSecs,
   onAdvanceLyric,
+  showEmptyState = false,
 }: DisplayContentProps) {
   const isSong = content?.kind === "song";
   const isCountdown = content?.kind === "countdown";
@@ -241,14 +244,14 @@ export function DisplayContent({
               </div>
             )}
           </>
-        ) : (
+        ) : showEmptyState ? (
           <div
-            className="font-mono tracking-[0.2em] uppercase text-center w-full text-primary"
+            className="font-mono tracking-[0.2em] uppercase text-center w-full text-[#3A332C]"
             style={{ fontSize: 14 }}
           >
             — no content on screen —
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Watermark */}

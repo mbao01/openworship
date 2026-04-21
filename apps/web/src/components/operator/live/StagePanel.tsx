@@ -110,6 +110,7 @@ function ScaledPreview({
         <DisplayContent
           content={toDisplayEvent(item)}
           backgroundValue={backgroundValue}
+          showEmptyState
         />
       </div>
     </div>
