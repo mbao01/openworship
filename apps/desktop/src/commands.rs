@@ -1246,7 +1246,7 @@ pub fn search_content_bank(
     let q = query.to_lowercase();
     let results: Vec<ContentBankEntry> = if q.is_empty() {
         let mut entries: Vec<ContentBankEntry> = bank.iter().cloned().collect();
-        entries.sort_by(|a, b| b.last_used_ms.cmp(&a.last_used_ms));
+        entries.sort_by_key(|e| std::cmp::Reverse(e.last_used_ms));
         entries.truncate(20);
         entries
     } else {
@@ -2352,7 +2352,7 @@ pub fn list_service_summaries(state: State<'_, AppState>) -> Result<Vec<ServiceS
         .read()
         .map_err(|e| e.to_string())?
         .clone();
-    summaries.sort_by(|a, b| b.generated_at_ms.cmp(&a.generated_at_ms));
+    summaries.sort_by_key(|s| std::cmp::Reverse(s.generated_at_ms));
     Ok(summaries)
 }
 
