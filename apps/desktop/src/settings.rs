@@ -25,6 +25,33 @@ pub enum ThemeMode {
     Dark,
 }
 
+/// Which Whisper model size to use for local STT.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WhisperModel {
+    /// ~75 MB — fastest, lowest quality.
+    Tiny,
+    /// ~140 MB — decent balance for older hardware.
+    #[default]
+    Base,
+    /// ~460 MB — good quality, recommended for Apple Silicon.
+    Small,
+    /// ~1.5 GB — high quality, slower on CPU.
+    Medium,
+}
+
+impl WhisperModel {
+    /// Returns the ggml model filename for this variant.
+    pub fn filename(&self) -> &'static str {
+        match self {
+            Self::Tiny => "ggml-tiny.en.bin",
+            Self::Base => "ggml-base.en.bin",
+            Self::Small => "ggml-small.en.bin",
+            Self::Medium => "ggml-medium.en.bin",
+        }
+    }
+}
+
 /// Which STT backend the operator has selected.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -77,6 +104,9 @@ pub struct AudioSettings {
     /// Detection mode persisted across restarts. Default: Copilot.
     #[serde(default)]
     pub detection_mode: DetectionMode,
+    /// Which Whisper model to use for local STT.
+    #[serde(default)]
+    pub whisper_model: WhisperModel,
 }
 
 impl Default for AudioSettings {
@@ -92,6 +122,7 @@ impl Default for AudioSettings {
             audio_input_device: None,
             theme: ThemeMode::System,
             detection_mode: DetectionMode::default(),
+            whisper_model: WhisperModel::default(),
         }
     }
 }
@@ -114,6 +145,8 @@ struct AudioSettingsFile {
     theme: ThemeMode,
     #[serde(default)]
     detection_mode: Option<DetectionMode>,
+    #[serde(default)]
+    whisper_model: Option<WhisperModel>,
 }
 
 impl AudioSettings {
@@ -179,6 +212,7 @@ impl AudioSettings {
             audio_input_device: file.audio_input_device,
             theme: file.theme,
             detection_mode: file.detection_mode.unwrap_or(defaults.detection_mode),
+            whisper_model: file.whisper_model.unwrap_or(defaults.whisper_model),
         })
     }
 

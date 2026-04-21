@@ -261,7 +261,10 @@ fn start_stt_with_settings(
     #[cfg(feature = "whisper")]
     {
         use ow_audio::WhisperTranscriber;
-        match WhisperTranscriber::from_env() {
+        // Resolve model path using the configured model preference
+        let preferred = settings.whisper_model.filename();
+        let model_path = ow_audio::resolve_model_path_for(Some(preferred));
+        match model_path.and_then(|p| WhisperTranscriber::new(&p)) {
             Ok(t) => {
                 eprintln!("[stt] starting Whisper.cpp offline transcriber");
                 return engine.start(t, config);
@@ -280,37 +283,45 @@ fn start_stt_with_settings(
     anyhow::bail!("No STT backend available. Download the Whisper model from Settings → Audio.")
 }
 
-/// Download the Whisper base.en model to `~/.openworship/models/ggml-base.en.bin`.
-/// Returns `true` if a usable Whisper model file already exists on disk.
+/// Returns `true` if the specified Whisper model file exists on disk.
+/// If no model name given, checks for any usable model via the fallback chain.
 #[tauri::command]
-pub fn check_whisper_model() -> bool {
+pub fn check_whisper_model(model: Option<String>) -> bool {
     #[cfg(feature = "whisper")]
     {
-        ow_audio::resolve_model_path().is_ok()
+        if let Some(ref name) = model {
+            ow_audio::check_model(name)
+        } else {
+            ow_audio::resolve_model_path().is_ok()
+        }
     }
     #[cfg(not(feature = "whisper"))]
     {
+        let _ = model;
         false
     }
 }
 
 ///
 /// Emits `stt://model-download-progress` events during download with payload
-/// `{ downloaded_bytes: u64, total_bytes: u64 | null, percent: number | null }`.
+/// `{ downloaded_bytes: u64, total_bytes: u64 | null, percent: number | null, model: string }`.
 /// Emits `stt://model-download-complete` on success.
-/// Returns an error string on failure.
+/// Accepts an optional `model` filename (e.g. "ggml-small.en.bin"); defaults to base.en.
 #[tauri::command]
-pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
+pub async fn download_whisper_model(app: AppHandle, model: Option<String>) -> Result<(), String> {
     use reqwest::header::CONTENT_LENGTH;
     use tokio::io::AsyncWriteExt;
 
-    const MODEL_URL: &str =
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin";
+    let model_filename = model.unwrap_or_else(|| "ggml-base.en.bin".to_string());
+    let model_url = format!(
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}",
+        model_filename
+    );
 
     let dest = {
         #[cfg(feature = "whisper")]
         {
-            ow_audio::default_model_path()
+            ow_audio::model_path_for(&model_filename)
         }
         #[cfg(not(feature = "whisper"))]
         {
@@ -318,7 +329,7 @@ pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
             std::path::PathBuf::from(home)
                 .join(".openworship")
                 .join("models")
-                .join("ggml-base.en.bin")
+                .join(&model_filename)
         }
     };
 
@@ -330,7 +341,7 @@ pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
 
     let client = reqwest::Client::new();
     let response = client
-        .get(MODEL_URL)
+        .get(&model_url)
         .send()
         .await
         .map_err(|e| format!("Download request failed: {e}"))?;
@@ -367,6 +378,7 @@ pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
                 "downloaded_bytes": downloaded,
                 "total_bytes": total_bytes,
                 "percent": percent,
+                "model": &model_filename,
             }),
         );
     }

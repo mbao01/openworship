@@ -65,18 +65,19 @@ export async function stopAudioMonitor(): Promise<void> {
 }
 
 /**
- * Checks whether the local Whisper base model is downloaded and available.
- * Returns true if the model file exists at ~/.openworship/models/.
+ * Checks whether a Whisper model is downloaded and available.
+ * @param model - Model filename (e.g. "ggml-small.en.bin"). If omitted, checks any usable model.
  */
-export async function checkWhisperModel(): Promise<boolean> {
-  return invoke<boolean>("check_whisper_model");
+export async function checkWhisperModel(model?: string): Promise<boolean> {
+  return invoke<boolean>("check_whisper_model", { model: model ?? null });
 }
 
 /**
- * Initiates a background download of the Whisper base.en model (~148 MB).
+ * Initiates a background download of a Whisper model.
+ * @param model - Model filename (e.g. "ggml-small.en.bin"). Defaults to base.en.
  * Emits `stt://model-download-progress` events during download and
  * `stt://model-download-complete` on completion.
  */
-export async function downloadWhisperModel(): Promise<void> {
-  return invoke("download_whisper_model");
+export async function downloadWhisperModel(model?: string): Promise<void> {
+  return invoke("download_whisper_model", { model: model ?? null });
 }

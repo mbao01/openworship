@@ -10,7 +10,14 @@ import { VuMeter } from "@/components/ui/vu-meter";
 import { Button } from "@/components/ui/button";
 import { listAudioInputDevices, startAudioMonitor, stopAudioMonitor } from "@/lib/commands/audio";
 import { setAnthropicApiKey } from "@/lib/commands/settings";
-import type { AudioInputDevice } from "@/lib/types";
+import type { AudioInputDevice, WhisperModel } from "@/lib/types";
+
+const WHISPER_MODELS: { value: WhisperModel; filename: string; label: string; size: string; recommended?: boolean }[] = [
+  { value: "tiny", filename: "ggml-tiny.en.bin", label: "Tiny", size: "~75 MB" },
+  { value: "base", filename: "ggml-base.en.bin", label: "Base", size: "~140 MB" },
+  { value: "small", filename: "ggml-small.en.bin", label: "Small", size: "~460 MB", recommended: true },
+  { value: "medium", filename: "ggml-medium.en.bin", label: "Medium", size: "~1.5 GB" },
+];
 
 /**
  * Audio settings section: STT backend, Anthropic API key, Whisper model,
@@ -18,7 +25,8 @@ import type { AudioInputDevice } from "@/lib/types";
  */
 export function AudioSection() {
   const { settings, update, loading } = useAudioSettings();
-  const { installed, downloading, progress, download } = useWhisperModel();
+  const selectedModel = WHISPER_MODELS.find((m) => m.value === (settings?.whisper_model ?? "base")) ?? WHISPER_MODELS[1];
+  const { installed, downloading, progress, download } = useWhisperModel(selectedModel.filename);
   const audioLevel = useAudioLevel();
   const [devices, setDevices] = useState<AudioInputDevice[]>([]);
   const [apiKey, setApiKey] = useState("");
@@ -105,27 +113,54 @@ export function AudioSection() {
         </SettingRow>
 
         {settings.backend === "whisper" && (
-          <SettingRow
-            label="Whisper model"
-            description={
-              installed ? "Model installed" : "~75 MB download required"
-            }
-          >
-            {installed ? (
-              <span className="font-mono text-[10.5px] text-success uppercase tracking-[0.05em]">
-                Installed
-              </span>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={download}
-                disabled={downloading}
+          <>
+            <SettingRow
+              label="Whisper model"
+              description="Larger models are more accurate but slower and use more RAM."
+            >
+              <Select
+                value={settings.whisper_model ?? "base"}
+                onValueChange={(v) =>
+                  update({ whisper_model: v as WhisperModel })
+                }
               >
-                {downloading ? `${Math.round(progress)}%…` : "Download"}
-              </Button>
-            )}
-          </SettingRow>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WHISPER_MODELS.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label} ({m.size})
+                      {m.recommended ? " *" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SettingRow>
+            <SettingRow
+              label="Model status"
+              description={
+                installed
+                  ? `${selectedModel.label} model ready`
+                  : `${selectedModel.size} download required`
+              }
+            >
+              {installed ? (
+                <span className="font-mono text-[10.5px] text-success uppercase tracking-[0.05em]">
+                  Installed
+                </span>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={download}
+                  disabled={downloading}
+                >
+                  {downloading ? `${Math.round(progress)}%…` : "Download"}
+                </Button>
+              )}
+            </SettingRow>
+          </>
         )}
 
         {settings.backend === "deepgram" && (

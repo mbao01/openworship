@@ -88,6 +88,9 @@ export type SttBackend = "whisper" | "deepgram" | "off";
 /** Matches Rust `ThemeMode` enum. */
 export type ThemeMode = "light" | "dark" | "system";
 
+/** Matches Rust `WhisperModel` enum. */
+export type WhisperModel = "tiny" | "base" | "small" | "medium";
+
 /** Matches Rust `AudioInputDevice` struct from `capture.rs`. */
 export interface AudioInputDevice {
   name: string;
@@ -107,6 +110,8 @@ export interface AudioSettings {
   audio_input_device: string | null;
   /** UI colour scheme preference. */
   theme: ThemeMode;
+  /** Which Whisper model to use for local STT. */
+  whisper_model: WhisperModel;
 }
 
 /** Matches Rust `BranchRole` enum. */
