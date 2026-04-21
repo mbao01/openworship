@@ -1,27 +1,38 @@
-import { CircleIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useQueue } from "../../../hooks/use-queue";
 import { useTranslations } from "../../../hooks/use-translations";
 import { useDisplayBackground } from "../../../hooks/use-display-background";
+import {
+  DisplayContent,
+  REF_WIDTH,
+  REF_HEIGHT,
+  type DisplayContentEvent,
+} from "../../display/DisplayContent";
 import type { DetectionMode, QueueItem } from "../../../lib/types";
 import { toastError } from "../../../lib/toast";
-import { AssetRenderer } from "./AssetRenderer";
 import { BackgroundPicker } from "./BackgroundPicker";
 
-function StageBtn({ label, kbd, primary, onClick, disabled, danger }: {
+function StageBtn({
+  label,
+  kbd,
+  primary,
+  onClick,
+  disabled,
+}: {
   label: string;
   kbd?: string;
   primary?: boolean;
   onClick?: () => void;
   disabled?: boolean;
-  danger?: boolean;
 }) {
-  let cls = "inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase border rounded transition-colors cursor-pointer";
+  let cls =
+    "inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase border rounded transition-colors cursor-pointer";
   if (primary) {
-    cls += " bg-accent text-accent-foreground border-accent font-semibold hover:bg-accent-hover";
-  } else if (danger) {
-    cls += " text-danger border-danger bg-bg-2 hover:bg-bg-3";
+    cls +=
+      " bg-accent text-accent-foreground border-accent font-semibold hover:bg-accent-hover";
   } else {
-    cls += " text-ink-2 border-line bg-bg-2 hover:bg-bg-3 hover:text-ink hover:border-line-strong";
+    cls +=
+      " text-ink-2 border-line bg-bg-2 hover:bg-bg-3 hover:text-ink hover:border-line-strong";
   }
   if (disabled) cls += " opacity-40 pointer-events-none cursor-not-allowed";
 
@@ -29,9 +40,7 @@ function StageBtn({ label, kbd, primary, onClick, disabled, danger }: {
     <button className={cls} onClick={onClick} disabled={disabled}>
       {label}
       {kbd && (
-        <kbd className={`font-mono text-[8.5px] px-1 py-px rounded-sm ${
-          primary ? "bg-black/20 text-black/60" : "bg-bg-4 text-ink-3"
-        }`}>
+        <kbd className="font-mono text-[8.5px] px-1 py-px rounded-sm bg-bg-4 text-ink-3">
           {kbd}
         </kbd>
       )}
@@ -39,31 +48,47 @@ function StageBtn({ label, kbd, primary, onClick, disabled, danger }: {
   );
 }
 
-function DisplayScreen({
-  label,
-  labelColor,
+function toDisplayEvent(item: QueueItem | null): DisplayContentEvent | null {
+  if (!item) return null;
+  return {
+    kind: item.kind ?? "scripture",
+    reference: item.reference,
+    text: item.text,
+    translation: item.translation,
+    image_url: item.image_url ?? undefined,
+  };
+}
+
+/**
+ * Scaled display preview — renders DisplayContent at 1920×1080 then
+ * CSS-scales it down to fit the preview container. Pixel-perfect miniature.
+ */
+function ScaledPreview({
   item,
-  dimmed,
   backgroundValue,
+  dimmed,
 }: {
-  label: string;
-  labelColor: string;
   item: QueueItem | null;
-  dimmed?: boolean;
   backgroundValue?: string | null;
+  dimmed?: boolean;
 }) {
-  const isSong = item?.kind === "song";
-  const isLive = label === "LIVE";
-  const marker = isLive ? (
-    <CircleIcon className="w-3 h-3 shrink-0 inline" fill="currentColor" />
-  ) : (
-    <CircleIcon className="w-3 h-3 shrink-0 inline" />
-  );
-  const sublabel = isLive ? "ON SCREEN" : "CUED NEXT";
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.35);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setScale(el.clientWidth / REF_WIDTH);
+    update();
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   return (
     <div
-      className={`relative w-full aspect-video bg-[#050403] text-[#F5EFDF] px-11 py-8 flex flex-col justify-center border border-line-strong overflow-hidden ${
+      ref={containerRef}
+      className={`relative w-full aspect-video overflow-hidden border border-line-strong ${
         dimmed
           ? "opacity-[0.85] hover:opacity-[0.95] border-[rgba(201,167,106,0.35)]"
           : ""
@@ -74,84 +99,19 @@ function DisplayScreen({
           : "0 20px 60px -20px rgba(0,0,0,0.6), inset 0 0 120px rgba(0,0,0,0.6)",
       }}
     >
-      {/* Background layer */}
-      {backgroundValue && (
-        <div className="absolute inset-0 z-0">
-          {backgroundValue.startsWith("data:video/") ? (
-            <video
-              src={backgroundValue}
-              autoPlay
-              loop
-              muted
-              className="w-full h-full object-cover"
-            />
-          ) : backgroundValue.startsWith("data:image/") ||
-            backgroundValue.startsWith("blob:") ? (
-            <img
-              src={backgroundValue}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div
-              className="w-full h-full"
-              style={{ background: backgroundValue }}
-            />
-          )}
-        </div>
-      )}
-      {/* Label bar */}
       <div
-        className="absolute top-0 left-0 right-0 z-10 px-4 py-2 flex justify-between font-mono text-[9.5px] tracking-[0.18em] uppercase"
-        style={{ color: dimmed ? labelColor : "rgba(245,239,223,0.5)" }}
+        style={{
+          width: REF_WIDTH,
+          height: REF_HEIGHT,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
       >
-        <span className="inline-flex items-center gap-1">
-          {marker} {label} · {sublabel}
-        </span>
-        <span>openworship</span>
+        <DisplayContent
+          content={toDisplayEvent(item)}
+          backgroundValue={backgroundValue}
+        />
       </div>
-
-      {item ? (
-        <div className="relative z-10">
-          {item.image_url?.startsWith("artifact:") ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <AssetRenderer
-                artifactRef={item.image_url}
-                filename={item.reference}
-              />
-            </div>
-          ) : !isSong ? (
-            <>
-              <div
-                className="font-mono text-[10.5px] tracking-[0.22em] uppercase text-accent mb-3"
-                style={dimmed ? { color: "rgba(201,167,106,0.6)" } : undefined}
-              >
-                {item.reference} · {item.translation}
-              </div>
-              <div
-                className="font-serif italic leading-[1.35] tracking-[-0.01em] max-w-[48ch]"
-                style={{
-                  fontSize: "clamp(15px, 1.7vw, 22px)",
-                  color: dimmed ? "rgba(245,239,223,0.72)" : "#F5EFDF",
-                }}
-              >
-                &ldquo;{item.text}&rdquo;
-              </div>
-            </>
-          ) : (
-            <div
-              className="font-serif text-center w-full"
-              style={{ fontSize: "clamp(15px, 1.7vw, 22px)" }}
-            >
-              <div>{item.reference}</div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="relative z-10 font-mono text-[10px] tracking-[0.2em] uppercase text-center w-full text-[#3A332C]">
-          — {isLive ? "no content" : "nothing cued"} —
-        </div>
-      )}
     </div>
   );
 }
@@ -167,14 +127,10 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
   const { activeId, presets, uploaded, previewId } = bg;
   const pending = queue[0] ?? null;
 
-  // Resolve a background ID to its display value (CSS gradient or data URL).
-  // For presets, use the value from the presets list. For artifacts, it will
-  // be resolved when applied to live (backend sends resolved value to display).
   const allBgs = [...presets, ...uploaded];
   const resolveValue = (id: string | null) => {
     if (!id) return null;
-    const found = allBgs.find((bg) => bg.id === id);
-    return found?.value ?? null;
+    return allBgs.find((b) => b.id === id)?.value ?? null;
   };
 
   const liveBgValue = resolveValue(activeId);
@@ -182,8 +138,7 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
 
   return (
     <section className="flex-1 flex flex-col bg-bg overflow-hidden">
-      {/* Note strip */}
-      <div className="flex justify-between items-center px-3.5 py-1.5 font-mono text-[9.5px] tracking-[0.12em] uppercase text-ink-3 bg-bg-1 border-b border-line">
+      <div className="flex justify-between items-center px-3.5 py-2 h-[29px] font-mono text-[9.5px] tracking-[0.12em] uppercase text-ink-3 bg-bg-1 border-b border-line">
         <span>
           <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent mr-1.5" />
           {mode.toUpperCase()} MODE · listening · rolling 10s context
@@ -191,7 +146,6 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
         <span>DISPLAY OUTPUT</span>
       </div>
 
-      {/* Dual display preview */}
       <div
         className="flex-1 p-4 flex items-center justify-center overflow-hidden"
         style={{
@@ -200,25 +154,15 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
         }}
       >
         <div className="w-full max-w-[760px] h-full flex flex-col gap-3.5 justify-center">
-          {/* LIVE screen */}
-          <DisplayScreen
-            label="LIVE"
-            labelColor="inherit"
-            item={live}
-            backgroundValue={liveBgValue}
-          />
-          {/* PREVIEW screen */}
-          <DisplayScreen
-            label="PREVIEW"
-            labelColor="rgba(201,167,106,0.75)"
+          <ScaledPreview item={live} backgroundValue={liveBgValue} />
+          <ScaledPreview
             item={pending}
-            dimmed={Boolean(pending)}
             backgroundValue={previewBgValue}
+            dimmed={Boolean(pending)}
           />
         </div>
       </div>
 
-      {/* Stage toolbar */}
       <div className="flex items-center gap-2.5 px-4 py-2.5 border-t border-line bg-bg-1 h-[52px] shrink-0">
         <div className="flex gap-1">
           <span className="relative inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-white bg-live border border-live rounded">
