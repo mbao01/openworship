@@ -5,10 +5,11 @@ interface RailProps {
 
 const ITEMS = [
   { id: "plan", label: "Plan", icon: PlanIcon },
-  { id: "preview", label: "Rehearse", icon: PreviewIcon },
+  { id: "preview", label: "Prep", icon: PreviewIcon },
   { id: "live", label: "Live", icon: LiveIcon },
   { id: "library", label: "Bank", icon: LibraryIcon },
-  { id: "artifacts", label: "Output", icon: ArtifactsIcon },
+  { id: "assets", label: "Assets", icon: AssetsIcon },
+  { id: "logs", label: "Logs", icon: LogsIcon },
   { id: "display", label: "Screen", icon: DisplayIcon },
 ];
 
@@ -18,7 +19,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
       {ITEMS.map((item) => (
         <button
           key={item.id}
-          className={`relative flex flex-col items-center gap-1 py-2.5 mx-2 rounded transition-all ${
+          className={`relative flex flex-col items-center gap-1 py-2.5 mx-2 rounded transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
             screen === item.id
               ? "text-ink bg-bg-3"
               : "text-ink-3 hover:text-ink hover:bg-bg-2"
@@ -26,7 +27,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
           onClick={() => onScreenChange(item.id)}
         >
           {screen === item.id && (
-            <span className="absolute left-[-8px] top-2.5 bottom-2.5 w-0.5 bg-accent" />
+            <span className="absolute left-[-8px] top-2.5 bottom-2.5 w-[3px] bg-accent" />
           )}
           <item.icon />
           <span className="font-mono text-[8.5px] tracking-[0.1em] uppercase">
@@ -37,7 +38,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
       <div className="flex-1" />
       <div className="h-px bg-line mx-3 my-2" />
       <button
-        className={`relative flex flex-col items-center gap-1 py-2.5 mx-2 rounded transition-all ${
+        className={`relative flex flex-col items-center gap-1 py-2.5 mx-2 rounded transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
           screen === "settings"
             ? "text-ink bg-bg-3"
             : "text-ink-3 hover:text-ink hover:bg-bg-2"
@@ -45,7 +46,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
         onClick={() => onScreenChange("settings")}
       >
         {screen === "settings" && (
-          <span className="absolute left-[-8px] top-2.5 bottom-2.5 w-0.5 bg-accent" />
+          <span className="absolute left-[-8px] top-2.5 bottom-2.5 w-[3px] bg-accent" />
         )}
         <SettingsIcon />
         <span className="font-mono text-[8.5px] tracking-[0.1em] uppercase">
@@ -85,6 +86,14 @@ function LiveIcon() {
   );
 }
 
+function AssetsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
 function LibraryIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -93,9 +102,16 @@ function LibraryIcon() {
   );
 }
 
-function ArtifactsIcon() {
+function LogsIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
       <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
       <path d="M14 3v6h6M8 13h8M8 17h5" />
     </svg>

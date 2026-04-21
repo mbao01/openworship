@@ -1,4 +1,10 @@
-import { useTheme, type AccentName, type ContentType, type LayoutMode, type UIDensity, type WindowChrome } from "@/hooks/use-theme";
+import {
+  useTheme,
+  type AccentName,
+  type ContentType,
+  type LayoutMode,
+  type UIDensity,
+} from "@/hooks/use-theme";
 import { Section, SettingRow } from "@/components/ui/section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
@@ -6,10 +12,10 @@ import { cn } from "@/lib/cn";
 import type { ThemeMode } from "@/lib/types";
 
 const ACCENT_COLORS: { name: AccentName; hex: string; label: string }[] = [
-  { name: "copper",  hex: "#C9A76A", label: "Copper" },
+  { name: "copper", hex: "#C9A76A", label: "Copper" },
   { name: "crimson", hex: "#B66A66", label: "Crimson" },
-  { name: "sage",    hex: "#8AB67B", label: "Sage" },
-  { name: "indigo",  hex: "#7C8BB5", label: "Indigo" },
+  { name: "sage", hex: "#8AB67B", label: "Sage" },
+  { name: "indigo", hex: "#7C8BB5", label: "Indigo" },
 ];
 
 type SegOption<T extends string> = { value: T; label: string };
@@ -30,12 +36,12 @@ function SegmentedControl<T extends string>({
           key={opt.value}
           onClick={() => onChange(opt.value)}
           className={cn(
-            "flex-1 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em]",
+            "flex-1 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest",
             "border-r border-line last:border-r-0",
             "transition-all duration-100",
             value === opt.value
-              ? "bg-accent text-[#1A0D00] font-semibold"
-              : "text-ink-3 hover:text-ink hover:bg-bg-3"
+              ? "bg-accent text-accent-foreground font-semibold"
+              : "text-ink-3 hover:text-ink hover:bg-bg-3",
           )}
         >
           {opt.label}
@@ -56,13 +62,18 @@ function SegmentedControl<T extends string>({
  */
 export function AppearanceSection() {
   const {
-    appTheme, setAppTheme,
-    accent, setAccent,
-    layoutMode, setLayoutMode,
-    windowChrome, setWindowChrome,
-    density, setDensity,
-    contentType, setContentType,
-    confThreshold, setConfThreshold,
+    appTheme,
+    setAppTheme,
+    accent,
+    setAccent,
+    layoutMode,
+    setLayoutMode,
+    density,
+    setDensity,
+    contentType,
+    setContentType,
+    confThreshold,
+    setConfThreshold,
   } = useTheme();
 
   return (
@@ -82,8 +93,8 @@ export function AppearanceSection() {
           <Section title="Colour scheme">
             <SegmentedControl<ThemeMode>
               options={[
-                { value: "light",  label: "Light" },
-                { value: "dark",   label: "Dark" },
+                { value: "light", label: "Light" },
+                { value: "dark", label: "Dark" },
                 { value: "system", label: "System" },
               ]}
               value={appTheme}
@@ -102,7 +113,7 @@ export function AppearanceSection() {
                     "w-8 h-8 rounded-full transition-transform",
                     accent === name
                       ? "ring-2 ring-offset-2 ring-offset-bg-3 scale-110"
-                      : "hover:scale-105"
+                      : "hover:scale-105",
                   )}
                   style={{
                     backgroundColor: hex,
@@ -119,7 +130,7 @@ export function AppearanceSection() {
               <SegmentedControl<LayoutMode>
                 options={[
                   { value: "cinematic", label: "Cinematic" },
-                  { value: "dense",     label: "Dense" },
+                  { value: "dense", label: "Dense" },
                 ]}
                 value={layoutMode}
                 onChange={setLayoutMode}
@@ -128,25 +139,13 @@ export function AppearanceSection() {
             <SettingRow label="UI density">
               <SegmentedControl<UIDensity>
                 options={[
-                  { value: "normal",  label: "Normal" },
+                  { value: "normal", label: "Normal" },
                   { value: "compact", label: "Compact" },
                 ]}
                 value={density}
                 onChange={setDensity}
               />
             </SettingRow>
-          </Section>
-
-          <Section title="Window chrome" separator>
-            <SegmentedControl<WindowChrome>
-              options={[
-                { value: "mac",       label: "macOS" },
-                { value: "win",       label: "Windows" },
-                { value: "frameless", label: "None" },
-              ]}
-              value={windowChrome}
-              onChange={setWindowChrome}
-            />
           </Section>
         </TabsContent>
 
@@ -160,9 +159,9 @@ export function AppearanceSection() {
               <SegmentedControl<ContentType>
                 options={[
                   { value: "scripture", label: "Verse" },
-                  { value: "lyrics",    label: "Lyric" },
-                  { value: "slide",     label: "Slide" },
-                  { value: "black",     label: "Black" },
+                  { value: "lyrics", label: "Lyric" },
+                  { value: "slide", label: "Slide" },
+                  { value: "black", label: "Black" },
                 ]}
                 value={contentType}
                 onChange={setContentType}

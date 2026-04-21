@@ -27,14 +27,14 @@ function SelectTrigger({
         "hover:border-line-strong hover:bg-bg-3",
         "focus:outline-none focus:border-accent",
         "disabled:pointer-events-none disabled:opacity-50",
-        "data-[placeholder]:text-muted",
+        "data-placeholder:text-muted",
         size === "sm" && "h-7 px-2.5 text-xs",
         size === "default" && "h-8",
-        className
+        className,
       )}
       {...props}
     >
-      {children}
+      <span className="truncate">{children}</span>
       <SelectPrimitive.Icon asChild>
         <ChevronDownIcon className="size-3 text-ink-3 shrink-0" />
       </SelectPrimitive.Icon>
@@ -73,7 +73,7 @@ function SelectScrollDownButton({
 function SelectContent({
   className,
   children,
-  position = "popper",
+  position = "item-aligned",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -82,15 +82,15 @@ function SelectContent({
         data-slot="select-content"
         position={position}
         className={cn(
-          "relative z-50 overflow-hidden rounded border border-line-strong",
-          "bg-bg-3 text-ink shadow-[0_10px_32px_-12px_rgba(0,0,0,0.6)]",
+          "relative z-200 overflow-hidden rounded border border-line-strong",
+          "bg-bg-1 text-ink shadow-[0_10px_32px_-12px_rgba(0,0,0,0.6)]",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
           position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1 min-w-[var(--radix-select-trigger-width)]",
-          className
+            "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1 min-w-(--radix-select-trigger-width)",
+          className,
         )}
         {...props}
       >
@@ -98,7 +98,7 @@ function SelectContent({
         <SelectPrimitive.Viewport
           className={cn(
             "p-1",
-            position === "popper" && "h-[var(--radix-select-trigger-height)] w-full"
+            position === "popper" && "h-(--radix-select-trigger-height) w-full",
           )}
         >
           {children}
@@ -133,13 +133,13 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-[2px]",
+        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm",
         "py-1.5 pl-2 pr-8 text-sm",
         "outline-none",
-        "focus:bg-bg-4 focus:text-ink",
+        "focus:bg-bg-3 focus:text-ink",
         "data-[state=checked]:text-accent",
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        className
+        "data-disabled:pointer-events-none data-disabled:opacity-50",
+        className,
       )}
       {...props}
     >

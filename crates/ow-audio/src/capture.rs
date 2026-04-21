@@ -46,9 +46,10 @@ impl Default for AudioConfig {
     fn default() -> Self {
         Self {
             sample_rate: 16_000,
-            // Whisper needs ≥1.5 s of audio to produce any segments.
-            // 2 s balances low latency with reliable transcription.
-            chunk_ms: 2000,
+            // Small micro-chunks for low-latency streaming. The engine
+            // accumulates these into a 1.5s sliding window before
+            // transcribing — so Whisper still gets enough audio.
+            chunk_ms: 200,
             context_window_secs: 10,
             device_name: None,
         }

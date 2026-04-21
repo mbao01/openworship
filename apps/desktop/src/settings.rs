@@ -8,6 +8,7 @@
 //! Display settings are persisted separately in `~/.openworship/display_settings.json`.
 
 use anyhow::Result;
+use ow_core::DetectionMode;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -73,6 +74,9 @@ pub struct AudioSettings {
     /// UI colour scheme preference. Default: `System`.
     #[serde(default)]
     pub theme: ThemeMode,
+    /// Detection mode persisted across restarts. Default: Copilot.
+    #[serde(default)]
+    pub detection_mode: DetectionMode,
 }
 
 impl Default for AudioSettings {
@@ -87,6 +91,7 @@ impl Default for AudioSettings {
             lyrics_threshold_copilot: 0.78,
             audio_input_device: None,
             theme: ThemeMode::System,
+            detection_mode: DetectionMode::default(),
         }
     }
 }
@@ -107,6 +112,8 @@ struct AudioSettingsFile {
     audio_input_device: Option<String>,
     #[serde(default)]
     theme: ThemeMode,
+    #[serde(default)]
+    detection_mode: Option<DetectionMode>,
 }
 
 impl AudioSettings {
@@ -171,6 +178,7 @@ impl AudioSettings {
                 .unwrap_or(defaults.lyrics_threshold_copilot),
             audio_input_device: file.audio_input_device,
             theme: file.theme,
+            detection_mode: file.detection_mode.unwrap_or(defaults.detection_mode),
         })
     }
 
@@ -338,5 +346,46 @@ mod tests {
         let s: AudioSettings = serde_json::from_str(json).unwrap();
         assert!((s.lyrics_threshold_auto - 0.70).abs() < f32::EPSILON);
         assert!((s.lyrics_threshold_copilot - 0.78).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn default_has_expected_values() {
+        let s = AudioSettings::default();
+        assert_eq!(s.backend, SttBackend::Whisper);
+        assert!(s.deepgram_api_key.is_empty());
+        assert!(s.semantic_enabled);
+        assert!((s.semantic_threshold_auto - 0.75).abs() < f32::EPSILON);
+        assert!((s.semantic_threshold_copilot - 0.82).abs() < f32::EPSILON);
+        assert!(s.audio_input_device.is_none());
+        assert_eq!(s.theme, ThemeMode::System);
+    }
+
+    #[test]
+    fn default_includes_detection_mode() {
+        let s = AudioSettings::default();
+        // detection_mode should default to Copilot (from ow_core::DetectionMode::default())
+        assert_eq!(s.detection_mode, DetectionMode::Copilot);
+    }
+
+    #[test]
+    fn detection_mode_survives_json_round_trip() {
+        let s = AudioSettings {
+            detection_mode: DetectionMode::Auto,
+            ..AudioSettings::default()
+        };
+        let json = serde_json::to_string(&s).unwrap();
+        let parsed: AudioSettings = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.detection_mode, DetectionMode::Auto);
+    }
+
+    #[test]
+    fn load_returns_defaults_when_no_file() {
+        // AudioSettings::load() reads from HOME-based path.
+        // When HOME points to a non-existent dir, try_load returns defaults.
+        // We test the fallback by deserializing an empty JSON object.
+        let json = r#"{}"#;
+        let s: AudioSettings = serde_json::from_str(json).unwrap();
+        assert_eq!(s.backend, SttBackend::Whisper);
+        assert_eq!(s.detection_mode, DetectionMode::Copilot);
     }
 }

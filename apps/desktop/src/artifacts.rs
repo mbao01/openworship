@@ -84,6 +84,8 @@ pub struct ArtifactEntry {
     pub starred: bool,
     pub created_at_ms: i64,
     pub modified_at_ms: i64,
+    #[serde(default)]
+    pub thumbnail_path: Option<String>,
 }
 
 /// User-configurable settings for the artifact store.
@@ -147,12 +149,17 @@ impl ArtifactsDb {
                mime_type     TEXT,
                starred       INTEGER NOT NULL DEFAULT 0,
                created_at_ms INTEGER NOT NULL,
-               modified_at_ms INTEGER NOT NULL
+               modified_at_ms INTEGER NOT NULL,
+               thumbnail_path TEXT
              );
              CREATE INDEX IF NOT EXISTS idx_artifacts_service ON artifacts(service_id);
              CREATE INDEX IF NOT EXISTS idx_artifacts_parent  ON artifacts(parent_path);
              CREATE INDEX IF NOT EXISTS idx_artifacts_starred ON artifacts(starred);",
         )?;
+        // Migration: add thumbnail_path column for existing databases.
+        self.conn
+            .execute_batch("ALTER TABLE artifacts ADD COLUMN thumbnail_path TEXT;")
+            .ok(); // ignore error if column already exists
         Ok(())
     }
 
@@ -165,10 +172,11 @@ impl ArtifactsDb {
     ) -> Result<Vec<ArtifactEntry>> {
         let mut stmt = self.conn.prepare(
             "SELECT id,service_id,path,name,is_dir,parent_path,size_bytes,mime_type,
-                    starred,created_at_ms,modified_at_ms
+                    starred,created_at_ms,modified_at_ms,thumbnail_path
              FROM artifacts
              WHERE (service_id IS ?1 OR (?1 IS NULL AND service_id IS NULL))
                AND (parent_path IS ?2 OR (?2 IS NULL AND parent_path IS NULL))
+               AND name != '_thumbnails' AND path NOT LIKE '%/_thumbnails/%'
              ORDER BY is_dir DESC, name ASC",
         )?;
         let rows = stmt.query_map(params![service_id, parent_path], map_row)?;
@@ -181,8 +189,10 @@ impl ArtifactsDb {
     pub fn list_all(&self) -> Result<Vec<ArtifactEntry>> {
         let mut stmt = self.conn.prepare(
             "SELECT id,service_id,path,name,is_dir,parent_path,size_bytes,mime_type,
-                    starred,created_at_ms,modified_at_ms
-             FROM artifacts ORDER BY modified_at_ms DESC",
+                    starred,created_at_ms,modified_at_ms,thumbnail_path
+             FROM artifacts
+             WHERE name != '_thumbnails' AND path NOT LIKE '%/_thumbnails/%'
+             ORDER BY modified_at_ms DESC",
         )?;
         let rows = stmt.query_map([], map_row)?;
         let mut out = Vec::new();
@@ -193,8 +203,9 @@ impl ArtifactsDb {
     pub fn list_recent(&self, limit: usize) -> Result<Vec<ArtifactEntry>> {
         let mut stmt = self.conn.prepare(
             "SELECT id,service_id,path,name,is_dir,parent_path,size_bytes,mime_type,
-                    starred,created_at_ms,modified_at_ms
+                    starred,created_at_ms,modified_at_ms,thumbnail_path
              FROM artifacts WHERE is_dir=0
+               AND name != '_thumbnails' AND path NOT LIKE '%/_thumbnails/%'
              ORDER BY modified_at_ms DESC LIMIT ?",
         )?;
         let rows = stmt.query_map(params![limit as i64], map_row)?;
@@ -206,8 +217,10 @@ impl ArtifactsDb {
     pub fn list_starred(&self) -> Result<Vec<ArtifactEntry>> {
         let mut stmt = self.conn.prepare(
             "SELECT id,service_id,path,name,is_dir,parent_path,size_bytes,mime_type,
-                    starred,created_at_ms,modified_at_ms
-             FROM artifacts WHERE starred=1 ORDER BY name ASC",
+                    starred,created_at_ms,modified_at_ms,thumbnail_path
+             FROM artifacts WHERE starred=1
+               AND name != '_thumbnails' AND path NOT LIKE '%/_thumbnails/%'
+             ORDER BY name ASC",
         )?;
         let rows = stmt.query_map([], map_row)?;
         let mut out = Vec::new();
@@ -219,10 +232,11 @@ impl ArtifactsDb {
         let pattern = format!("%{query}%");
         let mut stmt = self.conn.prepare(
             "SELECT id,service_id,path,name,is_dir,parent_path,size_bytes,mime_type,
-                    starred,created_at_ms,modified_at_ms
+                    starred,created_at_ms,modified_at_ms,thumbnail_path
              FROM artifacts
              WHERE name LIKE ? COLLATE NOCASE
                AND (? IS NULL OR service_id=?)
+               AND name != '_thumbnails' AND path NOT LIKE '%/_thumbnails/%'
              ORDER BY name ASC LIMIT 100",
         )?;
         let rows = stmt.query_map(params![pattern, service_id, service_id], map_row)?;
@@ -234,7 +248,7 @@ impl ArtifactsDb {
     pub fn get_by_id(&self, id: &str) -> Result<Option<ArtifactEntry>> {
         let mut stmt = self.conn.prepare(
             "SELECT id,service_id,path,name,is_dir,parent_path,size_bytes,mime_type,
-                    starred,created_at_ms,modified_at_ms
+                    starred,created_at_ms,modified_at_ms,thumbnail_path
              FROM artifacts WHERE id=?",
         )?;
         let rows = stmt.query_map(params![id], map_row)?;
@@ -246,15 +260,16 @@ impl ArtifactsDb {
     pub fn upsert(&self, e: &ArtifactEntry) -> Result<()> {
         self.conn.execute(
             "INSERT INTO artifacts (id,service_id,path,name,is_dir,parent_path,size_bytes,
-                                    mime_type,starred,created_at_ms,modified_at_ms)
-             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)
+                                    mime_type,starred,created_at_ms,modified_at_ms,thumbnail_path)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)
              ON CONFLICT(path) DO UPDATE SET
                name=excluded.name, size_bytes=excluded.size_bytes,
-               mime_type=excluded.mime_type, modified_at_ms=excluded.modified_at_ms",
+               mime_type=excluded.mime_type, modified_at_ms=excluded.modified_at_ms,
+               thumbnail_path=excluded.thumbnail_path",
             params![
                 e.id, e.service_id, e.path, e.name, e.is_dir as i64,
                 e.parent_path, e.size_bytes, e.mime_type, e.starred as i64,
-                e.created_at_ms, e.modified_at_ms,
+                e.created_at_ms, e.modified_at_ms, e.thumbnail_path,
             ],
         )?;
         Ok(())
@@ -304,6 +319,32 @@ impl ArtifactsDb {
     }
 }
 
+// ─── Thumbnail generation ─────────────────────────────────────────────────────
+
+fn generate_thumbnail(abs_path: &std::path::Path, base_dir: &std::path::Path) -> Option<String> {
+    let mime = mime_guess::from_path(abs_path).first_or_octet_stream();
+    if !mime.to_string().starts_with("image/") {
+        return None;
+    }
+    let img = image::open(abs_path).ok()?;
+    let thumb = img.thumbnail(128, 128);
+
+    let parent = abs_path.parent()?;
+    let thumb_dir = parent.join("_thumbnails");
+    std::fs::create_dir_all(&thumb_dir).ok()?;
+
+    let stem = abs_path.file_stem()?.to_str()?;
+    let thumb_name = format!("{stem}.thumb.jpg");
+    let thumb_abs = thumb_dir.join(&thumb_name);
+
+    let file = std::fs::File::create(&thumb_abs).ok()?;
+    let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(file, 85);
+    thumb.write_with_encoder(encoder).ok()?;
+
+    let rel = thumb_abs.strip_prefix(base_dir).ok()?;
+    Some(rel.to_string_lossy().into_owned())
+}
+
 // ─── File operations ──────────────────────────────────────────────────────────
 
 pub fn create_dir(
@@ -333,6 +374,7 @@ pub fn create_dir(
         starred: false,
         created_at_ms: now_ms(),
         modified_at_ms: now_ms(),
+        thumbnail_path: None,
     };
     db.upsert(&entry)?;
     Ok(entry)
@@ -362,6 +404,8 @@ pub fn import_file(
         .with_context(|| format!("copy {} -> {}", src.display(), dest.display()))?;
     let meta = std::fs::metadata(&dest)?;
     let mime_type = mime_guess::from_path(&dest).first().map(|m| m.to_string());
+    let base_dir = PathBuf::from(&db.settings.base_path);
+    let thumbnail_path = generate_thumbnail(&dest, &base_dir);
     let entry = ArtifactEntry {
         id: new_id(),
         service_id,
@@ -374,6 +418,7 @@ pub fn import_file(
         starred: false,
         created_at_ms: now_ms(),
         modified_at_ms: now_ms(),
+        thumbnail_path,
     };
     db.upsert(&entry)?;
     Ok(entry)
@@ -402,6 +447,8 @@ pub fn write_artifact_bytes(
     std::fs::write(&dest, &data)
         .with_context(|| format!("write artifact: {}", dest.display()))?;
     let mime_type = mime_guess::from_path(&dest).first().map(|m| m.to_string());
+    let base_dir = PathBuf::from(&db.settings.base_path);
+    let thumbnail_path = generate_thumbnail(&dest, &base_dir);
     let entry = ArtifactEntry {
         id: new_id(),
         service_id,
@@ -414,6 +461,7 @@ pub fn write_artifact_bytes(
         starred: false,
         created_at_ms: now_ms(),
         modified_at_ms: now_ms(),
+        thumbnail_path,
     };
     db.upsert(&entry)?;
     Ok(entry)
@@ -550,6 +598,7 @@ fn map_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<ArtifactEntry> {
         starred: row.get::<_, i64>(8)? != 0,
         created_at_ms: row.get(9)?,
         modified_at_ms: row.get(10)?,
+        thumbnail_path: row.get(11)?,
     })
 }
 
@@ -573,7 +622,7 @@ mod tests {
             path: "s1/img.jpg".into(), name: "img.jpg".into(), is_dir: false,
             parent_path: Some("s1".into()), size_bytes: Some(1024),
             mime_type: Some("image/jpeg".into()), starred: false,
-            created_at_ms: 1000, modified_at_ms: 1000,
+            created_at_ms: 1000, modified_at_ms: 1000, thumbnail_path: None,
         };
         db.upsert(&e).unwrap();
         let list = db.list(Some("s1"), Some("s1")).unwrap();
@@ -589,7 +638,7 @@ mod tests {
                 id: new_id(), service_id: None, path: format!("_local/{name}"),
                 name: name.to_string(), is_dir: false, parent_path: Some("_local".into()),
                 size_bytes: Some(512), mime_type: None, starred: false,
-                created_at_ms: now_ms(), modified_at_ms: now_ms(),
+                created_at_ms: now_ms(), modified_at_ms: now_ms(), thumbnail_path: None,
             }).unwrap();
         }
         let r = db.search("sermon", None).unwrap();
@@ -604,7 +653,7 @@ mod tests {
             id: "s1".into(), service_id: None, path: "_local/f.txt".into(),
             name: "f.txt".into(), is_dir: false, parent_path: Some("_local".into()),
             size_bytes: Some(10), mime_type: None, starred: false,
-            created_at_ms: 1, modified_at_ms: 1,
+            created_at_ms: 1, modified_at_ms: 1, thumbnail_path: None,
         }).unwrap();
         db.toggle_star("s1", true).unwrap();
         assert_eq!(db.list_starred().unwrap().len(), 1);
@@ -619,9 +668,82 @@ mod tests {
             id: "d1".into(), service_id: None, path: "_local/del.txt".into(),
             name: "del.txt".into(), is_dir: false, parent_path: Some("_local".into()),
             size_bytes: None, mime_type: None, starred: false,
-            created_at_ms: 1, modified_at_ms: 1,
+            created_at_ms: 1, modified_at_ms: 1, thumbnail_path: None,
         }).unwrap();
         db.delete("d1").unwrap();
         assert!(db.list(None, None).unwrap().is_empty());
+    }
+
+    // ── safe_name tests ──────────────────────────────────────────────────
+
+    #[test]
+    fn safe_name_accepts_normal_names() {
+        assert!(safe_name("photo.jpg").is_ok());
+        assert!(safe_name("my-file_2024.pdf").is_ok());
+        assert!(safe_name("sermon notes.docx").is_ok());
+    }
+
+    #[test]
+    fn safe_name_rejects_forward_slash() {
+        assert!(safe_name("path/file.txt").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_backslash() {
+        assert!(safe_name("path\\file.txt").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_dot_dot_traversal() {
+        assert!(safe_name("../etc/passwd").is_err());
+        assert!(safe_name("foo..bar").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_null_bytes() {
+        assert!(safe_name("file\0name.txt").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_empty_string() {
+        assert!(safe_name("").is_err());
+        assert!(safe_name("   ").is_err());
+    }
+
+    #[test]
+    fn safe_name_rejects_names_over_255_chars() {
+        let long_name = "a".repeat(256);
+        assert!(safe_name(&long_name).is_err());
+        // Exactly 255 should be ok
+        let ok_name = "a".repeat(255);
+        assert!(safe_name(&ok_name).is_ok());
+    }
+
+    // ── assert_within_base tests ─────────────────────────────────────────
+
+    #[test]
+    fn assert_within_base_rejects_path_traversal() {
+        // Create real directories so canonicalize resolves the paths
+        let base = std::env::temp_dir().join("ow_traversal_test_base");
+        std::fs::create_dir_all(&base).unwrap();
+        // An evil path that resolves outside base (e.g. /tmp itself)
+        let evil = base.join("..").join("ow_traversal_evil_target");
+        std::fs::create_dir_all(&evil).unwrap();
+        let result = assert_within_base(&base, &evil);
+        assert!(result.is_err(), "path traversal should be rejected");
+        let _ = std::fs::remove_dir_all(&base);
+        let _ = std::fs::remove_dir_all(&evil);
+    }
+
+    #[test]
+    fn assert_within_base_accepts_child_path() {
+        // Use temp dir so canonicalize works
+        let base = std::env::temp_dir().join("ow_base_test");
+        let child = base.join("subdir").join("file.txt");
+        std::fs::create_dir_all(base.join("subdir")).ok();
+        std::fs::write(&child, b"test").ok();
+        let result = assert_within_base(&base, &child);
+        assert!(result.is_ok(), "child path should be accepted: {:?}", result);
+        let _ = std::fs::remove_dir_all(&base);
     }
 }

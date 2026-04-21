@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   getQueue,
@@ -33,18 +33,22 @@ export interface UseQueueReturn {
  *
  * Subscribes to the `detection://queue-updated` Tauri event for real-time
  * updates and provides action handlers for all queue operations.
+ *
+ * Event handler is debounced (300ms) to prevent re-render storms when
+ * detection fires rapidly during fast speech.
  */
 export function useQueue(): UseQueueReturn {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [live, setLive] = useState<QueueItem | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadQueue = useCallback(async () => {
     try {
       const items = await getQueue();
       setQueue(items.filter((i) => i.status === "pending"));
       setLive(items.find((i) => i.status === "live") ?? null);
-    } catch (e) {
-      console.error("[use-queue] load failed:", e);
+    } catch {
+      // silently ignore load failures
     }
   }, []);
 
@@ -53,13 +57,16 @@ export function useQueue(): UseQueueReturn {
 
     let unlisten: (() => void) | undefined;
     listen("detection://queue-updated", () => {
-      loadQueue();
+      // Debounce: coalesce rapid-fire events into one reload
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(loadQueue, 300);
     }).then((fn) => {
       unlisten = fn;
     });
 
     return () => {
       unlisten?.();
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [loadQueue]);
 

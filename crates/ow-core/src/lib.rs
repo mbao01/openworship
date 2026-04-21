@@ -527,4 +527,109 @@ mod tests {
         let refs = d.detect("open your Bibles to Genesis chapter 1");
         assert_eq!(refs, vec!["Genesis 1"]);
     }
+
+    // ── QueueItem tests ──────────────────────────────────────────────────
+
+    #[test]
+    fn queue_item_new_creates_with_pending_status() {
+        let item = QueueItem::new("Psalm 23:1".into(), "The Lord is my shepherd".into(), "WEB".into());
+        assert_eq!(item.status, QueueStatus::Pending);
+        assert_eq!(item.reference, "Psalm 23:1");
+        assert_eq!(item.translation, "WEB");
+        assert!(!item.id.is_empty());
+        assert!(!item.is_semantic);
+        assert!(item.confidence.is_none());
+        assert_eq!(item.kind, "scripture");
+    }
+
+    #[test]
+    fn queue_item_new_generates_unique_ids() {
+        let a = QueueItem::new("A".into(), "a".into(), "X".into());
+        let b = QueueItem::new("B".into(), "b".into(), "X".into());
+        assert_ne!(a.id, b.id);
+    }
+
+    #[test]
+    fn queue_item_new_song_has_song_kind() {
+        let item = QueueItem::new_song("Amazing Grace".into(), "lyrics".into(), "Newton".into(), 42);
+        assert_eq!(item.kind, "song");
+        assert_eq!(item.song_id, Some(42));
+        assert_eq!(item.status, QueueStatus::Pending);
+    }
+
+    #[test]
+    fn queue_item_new_announcement_has_correct_kind() {
+        let item = QueueItem::new_announcement("Welcome".into(), "Hello all".into(), None);
+        assert_eq!(item.kind, "announcement");
+        assert!(item.image_url.is_none());
+    }
+
+    #[test]
+    fn queue_item_new_countdown_has_duration() {
+        let item = QueueItem::new_countdown("Intermission".into(), 300);
+        assert_eq!(item.kind, "countdown");
+        assert_eq!(item.duration_secs, Some(300));
+    }
+
+    // ── DetectionMode serde round-trip ───────────────────────────────────
+
+    #[test]
+    fn detection_mode_serde_round_trip() {
+        for mode in [DetectionMode::Auto, DetectionMode::Copilot, DetectionMode::Airplane, DetectionMode::Offline] {
+            let json = serde_json::to_string(&mode).unwrap();
+            let back: DetectionMode = serde_json::from_str(&json).unwrap();
+            assert_eq!(mode, back);
+        }
+    }
+
+    #[test]
+    fn detection_mode_serializes_as_lowercase() {
+        assert_eq!(serde_json::to_string(&DetectionMode::Auto).unwrap(), r#""auto""#);
+        assert_eq!(serde_json::to_string(&DetectionMode::Copilot).unwrap(), r#""copilot""#);
+        assert_eq!(serde_json::to_string(&DetectionMode::Airplane).unwrap(), r#""airplane""#);
+        assert_eq!(serde_json::to_string(&DetectionMode::Offline).unwrap(), r#""offline""#);
+    }
+
+    // ── QueueStatus variants ─────────────────────────────────────────────
+
+    #[test]
+    fn queue_status_serde_round_trip() {
+        for status in [QueueStatus::Pending, QueueStatus::Live, QueueStatus::Dismissed] {
+            let json = serde_json::to_string(&status).unwrap();
+            let back: QueueStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(status, back);
+        }
+    }
+
+    #[test]
+    fn queue_status_serializes_as_lowercase() {
+        assert_eq!(serde_json::to_string(&QueueStatus::Pending).unwrap(), r#""pending""#);
+        assert_eq!(serde_json::to_string(&QueueStatus::Live).unwrap(), r#""live""#);
+        assert_eq!(serde_json::to_string(&QueueStatus::Dismissed).unwrap(), r#""dismissed""#);
+    }
+
+    // ── SongDetector tests ───────────────────────────────────────────────
+
+    #[test]
+    fn song_detector_empty_is_empty() {
+        let d = SongDetector::new(&[]);
+        assert!(d.is_empty());
+        assert!(d.detect("anything").is_empty());
+    }
+
+    #[test]
+    fn song_detector_finds_title_in_text() {
+        let songs = vec![SongRef { id: 1, title: "Amazing Grace".into() }];
+        let d = SongDetector::new(&songs);
+        let found = d.detect("We sang Amazing Grace today");
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].title, "Amazing Grace");
+    }
+
+    #[test]
+    fn song_detector_ignores_short_titles() {
+        let songs = vec![SongRef { id: 1, title: "Joy".into() }];
+        let d = SongDetector::new(&songs);
+        assert!(d.is_empty(), "titles < 5 chars should be filtered out");
+    }
 }

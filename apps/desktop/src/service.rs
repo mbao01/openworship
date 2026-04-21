@@ -38,7 +38,7 @@ pub fn now_ms() -> i64 {
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
 
-/// A single scripture item within a service project.
+/// A single content/event item within a service project.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectItem {
     pub id: String,
@@ -48,6 +48,46 @@ pub struct ProjectItem {
     /// Display order (0-based).
     pub position: usize,
     pub added_at_ms: i64,
+    /// Event type: "scripture", "song", "prayer", "sermon", "announcement", "other"
+    #[serde(default = "default_item_type")]
+    pub item_type: String,
+    /// Planned duration in seconds (e.g. 300 for 5 minutes).
+    #[serde(default)]
+    pub duration_secs: Option<u32>,
+    /// Operator notes for this event.
+    #[serde(default)]
+    pub notes: Option<String>,
+    /// Linked artifact IDs (assets attached to this event).
+    #[serde(default)]
+    pub asset_ids: Vec<String>,
+}
+
+fn default_item_type() -> String {
+    "scripture".into()
+}
+
+/// Task status for service planning.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskStatus {
+    Backlog,
+    Todo,
+    InProgress,
+    Done,
+    Cancelled,
+}
+
+/// A task within a service project (e.g. "Print bulletins", "Sound check").
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceTask {
+    pub id: String,
+    pub service_id: String,
+    pub title: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    pub status: TaskStatus,
+    pub created_at_ms: i64,
+    pub updated_at_ms: i64,
 }
 
 /// A named container for the ordered content plan of a single worship service.
@@ -58,7 +98,17 @@ pub struct ServiceProject {
     pub created_at_ms: i64,
     /// `None` while the service is active; set when the operator ends the service.
     pub closed_at_ms: Option<i64>,
+    /// Scheduled date/time for the service (operator-editable).
+    /// Defaults to `created_at_ms` if not set.
+    #[serde(default)]
+    pub scheduled_at_ms: Option<i64>,
+    /// Service description / notes.
+    #[serde(default)]
+    pub description: Option<String>,
     pub items: Vec<ProjectItem>,
+    /// Per-service task list.
+    #[serde(default)]
+    pub tasks: Vec<ServiceTask>,
 }
 
 impl ServiceProject {
@@ -112,7 +162,9 @@ pub fn save_projects(projects: &[ServiceProject]) -> Result<()> {
     if let Some(p) = path.parent() {
         std::fs::create_dir_all(p)?;
     }
-    std::fs::write(&path, serde_json::to_vec_pretty(projects)?)?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_vec_pretty(projects)?)?;
+    std::fs::rename(&tmp, &path)?;
     Ok(())
 }
 
@@ -136,7 +188,9 @@ pub fn save_content_bank(bank: &[ContentBankEntry]) -> Result<()> {
     if let Some(p) = path.parent() {
         std::fs::create_dir_all(p)?;
     }
-    std::fs::write(&path, serde_json::to_vec_pretty(bank)?)?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_vec_pretty(bank)?)?;
+    std::fs::rename(&tmp, &path)?;
     Ok(())
 }
 
@@ -177,6 +231,179 @@ pub fn save_session_memory(mem: &SessionMemory) -> Result<()> {
     if let Some(p) = path.parent() {
         std::fs::create_dir_all(p)?;
     }
-    std::fs::write(&path, serde_json::to_vec_pretty(mem)?)?;
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, serde_json::to_vec_pretty(mem)?)?;
+    std::fs::rename(&tmp, &path)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    // Serialize tests that mutate HOME so they don't race each other.
+    static HOME_LOCK: Mutex<()> = Mutex::new(());
+
+    fn with_temp_home<F: FnOnce()>(f: F) {
+        let _guard = HOME_LOCK.lock().unwrap();
+        let dir = std::env::temp_dir().join(format!("ow_test_{}", new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let prev = std::env::var("HOME").ok();
+        unsafe { std::env::set_var("HOME", &dir); }
+        f();
+        // Restore HOME
+        match prev {
+            Some(h) => unsafe { std::env::set_var("HOME", h) },
+            None => unsafe { std::env::remove_var("HOME") },
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn new_id_generates_unique_ids() {
+        let a = new_id();
+        let b = new_id();
+        assert_ne!(a, b);
+        // Should be 24 hex chars: 16 (timestamp) + 8 (counter)
+        assert_eq!(a.len(), 24);
+        assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn now_ms_returns_reasonable_timestamp() {
+        let ts = now_ms();
+        // Should be after 2020-01-01 and positive
+        assert!(ts > 1_577_836_800_000);
+        assert!(ts > 0);
+    }
+
+    #[test]
+    fn save_and_load_projects_round_trip() {
+        with_temp_home(|| {
+            let projects = vec![ServiceProject {
+                id: "p1".into(),
+                name: "Sunday Service".into(),
+                created_at_ms: 1000,
+                closed_at_ms: None,
+                scheduled_at_ms: None,
+                description: Some("Test service".into()),
+                items: vec![ProjectItem {
+                    id: "i1".into(),
+                    reference: "John 3:16".into(),
+                    text: "For God so loved".into(),
+                    translation: "KJV".into(),
+                    position: 0,
+                    added_at_ms: 1000,
+                    item_type: "scripture".into(),
+                    duration_secs: None,
+                    notes: None,
+                    asset_ids: vec![],
+                }],
+                tasks: vec![],
+            }];
+            save_projects(&projects).unwrap();
+            let loaded = load_projects();
+            assert_eq!(loaded.len(), 1);
+            assert_eq!(loaded[0].name, "Sunday Service");
+            assert_eq!(loaded[0].items.len(), 1);
+            assert_eq!(loaded[0].items[0].reference, "John 3:16");
+        });
+    }
+
+    #[test]
+    fn load_projects_returns_empty_when_no_file() {
+        with_temp_home(|| {
+            let loaded = load_projects();
+            assert!(loaded.is_empty());
+        });
+    }
+
+    #[test]
+    fn save_and_load_content_bank_round_trip() {
+        with_temp_home(|| {
+            let bank = vec![ContentBankEntry {
+                id: "cb1".into(),
+                reference: "Romans 8:28".into(),
+                text: "And we know".into(),
+                translation: "KJV".into(),
+                last_used_ms: 2000,
+                use_count: 3,
+            }];
+            save_content_bank(&bank).unwrap();
+            let loaded = load_content_bank();
+            assert_eq!(loaded.len(), 1);
+            assert_eq!(loaded[0].reference, "Romans 8:28");
+            assert_eq!(loaded[0].use_count, 3);
+        });
+    }
+
+    #[test]
+    fn load_content_bank_returns_empty_when_no_file() {
+        with_temp_home(|| {
+            let loaded = load_content_bank();
+            assert!(loaded.is_empty());
+        });
+    }
+
+    #[test]
+    fn save_and_load_session_memory_round_trip() {
+        with_temp_home(|| {
+            let mem = SessionMemory {
+                preferred_translation: Some("WEB".into()),
+            };
+            save_session_memory(&mem).unwrap();
+            let loaded = load_session_memory();
+            assert_eq!(loaded.preferred_translation, Some("WEB".into()));
+        });
+    }
+
+    #[test]
+    fn load_session_memory_returns_default_when_no_file() {
+        with_temp_home(|| {
+            let loaded = load_session_memory();
+            assert!(loaded.preferred_translation.is_none());
+        });
+    }
+
+    #[test]
+    fn atomic_write_temp_file_does_not_persist_on_success() {
+        with_temp_home(|| {
+            save_projects(&[]).unwrap();
+            let path = projects_path().unwrap();
+            let tmp = path.with_extension("json.tmp");
+            assert!(!tmp.exists(), "temp file should be removed after rename");
+            assert!(path.exists(), "final file should exist");
+        });
+    }
+
+    #[test]
+    fn service_project_is_open_when_not_closed() {
+        let p = ServiceProject {
+            id: "x".into(),
+            name: "Test".into(),
+            created_at_ms: 0,
+            closed_at_ms: None,
+            scheduled_at_ms: None,
+            description: None,
+            items: vec![],
+            tasks: vec![],
+        };
+        assert!(p.is_open());
+    }
+
+    #[test]
+    fn service_project_is_not_open_when_closed() {
+        let p = ServiceProject {
+            id: "x".into(),
+            name: "Test".into(),
+            created_at_ms: 0,
+            closed_at_ms: Some(1000),
+            scheduled_at_ms: None,
+            description: None,
+            items: vec![],
+            tasks: vec![],
+        };
+        assert!(!p.is_open());
+    }
 }

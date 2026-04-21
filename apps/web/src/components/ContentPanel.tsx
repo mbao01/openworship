@@ -14,7 +14,7 @@ import type { AnnouncementItem, SermonNote } from "../lib/types";
 const inputCls = "w-full bg-bg border-none border-b border-b-line text-ink font-sans text-xs py-2 px-0 outline-none transition-colors focus:border-b-accent";
 const textareaCls = "w-full box-sizing-border bg-bg border border-line rounded-[3px] text-ink font-sans text-xs p-2 resize-y outline-none transition-colors focus:border-accent";
 const btnBaseCls = "bg-none border border-line text-ink-3 rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:text-ink hover:not-disabled:border-line-strong";
-const btnPrimaryCls = "bg-none border border-accent text-accent rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-accent hover:not-disabled:text-[#1A0D00]";
+const btnPrimaryCls = "bg-none border border-accent text-accent rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-accent hover:not-disabled:text-accent-foreground";
 const sectionTitleCls = "text-[10px] font-semibold tracking-[0.14em] uppercase text-ink-3";
 
 type AnnForm = { title: string; body: string; image_url: string; keyword_cue: string };
@@ -395,7 +395,7 @@ function SermonNotesPanel() {
             Slide {activeSlide + 1} / {totalSlides}
           </span>
           <button
-            className="bg-none border border-accent text-accent rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-accent hover:not-disabled:text-[#1A0D00]"
+            className="bg-none border border-accent text-accent rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-accent hover:not-disabled:text-accent-foreground"
             onClick={handleAdvance}
             disabled={activeSlide + 1 >= totalSlides}
             title="Advance to next slide"

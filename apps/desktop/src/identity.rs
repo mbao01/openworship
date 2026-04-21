@@ -26,7 +26,7 @@ pub struct ChurchIdentity {
     pub branch_id: String,
     pub branch_name: String,
     pub role: BranchRole,
-    /// 8-char alphanumeric invite code, present only for HQ branches.
+    /// 16-char alphanumeric invite code, present only for HQ branches.
     pub invite_code: Option<String>,
 }
 
@@ -54,15 +54,16 @@ impl ChurchIdentity {
     }
 }
 
-/// Generate an 8-char uppercase alphanumeric invite code from a church UUID.
+/// Generate a 16-char uppercase alphanumeric invite code from a church UUID.
 ///
-/// Takes the first 8 hex chars of the UUID (stripping hyphens) and uppercases
+/// Takes the first 16 hex chars of the UUID (stripping hyphens) and uppercases
 /// them. Deterministic: same church_id always produces the same code.
+/// 16 hex chars = 64 bits of entropy (vs. 32 bits with the old 8-char code).
 pub fn derive_invite_code(church_id: &str) -> String {
     church_id
         .chars()
         .filter(|c| c.is_ascii_alphanumeric())
-        .take(8)
+        .take(16)
         .collect::<String>()
         .to_uppercase()
 }
@@ -123,8 +124,9 @@ pub fn join_church(
     state: tauri::State<'_, crate::state::AppState>,
 ) -> Result<ChurchIdentity, String> {
     let code = invite_code.trim().to_uppercase();
-    if code.len() != 8 || !code.chars().all(|c| c.is_ascii_alphanumeric()) {
-        return Err("Invite code must be exactly 8 alphanumeric characters.".into());
+    // Validate code format: 16 alphanumeric characters
+    if code.len() != 16 || !code.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err("Invalid invite code format".into());
     }
 
     // Derive the church_id from the invite code: the code IS the first 8 chars
@@ -213,10 +215,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn invite_code_is_8_chars_uppercase() {
+    fn invite_code_is_16_chars_uppercase() {
         let church_id = "3f8a1b2c-dead-beef-cafe-123456789abc";
         let code = derive_invite_code(church_id);
-        assert_eq!(code.len(), 8);
+        assert_eq!(code.len(), 16);
         assert!(code.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()));
     }
 
@@ -248,12 +250,70 @@ mod tests {
             branch_id: "abc12345-0000-4000-8000-000000000002".into(),
             branch_name: "Main Campus".into(),
             role: BranchRole::Hq,
-            invite_code: Some("ABC12345".into()),
+            invite_code: Some("ABC1234500004000".into()),
         };
         let json = serde_json::to_string(&id).unwrap();
         let back: ChurchIdentity = serde_json::from_str(&json).unwrap();
         assert_eq!(back.church_name, "Grace Church");
         assert_eq!(back.role, BranchRole::Hq);
-        assert_eq!(back.invite_code, Some("ABC12345".into()));
+        assert_eq!(back.invite_code, Some("ABC1234500004000".into()));
+    }
+
+    #[test]
+    fn invite_code_is_16_char_alphanumeric() {
+        let code = derive_invite_code("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+        assert_eq!(code.len(), 16);
+        assert!(
+            code.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()),
+            "code should be uppercase alphanumeric, got: {code}"
+        );
+    }
+
+    #[test]
+    fn invite_code_deterministic_same_input_same_output() {
+        let church_id = "aaaabbbb-cccc-dddd-eeee-ffffffffffff";
+        let code1 = derive_invite_code(church_id);
+        let code2 = derive_invite_code(church_id);
+        let code3 = derive_invite_code(church_id);
+        assert_eq!(code1, code2);
+        assert_eq!(code2, code3);
+    }
+
+    #[test]
+    fn different_church_ids_produce_different_codes() {
+        let code_a = derive_invite_code("11111111-2222-3333-4444-555555555555");
+        let code_b = derive_invite_code("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        assert_ne!(code_a, code_b);
+    }
+
+    #[test]
+    fn uuid_v4_produces_valid_format() {
+        let id = uuid_v4();
+        // UUID format: 8-4-4-4-12
+        assert_eq!(id.len(), 36);
+        let parts: Vec<&str> = id.split('-').collect();
+        assert_eq!(parts.len(), 5);
+        assert_eq!(parts[0].len(), 8);
+        assert_eq!(parts[1].len(), 4);
+        assert_eq!(parts[2].len(), 4);
+        assert_eq!(parts[3].len(), 4);
+        assert_eq!(parts[4].len(), 12);
+        // All chars are hex digits or hyphens
+        assert!(id.chars().all(|c| c.is_ascii_hexdigit() || c == '-'));
+        // Version nibble = 4
+        assert!(parts[2].starts_with('4'));
+        // Variant bits: first char of parts[3] must be 8, 9, a, or b
+        let variant_char = parts[3].chars().next().unwrap();
+        assert!(
+            "89ab".contains(variant_char),
+            "variant nibble should be 8/9/a/b, got: {variant_char}"
+        );
+    }
+
+    #[test]
+    fn uuid_v4_generates_unique_ids() {
+        let a = uuid_v4();
+        let b = uuid_v4();
+        assert_ne!(a, b);
     }
 }

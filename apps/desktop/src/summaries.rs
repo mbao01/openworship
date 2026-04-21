@@ -316,9 +316,11 @@ mod tests {
 
     #[test]
     fn roundtrip_email_settings_json() {
-        let mut settings = EmailSettings::default();
-        settings.smtp_host = "smtp.gmail.com".into();
-        settings.send_delay_hours = 2;
+        let settings = EmailSettings {
+            smtp_host: "smtp.gmail.com".into(),
+            send_delay_hours: 2,
+            ..EmailSettings::default()
+        };
         let json = serde_json::to_string(&settings).unwrap();
         let back: EmailSettings = serde_json::from_str(&json).unwrap();
         assert_eq!(back.smtp_host, "smtp.gmail.com");

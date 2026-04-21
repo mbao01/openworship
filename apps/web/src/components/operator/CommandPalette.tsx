@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  BookOpenIcon,
+  CornerDownLeftIcon,
+  MusicIcon,
+  SearchIcon,
+  SquareIcon,
+} from "lucide-react";
 import { invoke } from "../../lib/tauri";
 import { toastError } from "../../lib/toast";
+import { clearLive } from "../../lib/commands/detection";
 import type { VerseResult, Song } from "../../lib/types";
 
 interface CommandPaletteProps {
@@ -13,7 +21,7 @@ interface ResultGroup {
 }
 
 interface ResultItem {
-  glyph: string;
+  glyph: React.ReactNode;
   main: string;
   sub: string;
   onSelect: () => void;
@@ -90,9 +98,9 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     groups.push({
       group: "Scripture",
       items: scriptureResults.map((v) => ({
-        glyph: "\u00A7",
-        main: `${v.reference} \u00B7 \u201C${v.text.slice(0, 50)}\u2026\u201D`,
-        sub: `${v.translation} \u00B7 library`,
+        glyph: <BookOpenIcon className="w-3.5 h-3.5 shrink-0" />,
+        main: `${v.reference} · \u201C${v.text.slice(0, 50)}…\u201D`,
+        sub: `${v.translation} · library`,
         onSelect: () => handlePushScripture(v),
       })),
     });
@@ -101,9 +109,9 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     groups.push({
       group: "Lyrics",
       items: songResults.map((s) => ({
-        glyph: "\u266A",
+        glyph: <MusicIcon className="w-3.5 h-3.5 shrink-0" />,
         main: s.title,
-        sub: `${s.artist || "Hymn"} \u00B7 in library`,
+        sub: `${s.artist || "Hymn"} · in library`,
         onSelect: () => handlePushSong(s),
       })),
     });
@@ -112,7 +120,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     groups.push({
       group: "Actions",
       items: [
-        { glyph: "\u25A1", main: "Black display", sub: "Action", onSelect: onClose },
+        { glyph: <SquareIcon className="w-3.5 h-3.5 shrink-0" />, main: "Black display", sub: "Action", onSelect: () => { clearLive().catch(toastError("Failed to clear display")); onClose(); } },
       ],
     });
   }
@@ -148,10 +156,10 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       >
         {/* Input */}
         <div className="flex items-center gap-3 px-[22px] py-[18px] border-b border-line">
-          <span className="text-accent font-serif text-[22px] italic">{"\u2315"}</span>
+          <span className="text-accent flex items-center"><SearchIcon className="w-5 h-5 shrink-0" /></span>
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent border-0 font-serif text-[22px] text-ink tracking-[-0.01em] placeholder:text-ink-3 placeholder:italic"
+            className="flex-1 bg-transparent border-0 font-serif text-[22px] text-ink tracking-[-0.01em] placeholder:text-ink-3 placeholder:italic outline-none focus:ring-0"
             placeholder="Search scripture, lyrics, slides, or commands\u2026"
             value={query}
             onChange={handleChange}
@@ -173,17 +181,17 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                 return (
                   <div
                     key={`${g.group}-${idx}`}
-                    className={`grid grid-cols-[28px_1fr_auto] gap-3.5 px-[22px] py-2.5 cursor-pointer items-center ${
+                    className={`grid grid-cols-[28px_1fr_auto] gap-3.5 px-[22px] py-2.5 cursor-pointer items-center transition-colors ${
                       idx === selected ? "bg-accent-soft" : "hover:bg-accent-soft"
                     }`}
                     onClick={item.onSelect}
                   >
-                    <span className="font-serif italic text-base text-accent">{item.glyph}</span>
+                    <span className="text-accent flex items-center">{item.glyph}</span>
                     <div>
                       <div className="text-[13.5px] text-ink truncate">{item.main}</div>
                       <div className="font-mono text-[10px] text-ink-3 tracking-[0.06em] mt-0.5 uppercase">{item.sub}</div>
                     </div>
-                    <span className="font-mono text-[10px] text-ink-3">{"\u21B5"}</span>
+                    <span className="text-ink-3 flex items-center"><CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" /></span>
                   </div>
                 );
               })}
@@ -198,11 +206,11 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
 
         {/* Footer */}
         <div className="flex gap-4 items-center px-[22px] py-2.5 border-t border-line font-mono text-[10px] text-ink-3 tracking-[0.08em] uppercase">
-          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">{"\u2191\u2193"}</kbd> navigate</span>
-          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">{"\u21B5"}</kbd> push</span>
-          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">{"\u21E7\u21B5"}</kbd> queue</span>
+          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">↑↓</kbd> navigate</span>
+          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">↵</kbd> push</span>
+          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">⇧↵</kbd> queue</span>
           <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">esc</kbd> close</span>
-          <span className="ml-auto">searching {"\u00B7"} scripture {"\u00B7"} lyrics {"\u00B7"} slides</span>
+          <span className="ml-auto">searching · scripture · lyrics · slides</span>
         </div>
       </div>
     </div>

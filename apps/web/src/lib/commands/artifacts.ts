@@ -124,6 +124,15 @@ export async function openArtifact(id: string): Promise<void> {
   return invoke("open_artifact", { id });
 }
 
+// ─── Thumbnails ──────────────────────────────────────────────────────────────
+
+/**
+ * Reads thumbnail bytes for an artifact by ID.
+ */
+export async function readThumbnail(id: string): Promise<number[]> {
+  return invoke<number[]>("read_thumbnail", { id });
+}
+
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
 /**

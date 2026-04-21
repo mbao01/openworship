@@ -24,9 +24,10 @@
   --color-muted: #5E574D;
 
   /* Accent — default copper; overridden at runtime via CSS var */
-  --color-accent:       #C9A76A;
-  --color-accent-soft:  rgba(201,167,106,0.12);
-  --color-accent-hover: #D9B879;
+  --color-accent:            #C9A76A;
+  --color-accent-soft:       rgba(201,167,106,0.12);
+  --color-accent-hover:      #D9B879;
+  --color-accent-foreground: #1A0D00;
 
   /* Semantic */
   --color-danger:  #D26060;
@@ -57,7 +58,7 @@ html[data-app-theme="light"] {
   --color-ink:         #1A1714;
   --color-ink-2:       #3A332C;
   --color-ink-3:       #6B6259;
-  --color-muted:       #8F8578;
+  --color-muted:       #7A7064;
   --color-accent:      #6B4423;
   --color-accent-soft: rgba(107,68,35,0.10);
   --color-accent-hover: #8A5A32;
@@ -78,7 +79,7 @@ html[data-density="compact"] {
 @theme inline {
   --color-background:         var(--color-bg);
   --color-foreground:         var(--color-ink);
-  --color-muted:              var(--color-bg-2);
+  --color-muted:              #7A7064;
   --color-muted-foreground:   var(--color-ink-3);
   --color-border:             var(--color-line-strong);
   --color-input:              var(--color-line-strong);
@@ -206,6 +207,14 @@ html[data-app-theme="light"] {
 
   input:focus {
     outline: none;
+  }
+
+  /* Consistent thin scrollbars across the app */
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .overflow-auto {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-bg-3) transparent;
   }
 }
 

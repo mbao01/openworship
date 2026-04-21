@@ -10,7 +10,7 @@ const buttonVariants = cva(
       variant: {
         /** Primary CTA — copper gold fill, dark text. */
         default:
-          "bg-accent text-[#1A0D00] font-semibold hover:bg-accent-hover [data-app-theme=light_&]:text-bg",
+          "bg-accent text-accent-foreground font-semibold hover:bg-accent-hover [data-app-theme=light_&]:text-bg",
         /** Subtle bordered button — used for secondary actions. */
         outline:
           "border border-line-strong bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong hover:bg-bg-3",

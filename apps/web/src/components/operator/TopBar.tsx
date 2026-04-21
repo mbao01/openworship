@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { DetectionMode } from "../../lib/types";
+import { getAudioLevel, startStt, stopStt } from "../../lib/commands/audio";
+import { getAudioSettings } from "../../lib/commands/settings";
 import { toastError } from "../../lib/toast";
 
 interface TopBarProps {
   mode: DetectionMode;
   onModeChange: (mode: DetectionMode) => void;
   onOpenCmdK: () => void;
-  micActive?: boolean;
-  audioLevel?: number;
+  onPush?: () => void;
 }
 
 const MODES: { value: DetectionMode; label: string }[] = [
@@ -18,7 +20,42 @@ const MODES: { value: DetectionMode; label: string }[] = [
   { value: "offline", label: "Offline" },
 ];
 
-export function TopBar({ mode, onModeChange, onOpenCmdK, micActive, audioLevel = 0 }: TopBarProps) {
+export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) {
+  const [micActive, setMicActive] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [inputLabel, setInputLabel] = useState("INPUT");
+
+  // Subscribe to stt://transcript events for mic_active state
+  useEffect(() => {
+    const unlisten = listen<{ mic_active: boolean }>("stt://transcript", (event) => {
+      setMicActive(event.payload.mic_active);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  // Poll audio level at 100ms when mic is active
+  useEffect(() => {
+    if (!micActive) {
+      setAudioLevel(0);
+      return;
+    }
+    const id = setInterval(() => {
+      getAudioLevel().then(setAudioLevel).catch(() => {});
+    }, 100);
+    return () => clearInterval(id);
+  }, [micActive]);
+
+  // Load audio settings on mount
+  useEffect(() => {
+    try {
+      getAudioSettings().then((s) => setInputLabel(s.audio_input_device || "INPUT"));
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // Load initial mode from backend
   useEffect(() => {
     invoke<DetectionMode>("get_detection_mode")
@@ -26,6 +63,16 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, micActive, audioLevel =
       .catch(toastError("Failed to load detection mode"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleMicToggle = async () => {
+    if (micActive) {
+      await stopStt().catch(() => {});
+      setMicActive(false);
+    } else {
+      await startStt().catch(() => {});
+      setMicActive(true);
+    }
+  };
 
   function handleModeChange(next: DetectionMode) {
     invoke("set_detection_mode", { mode: next })
@@ -47,9 +94,9 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, micActive, audioLevel =
           {MODES.map((m) => (
             <button
               key={m.value}
-              className={`px-3.5 py-[7px] font-mono text-[10px] tracking-[0.12em] uppercase transition-all border-r border-line last:border-r-0 ${
+              className={`px-3.5 py-1.5 font-mono text-[10px] tracking-[0.12em] uppercase transition-all border-r border-line last:border-r-0 cursor-pointer ${
                 mode === m.value
-                  ? "bg-accent text-[#1A0D00] font-semibold"
+                  ? "bg-accent text-accent-foreground font-semibold"
                   : "text-ink-3 hover:text-ink hover:bg-bg-3"
               }`}
               onClick={() => handleModeChange(m.value)}
@@ -60,7 +107,11 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, micActive, audioLevel =
         </div>
 
         {/* Mic group */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-line h-[52px]">
+        <button
+          className="flex items-center gap-2.5 pl-3 border-l border-line h-[52px] cursor-pointer hover:bg-bg-2/50 transition-colors"
+          onClick={handleMicToggle}
+          title={micActive ? "Stop microphone" : "Start microphone"}
+        >
           <span
             className={`w-2 h-2 rounded-full ${
               micActive ? "bg-live animate-[blink_2s_infinite]" : "bg-bg-4"
@@ -68,24 +119,27 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, micActive, audioLevel =
           />
           <LevelBars level={audioLevel} active={micActive} />
           <span className="font-mono text-[10.5px] tracking-[0.05em] uppercase text-ink-3">
-            INPUT
+            {inputLabel}
           </span>
-        </div>
+        </button>
       </div>
 
       {/* Right */}
       <div className="flex items-center gap-1.5">
         <button
-          className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs text-ink-2 rounded border border-line bg-bg-2 transition-all hover:text-ink hover:border-line-strong hover:bg-bg-3"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-ink-2 rounded border border-line bg-bg-2 transition-all hover:text-ink hover:border-line-strong hover:bg-bg-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={onOpenCmdK}
         >
           <SearchIcon />
           Search
           <kbd className="font-mono text-[10px] px-1 py-px bg-bg-4 rounded-sm text-ink-3">
-            {"\u2318"}K
+            ⌘K
           </kbd>
         </button>
-        <button className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-[#1A0D00] transition-all hover:bg-accent-hover">
+        <button
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground transition-all hover:bg-accent-hover cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={onPush}
+        >
           Push
           <kbd className="font-mono text-[10px] px-1 py-px bg-black/20 rounded-sm text-black/60">
             Space

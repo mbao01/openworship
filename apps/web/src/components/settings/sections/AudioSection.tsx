@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAudioSettings } from "@/hooks/use-audio-settings";
 import { useWhisperModel } from "@/hooks/use-whisper-model";
 import { useAudioLevel } from "@/hooks/use-audio-level";
@@ -8,9 +8,8 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VuMeter } from "@/components/ui/vu-meter";
 import { Button } from "@/components/ui/button";
-import { listAudioInputDevices } from "@/lib/commands/audio";
+import { listAudioInputDevices, startAudioMonitor, stopAudioMonitor } from "@/lib/commands/audio";
 import { setAnthropicApiKey } from "@/lib/commands/settings";
-import { useEffect } from "react";
 import type { AudioInputDevice } from "@/lib/types";
 
 /**
@@ -25,12 +24,42 @@ export function AudioSection() {
   const [apiKey, setApiKey] = useState("");
   const [keyVisible, setKeyVisible] = useState(false);
   const [savingKey, setSavingKey] = useState(false);
+  const [micTesting, setMicTesting] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
 
   useEffect(() => {
     listAudioInputDevices()
       .then(setDevices)
       .catch(() => {});
   }, []);
+
+  // Auto-start audio monitor on mount, stop on unmount
+  useEffect(() => {
+    startAudioMonitor()
+      .then(() => setMicTesting(true))
+      .catch(() => {});
+    return () => {
+      stopAudioMonitor().catch(() => {});
+    };
+  }, []);
+
+  const handleMicTest = async () => {
+    setMicError(null);
+    if (micTesting) {
+      try {
+        await stopAudioMonitor();
+      } catch { /* ignore */ }
+      setMicTesting(false);
+    } else {
+      try {
+        await startAudioMonitor();
+        setMicTesting(true);
+      } catch (e) {
+        setMicError(String(e));
+        setMicTesting(false);
+      }
+    }
+  };
 
   const handleSaveApiKey = async () => {
     setSavingKey(true);
@@ -60,9 +89,11 @@ export function AudioSection() {
         <SettingRow label="Backend">
           <Select
             value={settings.backend}
-            onValueChange={(v) => update({ backend: v as typeof settings.backend })}
+            onValueChange={(v) =>
+              update({ backend: v as typeof settings.backend })
+            }
           >
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-42">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -76,7 +107,9 @@ export function AudioSection() {
         {settings.backend === "whisper" && (
           <SettingRow
             label="Whisper model"
-            description={installed ? "Model installed" : "~75 MB download required"}
+            description={
+              installed ? "Model installed" : "~75 MB download required"
+            }
           >
             {installed ? (
               <span className="font-mono text-[10.5px] text-success uppercase tracking-[0.05em]">
@@ -117,7 +150,11 @@ export function AudioSection() {
         )}
       </Section>
 
-      <Section title="Anthropic API key" separator description="Required for semantic scripture matching and service summaries.">
+      <Section
+        title="Anthropic API key"
+        separator
+        description="Required for semantic scripture matching and service summaries."
+      >
         <SettingRow label="API key">
           <div className="flex gap-2">
             <input
@@ -143,7 +180,9 @@ export function AudioSection() {
         <SettingRow label="Microphone">
           <Select
             value={settings.audio_input_device ?? "__default__"}
-            onValueChange={(v) => update({ audio_input_device: v === "__default__" ? null : v })}
+            onValueChange={(v) =>
+              update({ audio_input_device: v === "__default__" ? null : v })
+            }
           >
             <SelectTrigger className="w-48">
               <SelectValue placeholder="System default" />
@@ -160,12 +199,34 @@ export function AudioSection() {
           </Select>
         </SettingRow>
 
-        <SettingRow label="Input level">
-          <VuMeter level={audioLevel} />
+        <SettingRow
+          label="Input level"
+          description={
+            micError
+              ? micError
+              : micTesting
+                ? "Listening — speak to test"
+                : "Start mic to see levels"
+          }
+        >
+          <div className="flex items-center gap-3">
+            <VuMeter level={audioLevel} showPercentage />
+            <Button
+              variant={micTesting ? "outline" : "default"}
+              size="sm"
+              onClick={handleMicTest}
+            >
+              {micTesting ? "Stop" : "Test mic"}
+            </Button>
+          </div>
         </SettingRow>
       </Section>
 
-      <Section title="Semantic matching" separator description="AI-powered scripture matching using semantic similarity.">
+      <Section
+        title="Semantic matching"
+        separator
+        description="AI-powered scripture matching using semantic similarity."
+      >
         <SettingRow label="Enable semantic matching">
           <Toggle
             checked={settings.semantic_enabled}
@@ -175,30 +236,50 @@ export function AudioSection() {
 
         {settings.semantic_enabled && (
           <>
-            <SettingRow label={`Auto threshold — ${Math.round(settings.semantic_threshold_auto * 100)}%`}>
+            <SettingRow
+              label={`Auto threshold — ${Math.round(settings.semantic_threshold_auto * 100)}%`}
+            >
               <div className="w-36">
                 <Slider
-                  min={50} max={100} step={1}
+                  min={50}
+                  max={100}
+                  step={1}
                   value={[Math.round(settings.semantic_threshold_auto * 100)]}
-                  onValueChange={([v]: number[]) => update({ semantic_threshold_auto: v / 100 })}
+                  onValueChange={([v]: number[]) =>
+                    update({ semantic_threshold_auto: v / 100 })
+                  }
                 />
               </div>
             </SettingRow>
-            <SettingRow label={`Copilot threshold — ${Math.round(settings.semantic_threshold_copilot * 100)}%`}>
+            <SettingRow
+              label={`Copilot threshold — ${Math.round(settings.semantic_threshold_copilot * 100)}%`}
+            >
               <div className="w-36">
                 <Slider
-                  min={50} max={100} step={1}
-                  value={[Math.round(settings.semantic_threshold_copilot * 100)]}
-                  onValueChange={([v]: number[]) => update({ semantic_threshold_copilot: v / 100 })}
+                  min={50}
+                  max={100}
+                  step={1}
+                  value={[
+                    Math.round(settings.semantic_threshold_copilot * 100),
+                  ]}
+                  onValueChange={([v]: number[]) =>
+                    update({ semantic_threshold_copilot: v / 100 })
+                  }
                 />
               </div>
             </SettingRow>
-            <SettingRow label={`Lyrics auto — ${Math.round(settings.lyrics_threshold_auto * 100)}%`}>
+            <SettingRow
+              label={`Lyrics auto — ${Math.round(settings.lyrics_threshold_auto * 100)}%`}
+            >
               <div className="w-36">
                 <Slider
-                  min={50} max={100} step={1}
+                  min={50}
+                  max={100}
+                  step={1}
                   value={[Math.round(settings.lyrics_threshold_auto * 100)]}
-                  onValueChange={([v]: number[]) => update({ lyrics_threshold_auto: v / 100 })}
+                  onValueChange={([v]: number[]) =>
+                    update({ lyrics_threshold_auto: v / 100 })
+                  }
                 />
               </div>
             </SettingRow>

@@ -1,4 +1,4 @@
-use crate::service::{ContentBankEntry, ProjectItem, ServiceProject};
+use crate::service::{ContentBankEntry, ProjectItem, ServiceProject, ServiceTask, TaskStatus, new_id, now_ms};
 use crate::settings::{AudioSettings, SttBackend};
 use crate::slides::{AnnouncementItem, SermonNote};
 use crate::slides::{save_announcements, save_sermon_notes};
@@ -7,7 +7,7 @@ use crate::state::AppState;
 use ow_audio::{AudioConfig, AudioInputDevice, SttStatus, list_input_devices};
 use ow_core::{DetectionMode, QueueItem, QueueStatus, ScriptureDetector};
 use ow_display::ContentEvent;
-use ow_search::VerseResult;
+use ow_search::{VerseResult, parse_range_reference};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
@@ -21,6 +21,14 @@ pub fn search_scriptures(
     translation: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<Vec<VerseResult>, String> {
+    // Check for verse range pattern (e.g. "Romans 8:38-39") before full-text search.
+    if let Some((book, chapter, start, end)) = parse_range_reference(&query) {
+        return state
+            .search
+            .search_range(&book, chapter, start, end, translation.as_deref())
+            .map_err(|e| e.to_string());
+    }
+
     state
         .search
         .search(&query, translation.as_deref(), 25)
@@ -43,8 +51,27 @@ pub fn push_to_display(
     app: AppHandle,
 ) -> Result<(), String> {
     let event = ContentEvent::scripture(reference.clone(), text.clone(), translation.clone());
-    // Ignore send errors when no display client is connected.
+    // Send to display WebSocket clients.
     let _ = state.display_tx.send(event);
+
+    // ── Update queue: retire current live, add this item as live ──────────────
+    {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        // Retire any currently live items
+        for item in q.iter_mut() {
+            if item.status == QueueStatus::Live {
+                item.status = QueueStatus::Dismissed;
+            }
+        }
+        // Add as new live item
+        let mut new_item = QueueItem::new(reference.clone(), text.clone(), translation.clone());
+        new_item.status = QueueStatus::Live;
+        q.push_back(new_item);
+        // Emit queue update so the UI reflects the change
+        let snapshot: Vec<QueueItem> = q.iter().cloned().collect();
+        drop(q);
+        let _ = app.emit("detection://queue-updated", snapshot);
+    }
 
     // ── Update content bank ───────────────────────────────────────────────────
     {
@@ -86,6 +113,10 @@ pub fn push_to_display(
                         translation,
                         position,
                         added_at_ms: crate::service::now_ms(),
+                        item_type: "scripture".into(),
+                        duration_secs: None,
+                        notes: None,
+                        asset_ids: vec![],
                     });
                     let p = p.clone();
                     crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
@@ -355,7 +386,11 @@ pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
 /// Stop the STT engine.
 #[tauri::command]
 pub fn stop_stt(state: State<'_, AppState>) {
-    state.stt.lock().unwrap().stop();
+    if let Ok(mut engine) = state.stt.lock() {
+        engine.stop();
+    } else {
+        eprintln!("[stt] failed to acquire lock for stop; mutex poisoned");
+    }
 }
 
 /// Return the current STT engine status.
@@ -412,10 +447,46 @@ pub fn list_audio_input_devices() -> Result<Vec<AudioInputDevice>, String> {
 }
 
 /// Return the most-recent RMS audio level `[0.0, 1.0]`.
-/// Returns `0.0` when the STT engine is stopped.
+/// Reads from the STT engine if running, otherwise from the audio monitor.
 #[tauri::command]
 pub fn get_audio_level(state: State<'_, AppState>) -> f32 {
-    state.stt.lock().unwrap().audio_level_rms()
+    // Prefer STT engine level when it's running
+    let stt_level = state.stt.lock().unwrap_or_else(|e| e.into_inner()).audio_level_rms();
+    if stt_level > 0.0 {
+        return stt_level;
+    }
+    // Fall back to standalone audio monitor
+    state.audio_monitor.level_rms()
+}
+
+/// Start a lightweight audio capture purely for VU meter / mic check.
+/// Does NOT start transcription — just opens the mic and reads levels.
+#[tauri::command]
+pub fn start_audio_monitor(state: State<'_, AppState>) -> Result<(), String> {
+    let device_name = state
+        .audio_settings
+        .read()
+        .map_err(|e| e.to_string())?
+        .audio_input_device
+        .clone();
+    eprintln!("[audio-monitor] starting with device: {:?}", device_name);
+    let result = state
+        .audio_monitor
+        .start(device_name)
+        .map_err(|e| {
+            eprintln!("[audio-monitor] start failed: {e}");
+            e.to_string()
+        });
+    if result.is_ok() {
+        eprintln!("[audio-monitor] started successfully, is_running={}", state.audio_monitor.is_running());
+    }
+    result
+}
+
+/// Stop the audio monitor.
+#[tauri::command]
+pub fn stop_audio_monitor(state: State<'_, AppState>) {
+    state.audio_monitor.stop();
 }
 
 // ─── Detection commands ───────────────────────────────────────────────────────
@@ -453,7 +524,7 @@ pub fn detect_in_transcript(
     Ok(q.iter().cloned().collect())
 }
 
-/// Set the current detection mode.
+/// Set the current detection mode and persist to settings.
 #[tauri::command]
 pub fn set_detection_mode(
     mode: DetectionMode,
@@ -461,6 +532,11 @@ pub fn set_detection_mode(
 ) -> Result<(), String> {
     let mut m = state.detection_mode.write().map_err(|e| e.to_string())?;
     *m = mode;
+    drop(m);
+    // Persist to disk so it survives restart
+    let mut settings = state.audio_settings.write().map_err(|e| e.to_string())?;
+    settings.detection_mode = mode;
+    settings.save().map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -502,11 +578,8 @@ pub fn approve_item(
 
     if let Some(item) = q.iter_mut().find(|i| i.id == id) {
         item.status = QueueStatus::Live;
-        let _ = state.display_tx.send(ContentEvent::scripture(
-            item.reference.clone(),
-            item.text.clone(),
-            item.translation.clone(),
-        ));
+        let event = content_event_for_item(item);
+        let _ = state.display_tx.send(event);
     } else {
         return Err(format!("item {id} not found in queue"));
     }
@@ -717,7 +790,7 @@ pub fn clear_live(state: State<'_, AppState>, app: AppHandle) -> Result<(), Stri
     {
         let mut q = state.queue.lock().map_err(|e| e.to_string())?;
         for item in q.iter_mut() {
-            if item.status == QueueStatus::Live {
+            if item.status == QueueStatus::Live || item.status == QueueStatus::Pending {
                 item.status = QueueStatus::Dismissed;
             }
         }
@@ -828,6 +901,58 @@ pub(crate) fn detect_and_queue(
 
 // ─── Service project commands ─────────────────────────────────────────────────
 
+/// Delete a service project and all its items and tasks.
+#[tauri::command]
+pub fn delete_service_project(
+    project_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let len_before = projects.len();
+    projects.retain(|p| p.id != project_id);
+    if projects.len() == len_before {
+        return Err("Project not found".into());
+    }
+    // Clear active project if it was the deleted one
+    {
+        let mut active = state.active_project_id.write().map_err(|e| e.to_string())?;
+        if active.as_deref() == Some(&project_id) {
+            *active = None;
+        }
+    }
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://projects-changed", ());
+    Ok(())
+}
+
+/// Update a service project's name, description, or scheduled time.
+#[tauri::command]
+pub fn update_service_project(
+    project_id: String,
+    name: Option<String>,
+    description: Option<String>,
+    scheduled_at_ms: Option<i64>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter().position(|p| p.id == project_id).ok_or("Project not found")?;
+    if let Some(n) = name {
+        projects[idx].name = n;
+    }
+    if let Some(d) = description {
+        projects[idx].description = if d.is_empty() { None } else { Some(d) };
+    }
+    if let Some(t) = scheduled_at_ms {
+        projects[idx].scheduled_at_ms = Some(t);
+    }
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let result = projects[idx].clone();
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
 /// Create a new named service project and make it the active project.
 #[tauri::command]
 pub fn create_service_project(
@@ -840,7 +965,10 @@ pub fn create_service_project(
         name,
         created_at_ms: crate::service::now_ms(),
         closed_at_ms: None,
+        scheduled_at_ms: None,
+        description: None,
         items: vec![],
+        tasks: vec![],
     };
 
     {
@@ -863,7 +991,7 @@ pub fn create_service_project(
 pub fn list_service_projects(state: State<'_, AppState>) -> Result<Vec<ServiceProject>, String> {
     let projects = state.projects.read().map_err(|e| e.to_string())?;
     let mut list: Vec<ServiceProject> = projects.iter().cloned().collect();
-    list.sort_by(|a, b| b.created_at_ms.cmp(&a.created_at_ms));
+    list.sort_by_key(|b| std::cmp::Reverse(b.created_at_ms));
     Ok(list)
 }
 
@@ -960,6 +1088,11 @@ pub fn add_item_to_active_project(
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<ServiceProject, String> {
+    // Keep copies for queue enqueue (originals get moved into ProjectItem)
+    let q_ref = reference.clone();
+    let q_text = text.clone();
+    let q_trans = translation.clone();
+
     let active_id = state
         .active_project_id
         .read()
@@ -987,6 +1120,10 @@ pub fn add_item_to_active_project(
                 translation,
                 position,
                 added_at_ms: crate::service::now_ms(),
+                item_type: "scripture".into(),
+                duration_secs: None,
+                notes: None,
+                asset_ids: vec![],
             });
         }
 
@@ -994,6 +1131,18 @@ pub fn add_item_to_active_project(
         crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
         p
     };
+
+    // Enqueue as pending so it appears in the PREVIEW display
+    if !q_ref.is_empty() {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        if !q.iter().any(|qi| qi.reference == q_ref && qi.status == QueueStatus::Pending) {
+            let new_item = QueueItem::new(q_ref, q_text, q_trans);
+            q.push_back(new_item);
+            let snapshot: Vec<QueueItem> = q.iter().cloned().collect();
+            drop(q);
+            let _ = app.emit("detection://queue-updated", snapshot);
+        }
+    }
 
     let _ = app.emit("service://project-updated", &project);
     Ok(project)
@@ -1097,7 +1246,7 @@ pub fn search_content_bank(
     let q = query.to_lowercase();
     let results: Vec<ContentBankEntry> = if q.is_empty() {
         let mut entries: Vec<ContentBankEntry> = bank.iter().cloned().collect();
-        entries.sort_by(|a, b| b.last_used_ms.cmp(&a.last_used_ms));
+        entries.sort_by_key(|e| std::cmp::Reverse(e.last_used_ms));
         entries.truncate(20);
         entries
     } else {
@@ -1109,6 +1258,183 @@ pub fn search_content_bank(
             .collect()
     };
     Ok(results)
+}
+
+// ─── Project item update ─────────────────────────────────────────────────────
+
+/// Update metadata on a project item (duration, notes, type).
+#[tauri::command]
+pub fn update_project_item(
+    item_id: String,
+    duration_secs: Option<u32>,
+    notes: Option<String>,
+    item_type: Option<String>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let active_id = state.active_project_id.read().map_err(|e| e.to_string())?;
+    let active_id = active_id.as_deref().ok_or("No active project")?.to_string();
+    let idx = projects.iter().position(|p| p.id == active_id).ok_or("Project not found")?;
+    let item = projects[idx].items.iter_mut().find(|i| i.id == item_id).ok_or("Item not found")?;
+    if let Some(d) = duration_secs { item.duration_secs = Some(d); }
+    if let Some(n) = notes { item.notes = if n.is_empty() { None } else { Some(n) }; }
+    if let Some(t) = item_type { item.item_type = t; }
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+// ─── Service tasks ───────────────────────────────────────────────────────────
+
+/// Create a task within a service project.
+#[tauri::command]
+pub fn create_service_task(
+    service_id: String,
+    title: String,
+    description: Option<String>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter().position(|p| p.id == service_id).ok_or("Project not found")?;
+    let task = ServiceTask {
+        id: new_id(),
+        service_id: service_id.clone(),
+        title,
+        description,
+        status: TaskStatus::Todo,
+        created_at_ms: now_ms(),
+        updated_at_ms: now_ms(),
+    };
+    projects[idx].tasks.push(task);
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+/// Update a task's title, description, or status.
+#[tauri::command]
+pub fn update_service_task(
+    task_id: String,
+    title: Option<String>,
+    description: Option<String>,
+    status: Option<TaskStatus>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter()
+        .position(|p| p.tasks.iter().any(|t| t.id == task_id))
+        .ok_or("Task not found in any project")?;
+    let task = projects[idx].tasks.iter_mut().find(|t| t.id == task_id)
+        .expect("checked above: position guarantees task exists");
+    if let Some(t) = title { task.title = t; }
+    if let Some(d) = description { task.description = if d.is_empty() { None } else { Some(d) }; }
+    if let Some(s) = status { task.status = s; }
+    task.updated_at_ms = now_ms();
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+/// Delete a task from a service project.
+#[tauri::command]
+pub fn delete_service_task(
+    task_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter()
+        .position(|p| p.tasks.iter().any(|t| t.id == task_id))
+        .ok_or("Task not found in any project")?;
+    projects[idx].tasks.retain(|t| t.id != task_id);
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+// ─── Asset linking ───────────────────────────────────────────────────────────
+
+/// Link an existing artifact to a project item's assets.
+#[tauri::command]
+pub fn link_asset_to_item(
+    item_id: String,
+    artifact_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let active_id = state.active_project_id.read().map_err(|e| e.to_string())?;
+    let active_id = active_id.as_deref().ok_or("No active project")?.to_string();
+    let idx = projects.iter().position(|p| p.id == active_id).ok_or("Project not found")?;
+    let item = projects[idx].items.iter_mut().find(|i| i.id == item_id).ok_or("Item not found")?;
+    if !item.asset_ids.contains(&artifact_id) {
+        item.asset_ids.push(artifact_id);
+    }
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+/// Unlink an artifact from a project item's assets.
+#[tauri::command]
+pub fn unlink_asset_from_item(
+    item_id: String,
+    artifact_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let active_id = state.active_project_id.read().map_err(|e| e.to_string())?;
+    let active_id = active_id.as_deref().ok_or("No active project")?.to_string();
+    let idx = projects.iter().position(|p| p.id == active_id).ok_or("Project not found")?;
+    let item = projects[idx].items.iter_mut().find(|i| i.id == item_id).ok_or("Item not found")?;
+    item.asset_ids.retain(|id| id != &artifact_id);
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
+}
+
+/// Upload a file to the service's artifact directory, then link it to a project item.
+#[tauri::command]
+pub fn upload_and_link_asset(
+    item_id: String,
+    file_name: String,
+    data: Vec<u8>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<ServiceProject, String> {
+    let active_id = {
+        let id = state.active_project_id.read().map_err(|e| e.to_string())?;
+        id.as_ref().cloned().ok_or("No active project")?
+    };
+
+    // Import file into artifacts
+    let artifact = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::artifacts::write_artifact_bytes(&mut db, Some(active_id.clone()), None, file_name, data)
+            .map_err(|e| e.to_string())?
+    };
+
+    // Link to the item
+    let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+    let idx = projects.iter().position(|p| p.id == active_id).ok_or("Project not found")?;
+    let item = projects[idx].items.iter_mut().find(|i| i.id == item_id).ok_or("Item not found")?;
+    if !item.asset_ids.contains(&artifact.id) {
+        item.asset_ids.push(artifact.id);
+    }
+    let result = projects[idx].clone();
+    crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+    let _ = app.emit("service://project-updated", &result);
+    Ok(result)
 }
 
 // ─── Semantic search status ───────────────────────────────────────────────────
@@ -1402,6 +1728,10 @@ pub fn push_song_to_display(
                         translation,
                         position,
                         added_at_ms: crate::service::now_ms(),
+                        item_type: "scripture".into(),
+                        duration_secs: None,
+                        notes: None,
+                        asset_ids: vec![],
                     });
                     let p = p.clone();
                     crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
@@ -1676,14 +2006,68 @@ pub fn push_custom_slide(
     let ev = ContentEvent::custom_slide(title.clone(), body.clone(), image_url.clone());
     let _ = state.display_tx.send(ev);
 
-    let mut item =
-        ow_core::QueueItem::new_custom_slide(title, body, image_url);
-    item.status = ow_core::QueueStatus::Live;
+    // Retire previous live items and add new one
     {
         let mut q = state.queue.lock().map_err(|e| e.to_string())?;
-        q.push_back(item);
+        for item in q.iter_mut() {
+            if item.status == ow_core::QueueStatus::Live {
+                item.status = ow_core::QueueStatus::Dismissed;
+            }
+        }
+        let mut new_item =
+            ow_core::QueueItem::new_custom_slide(title, body, image_url);
+        new_item.status = ow_core::QueueStatus::Live;
+        q.push_back(new_item);
+        let snapshot: Vec<ow_core::QueueItem> = q.iter().cloned().collect();
+        drop(q);
+        let _ = app.emit("detection://queue-updated", snapshot);
     }
-    let _ = app.emit("detection://queue-updated", ());
+    Ok(())
+}
+
+/// Push an artifact (image/media) to the main display and queue.
+#[tauri::command]
+pub fn push_artifact_to_display(
+    artifact_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    // Load artifact from DB
+    let entry = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        db.get_by_id(&artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("artifact not found: {artifact_id}"))?
+    };
+
+    // Send to display with artifact: prefix in image_url
+    let ev = ContentEvent::custom_slide(
+        entry.name.clone(),
+        String::new(),
+        Some(format!("artifact:{artifact_id}")),
+    );
+    let _ = state.display_tx.send(ev);
+
+    // Retire previous live items and add new one
+    {
+        let mut q = state.queue.lock().map_err(|e| e.to_string())?;
+        for item in q.iter_mut() {
+            if item.status == ow_core::QueueStatus::Live {
+                item.status = ow_core::QueueStatus::Dismissed;
+            }
+        }
+        let mut new_item = ow_core::QueueItem::new_custom_slide(
+            entry.name,
+            String::new(),
+            Some(format!("artifact:{artifact_id}")),
+        );
+        new_item.status = ow_core::QueueStatus::Live;
+        q.push_back(new_item);
+        let snapshot: Vec<ow_core::QueueItem> = q.iter().cloned().collect();
+        drop(q);
+        let _ = app.emit("detection://queue-updated", snapshot);
+    }
+
     Ok(())
 }
 
@@ -1968,7 +2352,7 @@ pub fn list_service_summaries(state: State<'_, AppState>) -> Result<Vec<ServiceS
         .read()
         .map_err(|e| e.to_string())?
         .clone();
-    summaries.sort_by(|a, b| b.generated_at_ms.cmp(&a.generated_at_ms));
+    summaries.sort_by_key(|s| std::cmp::Reverse(s.generated_at_ms));
     Ok(summaries)
 }
 
@@ -2335,6 +2719,32 @@ pub fn open_artifact(id: String, state: State<'_, AppState>) -> Result<(), Strin
     #[cfg(target_os = "linux")]
     std::process::Command::new("xdg-open").arg(&abs).spawn().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Read an artifact's raw bytes. Used by the frontend preview panel to render
+/// images, videos, etc. via blob URLs when the asset:// protocol is unavailable.
+#[tauri::command]
+pub fn read_artifact_bytes(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<u8>, String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = db.get_by_id(&id).map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("artifact not found: {id}"))?;
+    let abs = db.abs_path(&entry.path);
+    std::fs::read(&abs).map_err(|e| e.to_string())
+}
+
+/// Read an artifact's thumbnail image bytes.
+#[tauri::command]
+pub fn read_thumbnail(id: String, state: State<'_, AppState>) -> Result<Vec<u8>, String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = db.get_by_id(&id).map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("artifact not found: {id}"))?;
+    let thumb_path = entry.thumbnail_path.as_ref()
+        .ok_or("no thumbnail available")?;
+    let abs = db.abs_path(thumb_path);
+    std::fs::read(&abs).map_err(|e| e.to_string())
 }
 
 // ── Phase 16: Cloud Sync ───────────────────────────────────────────────────────
@@ -2720,7 +3130,7 @@ pub fn get_storage_usage(state: State<'_, AppState>) -> Result<crate::cloud_sync
 #[cfg(test)]
 mod tests {
     use super::content_event_for_item;
-    use ow_core::{QueueItem, content_kind};
+    use ow_core::QueueItem;
 
     #[test]
     fn content_event_scripture_kind() {

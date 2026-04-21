@@ -43,7 +43,7 @@ export async function getQueue(): Promise<QueueItem[]> {
  * Approves a queued item, pushing it to the live display.
  */
 export async function approveItem(itemId: string): Promise<void> {
-  return invoke("approve_item", { itemId });
+  return invoke("approve_item", { id: itemId });
 }
 
 /**

@@ -145,7 +145,7 @@ function DetectionCard({ item, onApprove, onDismiss, onRejectLive }: CardProps) 
         <div className="flex gap-2 mt-2">
           <button
             data-qa={`approve-btn-${item.id}`}
-            className="font-sans text-[10px] font-medium tracking-[0.08em] text-[#1A0D00] bg-accent border-none rounded-sm px-[10px] py-1 cursor-pointer transition-all uppercase hover:brightness-115"
+            className="font-sans text-[10px] font-medium tracking-[0.08em] text-accent-foreground bg-accent border-none rounded-sm px-[10px] py-1 cursor-pointer transition-all uppercase hover:brightness-115"
             onClick={() => onApprove(item.id)}
             aria-label={`Approve ${item.reference}`}
           >
@@ -166,7 +166,7 @@ function DetectionCard({ item, onApprove, onDismiss, onRejectLive }: CardProps) 
         <div className="flex gap-2 mt-2">
           <button
             data-qa="reject-live-btn"
-            className="font-sans text-[10px] font-medium tracking-[0.08em] text-danger bg-transparent border border-danger rounded-sm px-[10px] py-1 cursor-pointer transition-all uppercase hover:bg-danger hover:text-[#1A0D00]"
+            className="font-sans text-[10px] font-medium tracking-[0.08em] text-danger bg-transparent border border-danger rounded-sm px-[10px] py-1 cursor-pointer transition-all uppercase hover:bg-danger hover:text-accent-foreground"
             onClick={onRejectLive}
             aria-label="Not this one — skip to next"
             title="Wrong verse? Dismiss and show the next pending item."
