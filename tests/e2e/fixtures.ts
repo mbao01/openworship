@@ -48,6 +48,8 @@ export async function stubTauriIdentity(page: Page): Promise<void> {
         if (cmd === "list_recent_artifacts") return Promise.resolve([]);
         if (cmd === "get_detection_mode") return Promise.resolve("copilot");
         if (cmd === "get_blackout") return Promise.resolve(false);
+        if (cmd === "get_book_chapters") return Promise.resolve([1, 2, 3]);
+        if (cmd === "get_chapter_verses") return Promise.resolve([1, 2, 3, 4, 5]);
         if (cmd === "get_semantic_status")
           return Promise.resolve({ ready: false, verse_count: 0, enabled: false });
         if (cmd === "get_audio_settings")

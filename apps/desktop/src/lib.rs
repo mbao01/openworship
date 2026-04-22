@@ -44,6 +44,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
     let verses = ow_db::get_all_verses(&db)?;
     let search =
         Arc::new(ow_search::SearchEngine::build(&verses)?);
+    let scripture_db = Arc::new(Mutex::new(db));
 
     // ── Display server channel ─────────────────────────────────────────────────
     let (display_tx, _) = broadcast::channel::<ow_display::ContentEvent>(32);
@@ -243,6 +244,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         email_settings,
         anthropic_api_key,
         blackout,
+        scripture_db,
     };
 
     tauri::Builder::default()
@@ -392,6 +394,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         .invoke_handler(tauri::generate_handler![
             commands::greet,
             commands::search_scriptures,
+            commands::get_book_chapters,
+            commands::get_chapter_verses,
             commands::push_to_display,
             commands::list_translations,
             commands::start_stt,

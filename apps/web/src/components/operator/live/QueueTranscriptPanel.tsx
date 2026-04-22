@@ -90,7 +90,7 @@ export function QueueTranscriptPanel() {
               className={`cursor-pointer rounded border px-2 py-1 font-mono text-[9px] font-bold tracking-[0.1em] uppercase transition-colors ${
                 micActive
                   ? "border-live/40 text-live hover:bg-live/10"
-                  : "bg-primary text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground"
+                  : "border-primary bg-primary text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground"
               }`}
               onClick={handleMicToggle}
             >

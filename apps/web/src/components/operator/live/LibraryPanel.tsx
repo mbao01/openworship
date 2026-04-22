@@ -1,25 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  BookOpenIcon,
   CornerDownLeftIcon,
   MusicIcon,
   PresentationIcon,
 } from "lucide-react";
-import type { VerseResult, Song, AnnouncementItem } from "../../../lib/types";
+import type { Song, AnnouncementItem } from "../../../lib/types";
 import { toastError } from "../../../lib/toast";
 import {
   listAnnouncements,
   pushAnnouncementToDisplay,
 } from "../../../lib/commands/annotations";
 import { AssetsPanel } from "./AssetsPanel";
+import { ScriptureSearchPanel } from "./ScriptureSearchPanel";
 
 export function LibraryPanel() {
   const [tab, setTab] = useState<"scripture" | "lyrics" | "slides">(
     "scripture",
   );
   const [query, setQuery] = useState("");
-  const [scriptureResults, setScriptureResults] = useState<VerseResult[]>([]);
   const [songResults, setSongResults] = useState<Song[]>([]);
   const [slides, setSlides] = useState<AnnouncementItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -36,25 +35,17 @@ export function LibraryPanel() {
   const runSearch = useCallback(
     async (q: string) => {
       if (!q.trim()) {
-        setScriptureResults([]);
         setSongResults([]);
         return;
       }
+      if (tab !== "lyrics") return;
       setIsSearching(true);
       try {
-        if (tab === "scripture") {
-          const res = await invoke<VerseResult[]>("search_scriptures", {
-            query: q,
-            translation: null,
-          });
-          setScriptureResults(res);
-        } else if (tab === "lyrics") {
-          const res = await invoke<Song[]>("search_songs", {
-            query: q,
-            limit: 20,
-          });
-          setSongResults(res);
-        }
+        const res = await invoke<Song[]>("search_songs", {
+          query: q,
+          limit: 20,
+        });
+        setSongResults(res);
       } catch {
         // silent
       } finally {
@@ -98,11 +89,9 @@ export function LibraryPanel() {
   ];
 
   const placeholder =
-    tab === "scripture"
-      ? "Romans 8:38 ..."
-      : tab === "lyrics"
-        ? "song title, opening line ..."
-        : "slide title ...";
+    tab === "lyrics"
+      ? "song title, opening line ..."
+      : "slide title ...";
 
   return (
     <section className="flex w-[280px] shrink-0 flex-col overflow-hidden border-r border-line bg-bg">
@@ -131,7 +120,6 @@ export function LibraryPanel() {
               onClick={() => {
                 setTab(t.id);
                 setQuery("");
-                setScriptureResults([]);
                 setSongResults([]);
               }}
             >
@@ -143,40 +131,25 @@ export function LibraryPanel() {
           ))}
         </div>
 
-        {/* Search */}
-        <div className="border-b border-line px-3 py-2.5">
-          <input
-            className="w-full rounded border border-line bg-bg-2 px-2.5 py-[7px] text-xs text-ink focus:border-line-strong"
-            placeholder={placeholder}
-            value={query}
-            onChange={handleQueryChange}
-          />
-        </div>
+        {/* Scripture panel (has its own search UI) */}
+        {tab === "scripture" && (
+          <ScriptureSearchPanel onPush={handlePush} />
+        )}
 
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto">
-          {tab === "scripture" &&
-            scriptureResults.map((v, i) => (
-              <div
-                key={`${v.translation}-${v.reference}-${i}`}
-                className="grid cursor-pointer grid-cols-[20px_1fr_auto] items-center gap-2.5 border-b border-transparent px-3.5 py-2 text-ink-2 transition-colors hover:bg-bg-2 hover:text-ink"
-                onClick={() => handlePush(v.reference, v.text, v.translation)}
-              >
-                <span className="flex items-center justify-center text-accent">
-                  <BookOpenIcon className="h-2 w-2 shrink-0" />
-                </span>
-                <div>
-                  <div className="font-serif text-sm italic">{v.reference}</div>
-                  <div className="font-mono text-[9.5px] tracking-[0.06em] text-ink-3">
-                    {v.translation}
-                  </div>
-                </div>
-                <span className="flex items-center text-ink-3">
-                  <CornerDownLeftIcon className="h-2 w-2 shrink-0" />
-                </span>
-              </div>
-            ))}
+        {/* Search input for lyrics/slides */}
+        {tab !== "scripture" && (
+          <div className="border-b border-line px-3 py-2.5">
+            <input
+              className="w-full rounded border border-line bg-bg-2 px-2.5 py-[7px] text-xs text-ink focus:border-line-strong"
+              placeholder={placeholder}
+              value={query}
+              onChange={handleQueryChange}
+            />
+          </div>
+        )}
 
+        {/* Results for lyrics/slides */}
+        <div className={`flex-1 overflow-y-auto ${tab === "scripture" ? "hidden" : ""}`}>
           {tab === "lyrics" &&
             songResults.map((s) => (
               <div
@@ -239,9 +212,8 @@ export function LibraryPanel() {
 
           {query.trim() &&
             !isSearching &&
-            scriptureResults.length === 0 &&
             songResults.length === 0 &&
-            tab !== "slides" && (
+            tab === "lyrics" && (
               <div className="px-3.5 py-6 text-center text-xs text-muted">
                 No results for &ldquo;{query}&rdquo;
               </div>

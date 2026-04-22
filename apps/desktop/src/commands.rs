@@ -35,6 +35,27 @@ pub fn search_scriptures(
         .map_err(|e| e.to_string())
 }
 
+/// Return the distinct chapter numbers for a Bible book.
+#[tauri::command]
+pub fn get_book_chapters(
+    book: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<u32>, String> {
+    let conn = state.scripture_db.lock().map_err(|e| e.to_string())?;
+    ow_db::get_chapters(&conn, &book).map_err(|e| e.to_string())
+}
+
+/// Return the distinct verse numbers for a Bible book + chapter.
+#[tauri::command]
+pub fn get_chapter_verses(
+    book: String,
+    chapter: u32,
+    state: State<'_, AppState>,
+) -> Result<Vec<u32>, String> {
+    let conn = state.scripture_db.lock().map_err(|e| e.to_string())?;
+    ow_db::get_verses(&conn, &book, chapter).map_err(|e| e.to_string())
+}
+
 /// Push a verse to the fullscreen display via WebSocket.
 ///
 /// Side-effects:

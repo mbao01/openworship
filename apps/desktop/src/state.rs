@@ -79,6 +79,8 @@ pub struct AppState {
     /// When `true`, the display output is blacked out (content hidden but queue
     /// state is preserved).  Toggled by the operator's "Live" button.
     pub blackout: Arc<RwLock<bool>>,
+    /// In-memory scripture database for chapter/verse metadata queries.
+    pub scripture_db: Arc<Mutex<rusqlite::Connection>>,
 }
 
 impl AppState {

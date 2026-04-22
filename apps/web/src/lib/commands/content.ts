@@ -24,6 +24,25 @@ export async function searchScriptures(
   return invoke<VerseResult[]>("search_scriptures", { query, translation });
 }
 
+// ─── Scripture Metadata ──────────────────────────────────────────────────────
+
+/**
+ * Returns the distinct chapter numbers for a Bible book.
+ */
+export async function getBookChapters(book: string): Promise<number[]> {
+  return invoke<number[]>("get_book_chapters", { book });
+}
+
+/**
+ * Returns the distinct verse numbers for a Bible book and chapter.
+ */
+export async function getChapterVerses(
+  book: string,
+  chapter: number,
+): Promise<number[]> {
+  return invoke<number[]>("get_chapter_verses", { book, chapter });
+}
+
 // ─── Translations ─────────────────────────────────────────────────────────────
 
 /**
