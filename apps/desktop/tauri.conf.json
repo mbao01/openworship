@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://asset.localhost; media-src 'self' blob: https://asset.localhost; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ws://127.0.0.1:9000 https://fonts.googleapis.com; object-src 'none'",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: https://asset.localhost; media-src 'self' blob: asset: https://asset.localhost; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ws://127.0.0.1:9000 https://fonts.googleapis.com; object-src 'none'",
       "assetProtocol": {
         "scope": [
           "$HOME/.openworship/**"

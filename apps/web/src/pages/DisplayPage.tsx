@@ -13,6 +13,7 @@ interface ContentEvent extends DisplayContentEvent {
   slide_index?: number;
   total_slides?: number;
   background_url?: string;
+  background_type?: string;
 }
 
 const WS_URL = "ws://127.0.0.1:9000";
@@ -63,6 +64,7 @@ export function DisplayPage() {
   const [chunkIndex, setChunkIndex] = useState(0);
   const [countdownSecs, setCountdownSecs] = useState<number | null>(null);
   const [backgroundValue, setBackgroundValue] = useState<string | null>(null);
+  const [backgroundType, setBackgroundType] = useState<string | null>(null);
   const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -115,8 +117,9 @@ export function DisplayPage() {
 
           if (event.kind === "set_background") {
             const url = event.background_url || null;
+            const bgType = event.background_type || null;
+            setBackgroundType(bgType);
             if (url?.startsWith("localfile:")) {
-              // Video backgrounds — resolve local path to Tauri asset URL
               const filePath = url.slice("localfile:".length);
               setBackgroundValue(convertFileSrc(filePath));
             } else {
@@ -217,6 +220,7 @@ export function DisplayPage() {
         <DisplayContent
           content={content}
           backgroundValue={backgroundValue}
+          backgroundType={backgroundType}
           currentChunk={currentChunk}
           totalChunks={lyricChunks.length}
           chunkIndex={chunkIndex}

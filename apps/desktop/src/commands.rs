@@ -2385,8 +2385,8 @@ pub fn set_display_background(
     // Resolve the background_id to a display-ready value
     let ev = match &background_id {
         Some(id) => {
-            let resolved = resolve_background_value(id, &state)?;
-            ContentEvent::set_background(resolved)
+            let (resolved, bg_type) = resolve_background_value(id, &state)?;
+            ContentEvent::set_background(resolved, bg_type.as_deref())
         }
         None => ContentEvent::clear_background(),
     };
@@ -2406,15 +2406,15 @@ pub fn set_display_background(
 /// Resolve a background ID to a display-ready value:
 /// - "preset:xyz" → CSS gradient string
 /// - "artifact:abc" → "data:image/...;base64,..." data URL
-fn resolve_background_value(id: &str, state: &AppState) -> Result<String, String> {
+/// Returns (resolved_url, bg_type) where bg_type is "video", "image", or "gradient".
+fn resolve_background_value(id: &str, state: &AppState) -> Result<(String, Option<String>), String> {
     if let Some(preset_key) = id.strip_prefix("preset:") {
-        // Look up the CSS gradient from presets
         let presets = crate::backgrounds::list_presets();
         let preset = presets
             .iter()
             .find(|p| p.id == id || p.id.ends_with(preset_key))
             .ok_or_else(|| format!("Unknown preset: {id}"))?;
-        Ok(preset.value.clone())
+        Ok((preset.value.clone(), Some("gradient".into())))
     } else if let Some(artifact_id) = id.strip_prefix("artifact:") {
         let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
         let entry = db
@@ -2427,21 +2427,17 @@ fn resolve_background_value(id: &str, state: &AppState) -> Result<String, String
             .as_deref()
             .unwrap_or("image/jpeg");
 
-        // Videos are too large for base64 data URLs — send the absolute path
-        // prefixed with "localfile:" so the frontend can resolve it via
-        // convertFileSrc (Tauri asset protocol).
         if mime.starts_with("video/") {
-            Ok(format!("localfile:{}", abs_path.display()))
+            Ok((format!("localfile:{}", abs_path.display()), Some("video".into())))
         } else {
             let bytes = std::fs::read(&abs_path)
                 .map_err(|e| format!("Failed to read artifact: {e}"))?;
             use base64::Engine;
             let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-            Ok(format!("data:{mime};base64,{b64}"))
+            Ok((format!("data:{mime};base64,{b64}"), Some("image".into())))
         }
     } else {
-        // Assume it's already a CSS value
-        Ok(id.to_string())
+        Ok((id.to_string(), None))
     }
 }
 

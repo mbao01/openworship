@@ -279,8 +279,8 @@ pub fn open_display_window(
         // Send current background
         if let Ok(settings) = display_settings.read() {
             if let Some(ref bg_id) = settings.background_id {
-                let resolved = resolve_bg_for_display(bg_id, &artifacts_db);
-                let _ = display_tx.send(ow_display::ContentEvent::set_background(resolved));
+                let (resolved, bg_type) = resolve_bg_for_display(bg_id, &artifacts_db);
+                let _ = display_tx.send(ow_display::ContentEvent::set_background(resolved, bg_type.as_deref()));
             }
         }
 
@@ -376,32 +376,30 @@ fn get_display_url(app: &AppHandle) -> String {
 /// Resolve a background ID to a display-ready value (CSS gradient or base64 data URL).
 /// Reuses the same logic as `commands::resolve_background_value` but takes an
 /// `Arc<Mutex<ArtifactsDb>>` instead of `&AppState` so it can run from a thread.
-fn resolve_bg_for_display(bg_id: &str, artifacts_db: &std::sync::Arc<Mutex<ArtifactsDb>>) -> String {
-    // Preset → CSS gradient
+/// Returns (resolved_url, bg_type).
+fn resolve_bg_for_display(bg_id: &str, artifacts_db: &std::sync::Arc<Mutex<ArtifactsDb>>) -> (String, Option<String>) {
     if let Some(preset_key) = bg_id.strip_prefix("preset:") {
         let presets = crate::backgrounds::list_presets();
         if let Some(preset) = presets.iter().find(|p| p.id == bg_id || p.id.ends_with(preset_key)) {
-            return preset.value.clone();
+            return (preset.value.clone(), Some("gradient".into()));
         }
     }
-    // Artifact → localfile: URL for videos, base64 data URL for images
     if let Some(artifact_id) = bg_id.strip_prefix("artifact:") {
         if let Ok(db) = artifacts_db.lock() {
             if let Ok(Some(entry)) = db.get_by_id(artifact_id) {
                 let abs_path = db.abs_path(&entry.path);
                 let mime = entry.mime_type.as_deref().unwrap_or("image/jpeg");
                 if mime.starts_with("video/") {
-                    return format!("localfile:{}", abs_path.display());
+                    return (format!("localfile:{}", abs_path.display()), Some("video".into()));
                 }
                 if let Ok(bytes) = std::fs::read(&abs_path) {
                     use base64::Engine;
                     let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-                    return format!("data:{mime};base64,{b64}");
+                    return (format!("data:{mime};base64,{b64}"), Some("image".into()));
                 }
             }
         }
     }
-    // Fallback: assume it's already a CSS value
-    bg_id.to_string()
+    (bg_id.to_string(), None)
 }
 
