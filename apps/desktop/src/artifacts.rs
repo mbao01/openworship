@@ -321,16 +321,39 @@ impl ArtifactsDb {
 
 // ─── Thumbnail generation ─────────────────────────────────────────────────────
 
+/// MIME types that should never get thumbnails.
+fn skip_thumbnail(mime: &str) -> bool {
+    matches!(
+        mime,
+        "text/plain"
+            | "text/x-shellscript"
+            | "application/x-sh"
+            | "application/x-csh"
+            | "application/x-executable"
+            | "application/x-mach-binary"
+            | "application/x-elf"
+            | "application/x-dosexec"
+            | "application/x-sharedlib"
+            | "application/octet-stream"
+            | "application/x-object"
+    )
+}
+
 pub fn generate_thumbnail(abs_path: &std::path::Path, base_dir: &std::path::Path) -> Option<String> {
     let mime = mime_guess::from_path(abs_path).first_or_octet_stream();
     let mime_str = mime.to_string();
 
-    let img = if mime_str.starts_with("image/") {
-        image::open(abs_path).ok()?
-    } else if mime_str.starts_with("video/") {
-        extract_video_frame(abs_path)?
-    } else {
+    if skip_thumbnail(&mime_str) {
         return None;
+    }
+
+    // Fast path: use the image crate for raster images (no subprocess needed)
+    let img = if mime_str.starts_with("image/") && mime_str != "image/svg+xml" {
+        image::open(abs_path).ok()?
+    } else {
+        // For everything else (video, PDF, Office docs, SVG, fonts, etc.)
+        // use the platform-specific thumbnail generator.
+        platform_thumbnail(abs_path, &mime_str)?
     };
 
     let thumb = img.thumbnail(128, 128);
@@ -351,18 +374,36 @@ pub fn generate_thumbnail(abs_path: &std::path::Path, base_dir: &std::path::Path
     Some(rel.to_string_lossy().into_owned())
 }
 
-/// Extract a single frame from a video file for thumbnail generation.
-/// Uses macOS `qlmanage` (Quick Look) which supports all common video formats.
-/// Falls back gracefully — returns None if the tool is unavailable.
-fn extract_video_frame(video_path: &std::path::Path) -> Option<image::DynamicImage> {
-    let tmp_dir = std::env::temp_dir().join("ow_video_thumbs");
+// ─── Platform-specific thumbnail backends ────────────────────────────────────
+
+/// Dispatch to the best available thumbnail backend for the current OS.
+/// Each backend handles videos, PDFs, Office docs, and more via native OS APIs.
+fn platform_thumbnail(file_path: &std::path::Path, mime: &str) -> Option<image::DynamicImage> {
+    // Try the OS-native thumbnailer first (handles the widest range of formats)
+    if let Some(img) = os_native_thumbnail(file_path) {
+        return Some(img);
+    }
+    // Fallback: use ffmpeg for video files (cross-platform)
+    if mime.starts_with("video/") {
+        return ffmpeg_thumbnail(file_path);
+    }
+    None
+}
+
+/// Try to extract a video frame using ffmpeg (available on all platforms).
+fn ffmpeg_thumbnail(file_path: &std::path::Path) -> Option<image::DynamicImage> {
+    let tmp_dir = std::env::temp_dir().join("ow_ffmpeg_thumbs");
     std::fs::create_dir_all(&tmp_dir).ok()?;
 
-    // qlmanage generates a PNG thumbnail at the specified size
-    let status = std::process::Command::new("qlmanage")
-        .args(["-t", "-s", "256", "-o"])
-        .arg(&tmp_dir)
-        .arg(video_path)
+    let stem = file_path.file_stem()?.to_str()?;
+    let out_path = tmp_dir.join(format!("{stem}.thumb.png"));
+
+    // Extract a frame at 1 second into the video
+    let status = std::process::Command::new("ffmpeg")
+        .args(["-y", "-i"])
+        .arg(file_path)
+        .args(["-ss", "1", "-vframes", "1", "-vf", "scale=256:-1"])
+        .arg(&out_path)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
@@ -372,16 +413,154 @@ fn extract_video_frame(video_path: &std::path::Path) -> Option<image::DynamicIma
         return None;
     }
 
-    // qlmanage outputs "{filename}.png" in the output directory
-    let file_name = video_path.file_name()?.to_str()?;
-    let thumb_path = tmp_dir.join(format!("{file_name}.png"));
-
-    let img = image::open(&thumb_path).ok();
-
-    // Clean up temp file
-    let _ = std::fs::remove_file(&thumb_path);
-
+    let img = image::open(&out_path).ok();
+    let _ = std::fs::remove_file(&out_path);
     img
+}
+
+// ── macOS: Quick Look (qlmanage) ─────────────────────────────────────────────
+
+#[cfg(target_os = "macos")]
+fn os_native_thumbnail(file_path: &std::path::Path) -> Option<image::DynamicImage> {
+    let tmp_dir = std::env::temp_dir().join("ow_ql_thumbs");
+    std::fs::create_dir_all(&tmp_dir).ok()?;
+
+    let status = std::process::Command::new("qlmanage")
+        .args(["-t", "-s", "256", "-o"])
+        .arg(&tmp_dir)
+        .arg(file_path)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .ok()?;
+
+    if !status.success() {
+        return None;
+    }
+
+    let file_name = file_path.file_name()?.to_str()?;
+    let thumb_path = tmp_dir.join(format!("{file_name}.png"));
+    let img = image::open(&thumb_path).ok();
+    let _ = std::fs::remove_file(&thumb_path);
+    img
+}
+
+// ── Windows: PowerShell + Shell API thumbnail extraction ─────────────────────
+
+#[cfg(target_os = "windows")]
+fn os_native_thumbnail(file_path: &std::path::Path) -> Option<image::DynamicImage> {
+    let tmp_dir = std::env::temp_dir().join("ow_win_thumbs");
+    std::fs::create_dir_all(&tmp_dir).ok()?;
+
+    let stem = file_path.file_stem()?.to_str()?;
+    let out_path = tmp_dir.join(format!("{stem}.thumb.png"));
+    let file_str = file_path.to_str()?;
+    let out_str = out_path.to_str()?;
+
+    // PowerShell script that uses the Windows Shell COM API to extract thumbnails.
+    // Works for videos, PDFs, Office docs, images, and any file type with a
+    // registered thumbnail handler.
+    let script = format!(
+        r#"
+Add-Type -AssemblyName System.Drawing
+$shell = New-Object -ComObject Shell.Application
+$folder = $shell.NameSpace((Split-Path -Parent '{file_str}'))
+$item = $folder.ParseName((Split-Path -Leaf '{file_str}'))
+$bmp = $null
+try {{
+    # Use ShellItem image factory via .NET interop
+    Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+[ComImport, Guid("bcc18b79-ba16-442f-80c4-8a59c30c463b"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IShellItemImageFactory {{
+    void GetImage([In, MarshalAs(UnmanagedType.Struct)] SIZE size, [In] int flags, out IntPtr hBitmap);
+}}
+[StructLayout(LayoutKind.Sequential)]
+public struct SIZE {{ public int cx; public int cy; }}
+public class ShellThumb {{
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
+    static extern void SHCreateItemFromParsingName(string pszPath, IntPtr pbc, ref Guid riid, out IShellItemImageFactory ppv);
+    [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr hObject);
+    public static void Save(string path, string outPath) {{
+        Guid iid = new Guid("bcc18b79-ba16-442f-80c4-8a59c30c463b");
+        IShellItemImageFactory factory;
+        SHCreateItemFromParsingName(path, IntPtr.Zero, ref iid, out factory);
+        SIZE sz; sz.cx = 256; sz.cy = 256;
+        IntPtr hBmp;
+        factory.GetImage(sz, 0, out hBmp);
+        var bmp = System.Drawing.Image.FromHbitmap(hBmp);
+        bmp.Save(outPath, System.Drawing.Imaging.ImageFormat.Png);
+        bmp.Dispose();
+        DeleteObject(hBmp);
+    }}
+}}
+"@
+    [ShellThumb]::Save('{file_str}', '{out_str}')
+}} catch {{
+    exit 1
+}}
+"#
+    );
+
+    let status = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .ok()?;
+
+    if !status.success() {
+        return None;
+    }
+
+    let img = image::open(&out_path).ok();
+    let _ = std::fs::remove_file(&out_path);
+    img
+}
+
+// ── Linux: freedesktop thumbnailers ──────────────────────────────────────────
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+fn os_native_thumbnail(file_path: &std::path::Path) -> Option<image::DynamicImage> {
+    let tmp_dir = std::env::temp_dir().join("ow_linux_thumbs");
+    std::fs::create_dir_all(&tmp_dir).ok()?;
+
+    let stem = file_path.file_stem()?.to_str()?;
+    let out_path = tmp_dir.join(format!("{stem}.thumb.png"));
+
+    // Try gnome-thumbnail (handles most file types on GNOME desktops)
+    let gnome = std::process::Command::new("gnome-desktop-thumbnailer")
+        .arg(file_path)
+        .arg(&out_path)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+
+    if gnome.map(|s| s.success()).unwrap_or(false) {
+        let img = image::open(&out_path).ok();
+        let _ = std::fs::remove_file(&out_path);
+        return img;
+    }
+
+    // Fallback: ffmpegthumbnailer (common on Linux, handles videos well)
+    let ffthumb = std::process::Command::new("ffmpegthumbnailer")
+        .args(["-i"])
+        .arg(file_path)
+        .args(["-o"])
+        .arg(&out_path)
+        .args(["-s", "256", "-t", "10"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+
+    if ffthumb.map(|s| s.success()).unwrap_or(false) {
+        let img = image::open(&out_path).ok();
+        let _ = std::fs::remove_file(&out_path);
+        return img;
+    }
+
+    None
 }
 
 // ─── File operations ──────────────────────────────────────────────────────────
