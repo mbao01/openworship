@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   DisplayContent,
   REF_WIDTH,
@@ -116,15 +115,8 @@ export function DisplayPage() {
           const event = JSON.parse(evt.data as string) as ContentEvent;
 
           if (event.kind === "set_background") {
-            const url = event.background_url || null;
-            const bgType = event.background_type || null;
-            setBackgroundType(bgType);
-            if (url?.startsWith("localfile:")) {
-              const filePath = url.slice("localfile:".length);
-              setBackgroundValue(convertFileSrc(filePath));
-            } else {
-              setBackgroundValue(url);
-            }
+            setBackgroundValue(event.background_url || null);
+            setBackgroundType(event.background_type || null);
             return;
           }
 

@@ -390,7 +390,7 @@ fn resolve_bg_for_display(bg_id: &str, artifacts_db: &std::sync::Arc<Mutex<Artif
                 let abs_path = db.abs_path(&entry.path);
                 let mime = entry.mime_type.as_deref().unwrap_or("image/jpeg");
                 if mime.starts_with("video/") {
-                    return (format!("localfile:{}", abs_path.display()), Some("video".into()));
+                    return (format!("owmedia://localhost/{artifact_id}"), Some("video".into()));
                 }
                 if let Ok(bytes) = std::fs::read(&abs_path) {
                     use base64::Engine;

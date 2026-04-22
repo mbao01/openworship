@@ -213,6 +213,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
     let song_embed_index = Arc::clone(&song_semantic_index);
     let song_embed_embedder = Arc::clone(&embedder);
 
+    let media_db = Arc::clone(&artifacts_db);
+
     let app_state = AppState {
         search,
         display_tx,
@@ -251,6 +253,46 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         .manage(app_state)
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .register_uri_scheme_protocol("owmedia", move |_ctx, request| {
+            // Custom protocol: owmedia://artifact/{id}
+            // Streams artifact files from disk — supports video, images, etc.
+            let uri = request.uri();
+            let path = uri.path().trim_start_matches('/');
+
+            let db = match media_db.lock() {
+                Ok(db) => db,
+                Err(_) => return tauri::http::Response::builder()
+                    .status(500)
+                    .body(Vec::new())
+                    .unwrap(),
+            };
+
+            let entry = match db.get_by_id(path) {
+                Ok(Some(e)) => e,
+                _ => return tauri::http::Response::builder()
+                    .status(404)
+                    .body(Vec::new())
+                    .unwrap(),
+            };
+
+            let abs = db.abs_path(&entry.path);
+            let bytes = match std::fs::read(&abs) {
+                Ok(b) => b,
+                Err(_) => return tauri::http::Response::builder()
+                    .status(404)
+                    .body(Vec::new())
+                    .unwrap(),
+            };
+
+            let mime = entry.mime_type.as_deref().unwrap_or("application/octet-stream");
+
+            tauri::http::Response::builder()
+                .status(200)
+                .header("Content-Type", mime)
+                .header("Access-Control-Allow-Origin", "*")
+                .body(bytes)
+                .unwrap()
+        })
         .setup(move |app| {
             let app_handle = app.handle().clone();
 

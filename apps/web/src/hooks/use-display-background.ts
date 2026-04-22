@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import {
   getDisplayBackground,
   listPresetBackgrounds,
@@ -42,11 +42,8 @@ async function resolveArtifactUrl(
 ): Promise<string | null> {
   try {
     if (bgType === "video") {
-      // Videos: get the absolute path and use Tauri's asset protocol
-      const absPath = await invoke<string>("get_artifact_path", {
-        id: artifactId,
-      });
-      return convertFileSrc(absPath);
+      // Videos: use the custom owmedia:// protocol (streamed from Rust)
+      return `owmedia://localhost/${artifactId}`;
     }
     // Images: read bytes and create blob URL
     const bytes = await invoke<number[]>("read_artifact_bytes", {

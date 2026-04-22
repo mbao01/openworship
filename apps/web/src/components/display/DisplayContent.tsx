@@ -125,9 +125,9 @@ export function DisplayContent({
       {/* Background */}
       {backgroundValue && (
         <div className="absolute inset-0 z-0">
-          {backgroundValue.startsWith("data:video/") ||
-          backgroundType === "video" ||
-          backgroundValue.includes("asset.localhost") ? (
+          {backgroundType === "video" ||
+          backgroundValue.startsWith("data:video/") ||
+          backgroundValue.startsWith("owmedia://") ? (
             <video
               key={backgroundValue}
               src={backgroundValue}

@@ -9,7 +9,6 @@ const mockInvoke = vi.fn();
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
-  convertFileSrc: (path: string) => `https://asset.localhost/${path}`,
 }));
 
 vi.mock("@/lib/commands/display", () => ({
@@ -109,14 +108,9 @@ describe("useDisplayBackground", () => {
     expect(result.current.uploaded[0].value).toMatch(/^blob:/);
   });
 
-  it("uses convertFileSrc for video backgrounds instead of blob URL", async () => {
+  it("uses owmedia:// protocol for video backgrounds instead of blob URL", async () => {
     mockGetDisplayBackground.mockResolvedValue("artifact:vid1");
     mockListUploadedBackgrounds.mockResolvedValue([UPLOADED_VIDEO]);
-    mockInvoke.mockImplementation((cmd: string) => {
-      if (cmd === "get_artifact_path")
-        return Promise.resolve("/path/to/background.mp4");
-      return Promise.resolve(null);
-    });
 
     const { result } = renderHook(() => useDisplayBackground());
 
@@ -124,9 +118,8 @@ describe("useDisplayBackground", () => {
       expect(result.current.uploaded).toHaveLength(1);
     });
 
-    // Video should use convertFileSrc URL, not blob
-    expect(result.current.uploaded[0].value).toContain("asset.localhost");
-    expect(result.current.uploaded[0].value).toContain("background.mp4");
+    // Video should use owmedia:// protocol URL, not blob
+    expect(result.current.uploaded[0].value).toBe("owmedia://localhost/vid1");
   });
 
   it("loadUploaded loads all uploaded backgrounds on demand", async () => {

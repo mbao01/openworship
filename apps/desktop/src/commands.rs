@@ -2428,7 +2428,7 @@ fn resolve_background_value(id: &str, state: &AppState) -> Result<(String, Optio
             .unwrap_or("image/jpeg");
 
         if mime.starts_with("video/") {
-            Ok((format!("localfile:{}", abs_path.display()), Some("video".into())))
+            Ok((format!("owmedia://localhost/{artifact_id}"), Some("video".into())))
         } else {
             let bytes = std::fs::read(&abs_path)
                 .map_err(|e| format!("Failed to read artifact: {e}"))?;
