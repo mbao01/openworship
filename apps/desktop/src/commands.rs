@@ -2403,10 +2403,9 @@ pub fn set_display_background(
     Ok(())
 }
 
-/// Resolve a background ID to a display-ready value:
-/// - "preset:xyz" → CSS gradient string
-/// - "artifact:abc" → "data:image/...;base64,..." data URL
-/// Returns (resolved_url, bg_type) where bg_type is "video", "image", or "gradient".
+/// Resolve a background ID to a display-ready value.
+///
+/// Returns `(resolved_url, bg_type)` where bg_type is `"video"`, `"image"`, or `"gradient"`.
 fn resolve_background_value(id: &str, state: &AppState) -> Result<(String, Option<String>), String> {
     if let Some(preset_key) = id.strip_prefix("preset:") {
         let presets = crate::backgrounds::list_presets();

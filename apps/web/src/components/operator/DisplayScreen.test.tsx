@@ -14,9 +14,14 @@ vi.mock("../../hooks/use-queue", () => ({
   useQueue: () => ({ queue: [], live: null }),
 }));
 
-vi.mock("../../lib/commands/display-window", () => ({
-  getObsDisplayUrl: vi.fn().mockResolvedValue("http://localhost:7411/display"),
-  openDisplayWindow: vi.fn().mockResolvedValue(undefined),
+vi.mock("../../hooks/use-display-window", () => ({
+  useDisplayWindow: () => ({
+    isOpen: false,
+    monitors: [],
+    obsUrl: "http://localhost:7411/display",
+    openOn: vi.fn(),
+    close: vi.fn(),
+  }),
 }));
 
 vi.mock("@/lib/commands/detection", () => ({
@@ -35,11 +40,10 @@ describe("DisplayScreen", () => {
     expect(screen.getByText("Output settings")).toBeInTheDocument();
   });
 
-  it("renders settings controls (Display URL, Resolution, Background, Safe area)", () => {
+  it("renders settings controls (Display output, Display URL, Safe area)", () => {
     render(<DisplayScreen />);
+    expect(screen.getByText("Display output")).toBeInTheDocument();
     expect(screen.getByText("Display URL")).toBeInTheDocument();
-    expect(screen.getByText("Resolution")).toBeInTheDocument();
-    expect(screen.getByText("Background")).toBeInTheDocument();
     expect(screen.getByText("Safe area")).toBeInTheDocument();
   });
 
