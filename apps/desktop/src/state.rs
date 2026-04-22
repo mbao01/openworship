@@ -85,4 +85,15 @@ impl AppState {
     pub fn stt_status(&self) -> SttStatus {
         self.stt.lock().unwrap().status()
     }
+
+    /// Send a content event to the display, but only if blackout is off.
+    /// Returns `true` if the event was sent.
+    pub fn send_to_display(&self, event: ContentEvent) -> bool {
+        let is_blackout = self.blackout.read().map(|b| *b).unwrap_or(false);
+        if is_blackout {
+            return false;
+        }
+        let _ = self.display_tx.send(event);
+        true
+    }
 }

@@ -9,7 +9,7 @@ use ow_core::{DetectionMode, QueueItem, QueueStatus, ScriptureDetector};
 use ow_display::ContentEvent;
 use ow_search::{VerseResult, parse_range_reference};
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 
@@ -52,7 +52,7 @@ pub fn push_to_display(
 ) -> Result<(), String> {
     let event = ContentEvent::scripture(reference.clone(), text.clone(), translation.clone());
     // Send to display WebSocket clients.
-    let _ = state.display_tx.send(event);
+    state.send_to_display(event);
 
     // ── Update queue: retire current live, add this item as live ──────────────
     {
@@ -725,6 +725,7 @@ pub fn detect_in_transcript(
         &state.search,
         &state.queue,
         &state.display_tx,
+        &state.blackout,
         &app,
     );
 
@@ -786,11 +787,11 @@ pub fn approve_item(
 
     if let Some(item) = q.iter_mut().find(|i| i.id == id) {
         item.status = QueueStatus::Live;
-        let event = content_event_for_item(item);
-        let _ = state.display_tx.send(event);
-        // Auto-clear blackout when pushing new content live.
-        if let Ok(mut bo) = state.blackout.write() {
-            *bo = false;
+        // Only push to display if not blacked out.
+        let is_blackout = state.blackout.read().map(|b| *b).unwrap_or(false);
+        if !is_blackout {
+            let event = content_event_for_item(item);
+            state.send_to_display(event);
         }
     } else {
         return Err(format!("item {id} not found in queue"));
@@ -931,9 +932,9 @@ pub fn next_item(state: State<'_, AppState>, app: AppHandle) -> Result<(), Strin
     };
 
     if let Some(item) = new_live {
-        let _ = state.display_tx.send(content_event_for_item(&item));
+        state.send_to_display(content_event_for_item(&item));
     } else {
-        let _ = state.display_tx.send(ow_display::ContentEvent::clear());
+        state.send_to_display(ow_display::ContentEvent::clear());
     }
 
     let snapshot: Vec<QueueItem> = state
@@ -980,7 +981,7 @@ pub fn prev_item(state: State<'_, AppState>, app: AppHandle) -> Result<(), Strin
     };
 
     if let Some(item) = new_live {
-        let _ = state.display_tx.send(content_event_for_item(&item));
+        state.send_to_display(content_event_for_item(&item));
 
         let snapshot: Vec<QueueItem> = state
             .queue
@@ -1066,7 +1067,7 @@ pub fn toggle_blackout(state: State<'_, AppState>) -> Result<bool, String> {
         let q = state.queue.lock().map_err(|e| e.to_string())?;
         if let Some(live) = q.iter().find(|i| i.status == QueueStatus::Live) {
             let event = content_event_for_item(live);
-            let _ = state.display_tx.send(event);
+            state.send_to_display(event);
         }
     }
 
@@ -1093,6 +1094,7 @@ pub(crate) fn detect_and_queue(
     search: &ow_search::SearchEngine,
     queue: &Mutex<VecDeque<QueueItem>>,
     display_tx: &BroadcastSender<ContentEvent>,
+    blackout: &RwLock<bool>,
     app: &AppHandle,
 ) {
     let detector = ScriptureDetector::new();
@@ -1130,11 +1132,14 @@ pub(crate) fn detect_and_queue(
         match mode {
             DetectionMode::Auto | DetectionMode::Offline => {
                 item.status = QueueStatus::Live;
-                let _ = display_tx.send(ContentEvent::scripture(
-                    r.reference,
-                    r.text,
-                    r.translation,
-                ));
+                let is_blackout = blackout.read().map(|b| *b).unwrap_or(false);
+                if !is_blackout {
+                    let _ = display_tx.send(ContentEvent::scripture(
+                        r.reference,
+                        r.text,
+                        r.translation,
+                    ));
+                }
             }
             DetectionMode::Copilot => { /* leave Pending */ }
             DetectionMode::Airplane => unreachable!("guarded by caller"),
@@ -1958,7 +1963,7 @@ pub fn push_song_to_display(
 
     let artist = song.artist.clone().unwrap_or_default();
     let event = ContentEvent::song(song.title.clone(), song.lyrics.clone(), artist.clone());
-    let _ = state.display_tx.send(event);
+    state.send_to_display(event);
 
     // ── Update content bank ──────────────────────────────────────────────────
     let reference = song.title.clone();
@@ -2064,11 +2069,9 @@ pub fn reject_live_item(
     };
 
     if let Some((reference, text, translation)) = new_live {
-        let _ = state
-            .display_tx
-            .send(ContentEvent::scripture(reference, text, translation));
+        state.send_to_display(ContentEvent::scripture(reference, text, translation));
     } else {
-        let _ = state.display_tx.send(ContentEvent::clear());
+        state.send_to_display(ContentEvent::clear());
     }
 
     let snapshot: Vec<QueueItem> = state
@@ -2136,7 +2139,7 @@ pub fn switch_live_translation(
                 &verse.text,
                 &verse.translation,
             );
-            let _ = state.display_tx.send(event);
+            state.send_to_display(event);
 
             // Update the queue item text + translation in place.
             {
@@ -2250,7 +2253,7 @@ pub fn push_announcement_to_display(
         announcement.body.clone(),
         announcement.image_url.clone(),
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     let mut item = ow_core::QueueItem::new_announcement(
         announcement.title.clone(),
@@ -2279,7 +2282,7 @@ pub fn push_custom_slide(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let ev = ContentEvent::custom_slide(title.clone(), body.clone(), image_url.clone());
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     // Retire previous live items and add new one
     {
@@ -2321,7 +2324,7 @@ pub fn push_artifact_to_display(
         String::new(),
         Some(format!("artifact:{artifact_id}")),
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     // Retire previous live items and add new one
     {
@@ -2366,7 +2369,7 @@ pub fn set_display_background(
         }
         None => ContentEvent::clear_background(),
     };
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     // Persist the ID (not the resolved value) to settings
     let mut settings = state
@@ -2504,7 +2507,7 @@ pub fn start_countdown(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let ev = ContentEvent::countdown(title.clone(), duration_secs);
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     let mut item = ow_core::QueueItem::new_countdown(title, duration_secs);
     item.status = ow_core::QueueStatus::Live;
@@ -2595,7 +2598,7 @@ pub fn push_sermon_note(
         0,
         total,
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     // Mark as active at slide 0.
     {
@@ -2647,7 +2650,7 @@ pub fn advance_sermon_note(app: AppHandle, state: State<'_, AppState>) -> Result
         next_index,
         total,
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
     let _ = app.emit("speaker://note-changed", ());
     Ok(())
 }
@@ -2683,7 +2686,7 @@ pub fn rewind_sermon_note(app: AppHandle, state: State<'_, AppState>) -> Result<
         prev_index,
         total,
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
     let _ = app.emit("speaker://note-changed", ());
     Ok(())
 }

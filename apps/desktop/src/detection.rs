@@ -56,6 +56,7 @@ pub async fn run_loop(
     song_semantic_index: Arc<RwLock<Option<SongSemanticIndex>>>,
     song_refs: Arc<RwLock<Vec<SongRef>>>,
     display_tx: broadcast::Sender<ContentEvent>,
+    blackout: Arc<RwLock<bool>>,
     app: AppHandle,
     active_translation: Arc<RwLock<String>>,
     announcements: Arc<RwLock<Vec<AnnouncementItem>>>,
@@ -145,6 +146,7 @@ pub async fn run_loop(
                         current_mode,
                         &queue,
                         &display_tx,
+                        &blackout,
                         false,
                         Some(1.0),
                         content_kind::SCRIPTURE,
@@ -238,7 +240,9 @@ pub async fn run_loop(
                             let mut q = queue.lock().unwrap_or_else(|e| e.into_inner());
                             match current_mode {
                                 DetectionMode::Auto => {
-                                    let _ = display_tx.send(ev);
+                                    if !*blackout.read().unwrap_or_else(|e| e.into_inner()) {
+                                        let _ = display_tx.send(ev);
+                                    }
                                     for it in q.iter_mut() {
                                         if it.status == QueueStatus::Live {
                                             it.status = QueueStatus::Dismissed;
@@ -286,7 +290,9 @@ pub async fn run_loop(
                     ) {
                         ls.chunk_index = next_idx as u32;
                         let advance_evt = ContentEvent::song_advance(ls.title.clone(), ls.chunk_index);
-                        let _ = display_tx.send(advance_evt);
+                        if !*blackout.read().unwrap_or_else(|e| e.into_inner()) {
+                            let _ = display_tx.send(advance_evt);
+                        }
                     }
                 }
 
@@ -360,6 +366,7 @@ pub async fn run_loop(
                                                 current_mode,
                                                 &queue,
                                                 &display_tx,
+                                                &blackout,
                                                 true,
                                                 Some(m.score as f64),
                                                 content_kind::SCRIPTURE,
@@ -561,6 +568,7 @@ fn enqueue_item_inner(
     mode: DetectionMode,
     queue: &Mutex<VecDeque<QueueItem>>,
     display_tx: &broadcast::Sender<ContentEvent>,
+    blackout: &RwLock<bool>,
     is_semantic: bool,
     confidence: Option<f64>,
     kind: &str,
@@ -578,7 +586,9 @@ fn enqueue_item_inner(
         && confidence.map(|c| c >= 0.95).unwrap_or(false);
 
     if auto_approve {
-        let _ = display_tx.send(ContentEvent::scripture(&reference, &text, &translation));
+        if !*blackout.read().unwrap_or_else(|e| e.into_inner()) {
+            let _ = display_tx.send(ContentEvent::scripture(&reference, &text, &translation));
+        }
         item.status = QueueStatus::Live;
     }
     // Otherwise stays Pending (Copilot, Offline, or Auto with low confidence).

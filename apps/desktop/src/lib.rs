@@ -200,6 +200,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
     let detect_song_refs = Arc::clone(&song_refs);
     let detect_translation = Arc::clone(&active_translation);
     let detect_announcements = Arc::clone(&announcements);
+    let blackout = Arc::new(RwLock::new(false));
+    let detect_blackout = Arc::clone(&blackout);
 
     // ── Clone Arcs for background embedding tasks ─────────────────────────────
     let embed_index = Arc::clone(&semantic_index);
@@ -240,7 +242,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         subscribers,
         email_settings,
         anthropic_api_key,
-        blackout: Arc::new(RwLock::new(false)),
+        blackout,
     };
 
     tauri::Builder::default()
@@ -266,6 +268,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                 detect_song_semantic,
                 detect_song_refs,
                 tx_for_detect,
+                detect_blackout,
                 app_handle,
                 detect_translation,
                 detect_announcements,

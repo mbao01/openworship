@@ -136,6 +136,15 @@ export function DisplayPage() {
             startCountdown(event.duration_secs ?? 60);
           } else if (event.kind === "sermon_note") {
             // Ignore on projection display
+          } else if (event.kind === "clear") {
+            setLyricChunks([]);
+            setChunkIndex(0);
+            setCountdownSecs(null);
+            if (autoAdvanceTimer.current)
+              clearTimeout(autoAdvanceTimer.current);
+            if (countdownInterval.current)
+              clearInterval(countdownInterval.current);
+            setContent(null);
           } else {
             setLyricChunks([]);
             setChunkIndex(0);
