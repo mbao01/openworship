@@ -74,14 +74,14 @@ export async function createArtifactDir(
  * Imports an existing file from the filesystem into the artifacts store.
  */
 export async function importArtifactFile(
-  serviceId: string,
-  parentPath: string,
-  filePath: string,
+  sourcePath: string,
+  serviceId?: string | null,
+  parentPath?: string | null,
 ): Promise<ArtifactEntry> {
   return invoke<ArtifactEntry>("import_artifact_file", {
     serviceId,
     parentPath,
-    filePath,
+    sourcePath,
   });
 }
 

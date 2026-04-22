@@ -8,6 +8,7 @@ import {
 } from "../stores/upload-store";
 import { ShareDialog } from "../components/ShareDialog";
 import { invoke } from "../lib/tauri";
+import { importArtifactFile } from "../lib/commands/artifacts";
 import type {
   ArtifactCategory,
   ArtifactEntry,
@@ -1521,8 +1522,6 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
   const [cloudEntries, setCloudEntries] = useState<CloudSyncInfo[]>([]);
 
-  const uploadInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(t);
@@ -1773,54 +1772,39 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const handleUpload = () => uploadInputRef.current?.click();
-
-  const handleFileInput = (ev: React.ChangeEvent<HTMLInputElement>) => {
-    const files = ev.target.files;
-    if (!files || files.length === 0) return;
+  const handleUpload = async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selected = await open({
+      multiple: true,
+      title: "Import files",
+    });
+    if (!selected) return;
+    const paths = Array.isArray(selected) ? selected : [selected];
     const svcId = nav.kind === "service" ? nav.id : null;
 
-    for (const file of Array.from(files)) {
-      const placeholderId = `uploading-${file.name}-${Date.now()}`;
+    for (const filePath of paths) {
+      const fileName = filePath.split("/").pop() ?? filePath;
+      const placeholderId = `uploading-${fileName}-${Date.now()}`;
       addUpload({
         id: placeholderId,
-        name: file.name,
-        previewUrl: URL.createObjectURL(file),
-        size: file.size,
+        name: fileName,
+        previewUrl: "",
+        size: 0,
         status: "uploading",
         serviceId: svcId,
         parentPath,
       });
 
-      // Upload in background — non-blocking
-      file
-        .arrayBuffer()
-        .then((buffer) =>
-          invoke<ArtifactEntry>("write_artifact_bytes", {
-            serviceId: svcId,
-            parentPath,
-            fileName: file.name,
-            data: Array.from(new Uint8Array(buffer)),
-          }),
-        )
+      importArtifactFile(filePath, svcId, parentPath)
         .then((entry) => {
-          updateUpload(placeholderId, {
-            status: "done",
-            realEntry: entry,
-          });
-          // Append to entries so it appears in the real list
+          updateUpload(placeholderId, { status: "done", realEntry: entry });
           setEntries((prev) => [entry, ...prev.filter((e) => e.id !== entry.id)]);
-          // Clean up placeholder after entry is in the list
           removeUpload(placeholderId);
         })
         .catch((err) => {
-          updateUpload(placeholderId, {
-            status: "error",
-            error: String(err),
-          });
+          updateUpload(placeholderId, { status: "error", error: String(err) });
         });
     }
-    ev.target.value = "";
   };
 
   const sectionTitle =
@@ -2042,13 +2026,6 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                   <IconUpload />
                   Upload
                 </button>
-                <input
-                  ref={uploadInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileInput}
-                />
               </div>
             </div>
 

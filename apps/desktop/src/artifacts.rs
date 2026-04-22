@@ -323,10 +323,16 @@ impl ArtifactsDb {
 
 pub fn generate_thumbnail(abs_path: &std::path::Path, base_dir: &std::path::Path) -> Option<String> {
     let mime = mime_guess::from_path(abs_path).first_or_octet_stream();
-    if !mime.to_string().starts_with("image/") {
+    let mime_str = mime.to_string();
+
+    let img = if mime_str.starts_with("image/") {
+        image::open(abs_path).ok()?
+    } else if mime_str.starts_with("video/") {
+        extract_video_frame(abs_path)?
+    } else {
         return None;
-    }
-    let img = image::open(abs_path).ok()?;
+    };
+
     let thumb = img.thumbnail(128, 128);
 
     let parent = abs_path.parent()?;
@@ -343,6 +349,39 @@ pub fn generate_thumbnail(abs_path: &std::path::Path, base_dir: &std::path::Path
 
     let rel = thumb_abs.strip_prefix(base_dir).ok()?;
     Some(rel.to_string_lossy().into_owned())
+}
+
+/// Extract a single frame from a video file for thumbnail generation.
+/// Uses macOS `qlmanage` (Quick Look) which supports all common video formats.
+/// Falls back gracefully — returns None if the tool is unavailable.
+fn extract_video_frame(video_path: &std::path::Path) -> Option<image::DynamicImage> {
+    let tmp_dir = std::env::temp_dir().join("ow_video_thumbs");
+    std::fs::create_dir_all(&tmp_dir).ok()?;
+
+    // qlmanage generates a PNG thumbnail at the specified size
+    let status = std::process::Command::new("qlmanage")
+        .args(["-t", "-s", "256", "-o"])
+        .arg(&tmp_dir)
+        .arg(video_path)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .ok()?;
+
+    if !status.success() {
+        return None;
+    }
+
+    // qlmanage outputs "{filename}.png" in the output directory
+    let file_name = video_path.file_name()?.to_str()?;
+    let thumb_path = tmp_dir.join(format!("{file_name}.png"));
+
+    let img = image::open(&thumb_path).ok();
+
+    // Clean up temp file
+    let _ = std::fs::remove_file(&thumb_path);
+
+    img
 }
 
 // ─── File operations ──────────────────────────────────────────────────────────
@@ -380,7 +419,24 @@ pub fn create_dir(
     Ok(entry)
 }
 
+#[allow(dead_code)]
 pub fn import_file(
+    db: &mut ArtifactsDb,
+    service_id: Option<String>,
+    parent_path: Option<String>,
+    src: &Path,
+) -> Result<ArtifactEntry> {
+    let mut entry = import_file_no_thumb(db, service_id, parent_path, src)?;
+    let base_dir = PathBuf::from(&db.settings.base_path);
+    let dest = db.abs_path(&entry.path);
+    entry.thumbnail_path = generate_thumbnail(&dest, &base_dir);
+    db.upsert(&entry)?;
+    Ok(entry)
+}
+
+/// Same as `import_file` but skips thumbnail generation.
+/// Used when thumbnails are generated in a background thread.
+pub fn import_file_no_thumb(
     db: &mut ArtifactsDb,
     service_id: Option<String>,
     parent_path: Option<String>,
@@ -404,8 +460,6 @@ pub fn import_file(
         .with_context(|| format!("copy {} -> {}", src.display(), dest.display()))?;
     let meta = std::fs::metadata(&dest)?;
     let mime_type = mime_guess::from_path(&dest).first().map(|m| m.to_string());
-    let base_dir = PathBuf::from(&db.settings.base_path);
-    let thumbnail_path = generate_thumbnail(&dest, &base_dir);
     let entry = ArtifactEntry {
         id: new_id(),
         service_id,
@@ -418,7 +472,7 @@ pub fn import_file(
         starred: false,
         created_at_ms: now_ms(),
         modified_at_ms: now_ms(),
-        thumbnail_path,
+        thumbnail_path: None,
     };
     db.upsert(&entry)?;
     Ok(entry)

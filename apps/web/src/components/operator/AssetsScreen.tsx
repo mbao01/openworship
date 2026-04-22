@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ShareDialog } from "../ShareDialog";
 import { ConfirmDialog } from "../ui/confirm-dialog";
 import { invoke } from "../../lib/tauri";
@@ -7,6 +7,7 @@ import {
   updateUpload,
   removeUpload,
 } from "../../stores/upload-store";
+import { importArtifactFile } from "../../lib/commands/artifacts";
 import type {
   ArtifactCategory,
   ArtifactEntry,
@@ -134,7 +135,6 @@ export function AssetsScreen() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 300);
@@ -393,35 +393,30 @@ export function AssetsScreen() {
     }
   };
 
-  const handleUpload = () => uploadInputRef.current?.click();
-
-  const handleFileInput = (ev: React.ChangeEvent<HTMLInputElement>) => {
-    const files = ev.target.files;
-    if (!files || files.length === 0) return;
+  const handleUpload = async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selected = await open({
+      multiple: true,
+      title: "Import files",
+    });
+    if (!selected) return;
+    const paths = Array.isArray(selected) ? selected : [selected];
     const svcId = nav.kind === "service" ? nav.id : null;
 
-    for (const file of Array.from(files)) {
-      const placeholderId = `uploading-${file.name}-${Date.now()}`;
+    for (const filePath of paths) {
+      const fileName = filePath.split("/").pop() ?? filePath;
+      const placeholderId = `uploading-${fileName}-${Date.now()}`;
       addUpload({
         id: placeholderId,
-        name: file.name,
-        previewUrl: URL.createObjectURL(file),
-        size: file.size,
+        name: fileName,
+        previewUrl: "",
+        size: 0,
         status: "uploading",
         serviceId: svcId,
         parentPath,
       });
 
-      file
-        .arrayBuffer()
-        .then((buffer) =>
-          invoke<ArtifactEntry>("write_artifact_bytes", {
-            serviceId: svcId,
-            parentPath,
-            fileName: file.name,
-            data: Array.from(new Uint8Array(buffer)),
-          }),
-        )
+      importArtifactFile(filePath, svcId, parentPath)
         .then((entry) => {
           updateUpload(placeholderId, { status: "done", realEntry: entry });
           setEntries((prev) => [entry, ...prev.filter((e) => e.id !== entry.id)]);
@@ -431,7 +426,6 @@ export function AssetsScreen() {
           updateUpload(placeholderId, { status: "error", error: String(err) });
         });
     }
-    ev.target.value = "";
   };
 
   const sectionTitle =
@@ -645,13 +639,6 @@ export function AssetsScreen() {
                   <UploadIcon className={iconCls} />
                   Upload
                 </button>
-                <input
-                  ref={uploadInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileInput}
-                />
               </div>
             </div>
 

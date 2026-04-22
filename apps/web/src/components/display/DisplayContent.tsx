@@ -29,6 +29,8 @@ export interface DisplayContentEvent {
 interface DisplayContentProps {
   content: DisplayContentEvent | null;
   backgroundValue?: string | null;
+  /** Hint for blob: URLs — "video" renders a <video>, anything else an <img>. */
+  backgroundType?: string | null;
   currentChunk?: string | null;
   totalChunks?: number;
   chunkIndex?: number;
@@ -104,6 +106,7 @@ function fmtCountdown(secs: number) {
 export function DisplayContent({
   content,
   backgroundValue,
+  backgroundType,
   currentChunk,
   totalChunks = 0,
   chunkIndex = 0,
@@ -122,12 +125,15 @@ export function DisplayContent({
       {/* Background */}
       {backgroundValue && (
         <div className="absolute inset-0 z-0">
-          {backgroundValue.startsWith("data:video/") ? (
+          {backgroundValue.startsWith("data:video/") ||
+          backgroundValue.includes("asset.localhost") ||
+          (backgroundValue.startsWith("blob:") && backgroundType === "video") ? (
             <video
               src={backgroundValue}
               autoPlay
               loop
               muted
+              playsInline
               className="h-full w-full object-cover"
             />
           ) : backgroundValue.startsWith("data:image/") ||

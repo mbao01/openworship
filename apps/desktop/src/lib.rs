@@ -250,6 +250,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
     tauri::Builder::default()
         .manage(app_state)
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
             let app_handle = app.handle().clone();
 
@@ -475,6 +476,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::list_preset_backgrounds,
             commands::list_uploaded_backgrounds,
             commands::upload_background,
+            commands::import_background_file,
             // ── Countdown timers ───────────────────────────────────────────
             commands::start_countdown,
             // ── Sermon notes ───────────────────────────────────────────────

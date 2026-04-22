@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Popover } from "radix-ui";
 import { PaletteIcon, UploadIcon, XIcon } from "lucide-react";
 import type { UseDisplayBackgroundReturn } from "../../../hooks/use-display-background";
@@ -64,7 +64,6 @@ function BackgroundTile({
 export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"presets" | "uploaded">("presets");
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const {
     activeId,
@@ -77,14 +76,26 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
     upload,
   } = bg;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleUploadClick = async () => {
+    const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
+    const selected = await openDialog({
+      multiple: true,
+      title: "Import backgrounds",
+      filters: [
+        {
+          name: "Images & Video",
+          extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "mp4", "webm"],
+        },
+      ],
+    });
+    if (!selected) return;
+    const paths = Array.isArray(selected) ? selected : [selected];
     setTab("uploaded");
-    upload(file).catch((err) =>
-      console.error("Background upload failed:", err),
-    );
-    e.target.value = "";
+    for (const path of paths) {
+      upload(path).catch((err) =>
+        console.error("Background upload failed:", err),
+      );
+    }
   };
 
   const items = tab === "presets" ? presets : uploaded;
@@ -121,7 +132,7 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
               <button
                 type="button"
                 className="cursor-pointer rounded p-1 text-ink-3 transition-colors hover:bg-accent-soft hover:text-accent"
-                onClick={() => fileRef.current?.click()}
+                onClick={handleUploadClick}
                 title="Upload background"
               >
                 <UploadIcon className="h-3.5 w-3.5" />
@@ -206,14 +217,6 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
             </button>
           </div>
 
-          {/* Hidden file input */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*,video/mp4,video/webm,image/gif"
-            className="hidden"
-            onChange={handleFileChange}
-          />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

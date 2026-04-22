@@ -2416,22 +2416,29 @@ fn resolve_background_value(id: &str, state: &AppState) -> Result<String, String
             .ok_or_else(|| format!("Unknown preset: {id}"))?;
         Ok(preset.value.clone())
     } else if let Some(artifact_id) = id.strip_prefix("artifact:") {
-        // Read artifact bytes and encode as base64 data URL
         let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
         let entry = db
             .get_by_id(artifact_id)
             .map_err(|e| e.to_string())?
             .ok_or_else(|| format!("Artifact not found: {artifact_id}"))?;
         let abs_path = db.abs_path(&entry.path);
-        let bytes = std::fs::read(&abs_path)
-            .map_err(|e| format!("Failed to read artifact: {e}"))?;
         let mime = entry
             .mime_type
             .as_deref()
             .unwrap_or("image/jpeg");
-        use base64::Engine;
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-        Ok(format!("data:{mime};base64,{b64}"))
+
+        // Videos are too large for base64 data URLs — send the absolute path
+        // prefixed with "localfile:" so the frontend can resolve it via
+        // convertFileSrc (Tauri asset protocol).
+        if mime.starts_with("video/") {
+            Ok(format!("localfile:{}", abs_path.display()))
+        } else {
+            let bytes = std::fs::read(&abs_path)
+                .map_err(|e| format!("Failed to read artifact: {e}"))?;
+            use base64::Engine;
+            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+            Ok(format!("data:{mime};base64,{b64}"))
+        }
     } else {
         // Assume it's already a CSS value
         Ok(id.to_string())
@@ -2500,6 +2507,61 @@ pub fn upload_background(
         bytes,
     )
     .map_err(|e| e.to_string())?;
+
+    let is_video = entry
+        .mime_type
+        .as_deref()
+        .is_some_and(|m: &str| m.starts_with("video/"));
+
+    Ok(crate::backgrounds::BackgroundInfo {
+        id: format!("artifact:{}", entry.id),
+        name: entry.name,
+        source: "uploaded".into(),
+        value: format!("artifact:{}", entry.id),
+        bg_type: if is_video { "video".into() } else { "image".into() },
+    })
+}
+
+/// Import a background from a native file path (no bytes over IPC).
+#[tauri::command]
+pub fn import_background_file(
+    source_path: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<crate::backgrounds::BackgroundInfo, String> {
+    let entry = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::artifacts::import_file_no_thumb(
+            &mut db,
+            None,
+            Some("_backgrounds".into()),
+            std::path::Path::new(&source_path),
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    // Background thumbnail in background thread
+    let entry_id = entry.id.clone();
+    let abs_path = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        db.abs_path(&entry.path)
+    };
+    let base_dir = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        std::path::PathBuf::from(&db.settings().base_path)
+    };
+    let db_arc = state.artifacts_db.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
+            if let Ok(db) = db_arc.lock() {
+                if let Ok(Some(mut e)) = db.get_by_id(&entry_id) {
+                    e.thumbnail_path = Some(thumb);
+                    let _ = db.upsert(&e);
+                }
+            }
+            let _ = app.emit("artifacts://thumbnail-ready", &entry_id);
+        }
+    });
 
     let is_video = entry
         .mime_type
@@ -3001,7 +3063,6 @@ fn refresh_song_refs(state: &State<'_, AppState>) {
 use crate::artifacts::{
     ArtifactEntry, ArtifactsSettings,
     create_dir as do_create_dir,
-    import_file as do_import_file,
     rename_artifact as do_rename,
     delete_artifact as do_delete,
     move_artifact as do_move,
@@ -3064,10 +3125,43 @@ pub fn import_artifact_file(
     parent_path: Option<String>,
     source_path: String,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<ArtifactEntry, String> {
-    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
-    do_import_file(&mut db, service_id, parent_path, Path::new(&source_path))
-        .map_err(|e| e.to_string())
+    let entry = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::artifacts::import_file_no_thumb(
+            &mut db,
+            service_id,
+            parent_path,
+            Path::new(&source_path),
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    // Generate thumbnail in background
+    let entry_id = entry.id.clone();
+    let abs_path = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        db.abs_path(&entry.path)
+    };
+    let base_dir = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        std::path::PathBuf::from(&db.settings().base_path)
+    };
+    let db_arc = state.artifacts_db.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
+            if let Ok(db) = db_arc.lock() {
+                if let Ok(Some(mut e)) = db.get_by_id(&entry_id) {
+                    e.thumbnail_path = Some(thumb);
+                    let _ = db.upsert(&e);
+                }
+            }
+            let _ = app.emit("artifacts://thumbnail-ready", &entry_id);
+        }
+    });
+
+    Ok(entry)
 }
 
 /// Upload raw file bytes from the frontend.  Used when the native filesystem

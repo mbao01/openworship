@@ -22,22 +22,35 @@ export function useDisplayInfo(): DisplayInfo {
   const [info, setInfo] = useState<DisplayInfo>({ open: false, monitor: null });
 
   useEffect(() => {
+    let active = true;
+
     const refresh = async () => {
       try {
-        const [open, monitors] = await Promise.all([
-          getDisplayWindowOpen(),
-          listMonitors(),
-        ]);
-        const active =
+        // Check open state first (fast) — only fetch monitors if open
+        const open = await getDisplayWindowOpen();
+        if (!active) return;
+        if (!open) {
+          setInfo({ open: false, monitor: null });
+          return;
+        }
+        const monitors = await listMonitors();
+        if (!active) return;
+        const monitor =
           monitors.find((m) => !m.is_primary) ?? monitors[0] ?? null;
-        setInfo({ open, monitor: open ? active : null });
+        setInfo({ open: true, monitor });
       } catch {
         // ignore — display commands may not be available in test/web mode
       }
     };
-    refresh();
+
+    // Delay initial load so it doesn't block screen mount
+    const initial = setTimeout(refresh, 100);
     const id = setInterval(refresh, POLL_MS);
-    return () => clearInterval(id);
+    return () => {
+      active = false;
+      clearTimeout(initial);
+      clearInterval(id);
+    };
   }, []);
 
   return info;

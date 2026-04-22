@@ -5,7 +5,6 @@ import {
   listPresetBackgrounds,
   listUploadedBackgrounds,
   setDisplayBackground,
-  uploadBackground,
   type BackgroundInfo,
 } from "@/lib/commands/display";
 
@@ -24,8 +23,8 @@ export interface UseDisplayBackgroundReturn {
   applyToLive: (id: string | null) => Promise<void>;
   /** Clear the background (solid black) */
   clearBackground: () => Promise<void>;
-  /** Upload a new background file */
-  upload: (file: File) => Promise<void>;
+  /** Upload a background from a native file path */
+  upload: (sourcePath: string) => Promise<void>;
   /** Whether data is loading */
   loading: boolean;
 }
@@ -116,10 +115,10 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
     setPreviewId(null);
   }, []);
 
-  const upload = useCallback(async (file: File) => {
-    const buffer = await file.arrayBuffer();
-    const bytes = Array.from(new Uint8Array(buffer));
-    const info = await uploadBackground(file.name, bytes);
+  const upload = useCallback(async (sourcePath: string) => {
+    const info = await invoke<BackgroundInfo>("import_background_file", {
+      sourcePath,
+    });
     // Resolve the new upload's artifact value to a blob URL
     if (info.value.startsWith("artifact:")) {
       const artId = info.value.replace("artifact:", "");

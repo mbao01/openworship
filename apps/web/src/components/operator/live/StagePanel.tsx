@@ -78,12 +78,14 @@ function toDisplayEvent(item: QueueItem | null): DisplayContentEvent | null {
 function ScaledPreview({
   item,
   backgroundValue,
+  backgroundType,
   dimmed,
   label,
   sublabel,
 }: {
   item: QueueItem | null;
   backgroundValue?: string | null;
+  backgroundType?: string | null;
   dimmed?: boolean;
   label: string;
   sublabel: string;
@@ -126,6 +128,7 @@ function ScaledPreview({
         <DisplayContent
           content={toDisplayEvent(item)}
           backgroundValue={backgroundValue}
+          backgroundType={backgroundType}
           showEmptyState
         />
       </div>
@@ -174,8 +177,15 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
     return allBgs.find((b) => b.id === id)?.value ?? null;
   };
 
+  const resolveType = (id: string | null) => {
+    if (!id) return null;
+    return allBgs.find((b) => b.id === id)?.bg_type ?? null;
+  };
+
   const liveBgValue = resolveValue(activeId);
+  const liveBgType = resolveType(activeId);
   const previewBgValue = previewId ? resolveValue(previewId) : liveBgValue;
+  const previewBgType = previewId ? resolveType(previewId) : liveBgType;
 
   const displayInfo = useDisplayInfo();
 
@@ -240,6 +250,7 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
           <ScaledPreview
             item={live}
             backgroundValue={liveBgValue}
+            backgroundType={liveBgType}
             dimmed={blackout}
             label={blackout ? "OFF AIR" : "LIVE"}
             sublabel={blackout ? "BLACKED OUT" : "ON SCREEN"}
@@ -247,6 +258,7 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
           <ScaledPreview
             item={pending}
             backgroundValue={previewBgValue}
+            backgroundType={previewBgType}
             dimmed={Boolean(pending)}
             label="PREVIEW"
             sublabel="CUED NEXT"
