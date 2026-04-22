@@ -10,13 +10,13 @@ interface LiveScreenProps {
 export function LiveScreen({ mode }: LiveScreenProps) {
   return (
     <>
-      <div data-qa="operator-col-left" className="flex">
+      <div data-qa="operator-col-left" className="flex shrink-0">
         <LibraryPanel />
       </div>
-      <div data-qa="operator-col-center" className="flex flex-1">
+      <div data-qa="operator-col-center" className="flex min-w-0 flex-1">
         <StagePanel mode={mode} />
       </div>
-      <div data-qa="operator-col-right" className="flex">
+      <div data-qa="operator-col-right" className="flex shrink-0">
         <QueueTranscriptPanel />
       </div>
     </>

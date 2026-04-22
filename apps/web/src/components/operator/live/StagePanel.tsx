@@ -11,17 +11,25 @@ import {
 import type { DetectionMode, QueueItem } from "../../../lib/types";
 import { toastError } from "../../../lib/toast";
 import { BackgroundPicker } from "./BackgroundPicker";
-import { CircleIcon } from "lucide-react";
+import {
+  CircleIcon,
+  PlayIcon,
+  SkipForwardIcon,
+  XIcon,
+  EraserIcon,
+} from "lucide-react";
 
 function StageBtn({
   label,
   kbd,
+  icon: Icon,
   primary,
   onClick,
   disabled,
 }: {
   label: string;
   kbd?: string;
+  icon?: React.ComponentType<{ className?: string }>;
   primary?: boolean;
   onClick?: () => void;
   disabled?: boolean;
@@ -38,8 +46,9 @@ function StageBtn({
   if (disabled) cls += " opacity-40 pointer-events-none cursor-not-allowed";
 
   return (
-    <button className={cls} onClick={onClick} disabled={disabled}>
-      {label}
+    <button className={cls} onClick={onClick} disabled={disabled} title={label}>
+      {Icon && <Icon className="block h-3 w-3 xl:hidden" />}
+      <span className={Icon ? "hidden xl:inline" : ""}>{label}</span>
       {kbd && (
         <kbd className="rounded-sm bg-bg-4 px-1 py-px font-mono text-[8.5px] text-ink-3">
           {kbd}
@@ -232,8 +241,8 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
         </div>
       </div>
 
-      <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-t border-line bg-bg-1 px-4 py-2.5">
-        <div className="flex gap-1">
+      <div className="flex h-[52px] shrink-0 items-center gap-2.5 overflow-x-auto border-t border-line bg-bg-1 px-4 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex shrink-0 gap-1">
           <button
             className={`relative inline-flex cursor-pointer items-center gap-1.5 rounded border px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase transition-colors ${
               blackout
@@ -250,14 +259,17 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
                 blackout ? "bg-ink-3" : "animate-[blink_1.4s_infinite] bg-white"
               }`}
             />
-            {blackout ? "OFF AIR" : "LIVE"}
+            <span className="hidden xl:inline">
+              {blackout ? "OFF AIR" : "LIVE"}
+            </span>
           </button>
         </div>
-        <div className="ml-1.5 flex gap-1 border-l border-line pl-2.5">
+        <div className="ml-1.5 flex shrink-0 gap-1 border-l border-line pl-2.5">
           <StageBtn
             primary
             label="Push next"
             kbd="Space"
+            icon={PlayIcon}
             onClick={() =>
               pending &&
               approve(pending.id).catch(toastError("Failed to approve"))
@@ -267,6 +279,7 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
           <StageBtn
             label="Skip"
             kbd="X"
+            icon={SkipForwardIcon}
             onClick={() =>
               pending && skip(pending.id).catch(toastError("Failed to skip"))
             }
@@ -275,21 +288,23 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
           <StageBtn
             label="Not this one"
             kbd="N"
+            icon={XIcon}
             onClick={() => rejectLive().catch(toastError("Failed to reject"))}
           />
         </div>
-        <div className="ml-1.5 flex gap-1 border-l border-line pl-2.5">
+        <div className="ml-1.5 flex shrink-0 gap-1 border-l border-line pl-2.5">
           <StageBtn
             label="Clear"
+            icon={EraserIcon}
             onClick={() => clearLive().catch(toastError("Failed to clear"))}
           />
         </div>
-        <div className="ml-1.5 border-l border-line pl-2.5">
+        <div className="ml-1.5 shrink-0 border-l border-line pl-2.5">
           <BackgroundPicker bg={bg} />
         </div>
-        <div className="flex-1" />
-        <div className="flex items-center gap-2 rounded border border-line bg-bg-2 px-2.5 py-1.5 font-mono text-[10px] tracking-[0.1em] text-ink-2 uppercase">
-          Translation
+        <div className="min-w-2 flex-1" />
+        <div className="flex shrink-0 items-center gap-2 rounded border border-line bg-bg-2 px-2.5 py-1.5 font-mono text-[10px] tracking-[0.1em] text-ink-2 uppercase">
+          <span className="hidden xl:inline">Translation</span>
           <select
             className="cursor-pointer border-0 bg-transparent p-0 font-mono text-[10px] tracking-[0.1em] text-accent uppercase outline-0"
             value={activeTranslation}

@@ -42,13 +42,20 @@ export function TranscriptBody() {
   const nonEmpty = sentences.filter((s) => s.trim());
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3.5 font-serif text-[15px] leading-[1.55] tracking-[-0.003em] text-ink-3">
+    <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3.5 font-serif text-[15px] leading-[1.65] tracking-[-0.003em]">
       {nonEmpty.map((sentence, i) => {
-        const isLast =
+        const isActive =
           i === nonEmpty.length - 1 &&
           sentences[sentences.length - 1].trim() !== "";
         return (
-          <p key={i} className={`mb-2.5 ${isLast ? "text-ink italic" : ""}`}>
+          <p
+            key={i}
+            className={
+              isActive
+                ? "text-ink font-medium"
+                : "text-ink-3"
+            }
+          >
             {sentence}
           </p>
         );

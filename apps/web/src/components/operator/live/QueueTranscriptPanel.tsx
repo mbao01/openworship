@@ -29,7 +29,7 @@ export function QueueTranscriptPanel() {
   };
 
   return (
-    <section className="flex w-[340px] flex-1 shrink-0 flex-col overflow-hidden border-l border-line">
+    <section className="flex w-[340px] shrink-0 flex-col overflow-hidden border-l border-line">
       {/* Queue */}
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-line bg-bg-1 px-3.5">
         <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
@@ -77,10 +77,10 @@ export function QueueTranscriptPanel() {
           </span>
           <div className="flex items-center gap-2">
             <button
-              className={`cursor-pointer rounded border px-2 py-0.5 font-mono text-[9px] tracking-[0.1em] uppercase transition-colors ${
+              className={`cursor-pointer rounded border px-2 py-1 font-mono text-[9px] font-bold tracking-[0.1em] uppercase transition-colors ${
                 micActive
                   ? "border-live/40 text-live hover:bg-live/10"
-                  : "border-line text-ink-3 hover:border-line-strong hover:text-ink"
+                  : "bg-primary text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground"
               }`}
               onClick={handleMicToggle}
             >
@@ -91,7 +91,6 @@ export function QueueTranscriptPanel() {
               )}
               {micActive ? "Stop" : "Start"}
             </button>
-            <span className="font-mono text-[10px] text-ink-3">10s</span>
           </div>
         </div>
 
