@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import {
+  addUpload,
+  updateUpload,
+  removeUpload,
+  useUploads,
+} from "../stores/upload-store";
 import { ShareDialog } from "../components/ShareDialog";
 import { invoke } from "../lib/tauri";
 import type {
@@ -1486,6 +1492,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   const [projects, setProjects] = useState<ServiceProject[]>([]);
   const [nav, setNav] = useState<Nav>({ kind: "all" });
   const [entries, setEntries] = useState<ArtifactEntry[]>([]);
+  const pendingUploads = useUploads();
   const [parentPath, setParentPath] = useState<string | null>(null);
   const [crumbs, setCrumbs] = useState<
     Array<{ label: string; parent: string | null }>
@@ -1553,7 +1560,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
           serviceId: svcId,
         });
         setEntries(list);
-        await loadSyncInfo(list);
+        loadSyncInfo(list);
         return;
       }
 
@@ -1572,28 +1579,26 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
         });
       }
       setEntries(list);
-      await loadSyncInfo(list);
+      loadSyncInfo(list);
     } catch (e) {
       setError(String(e));
     }
   }, [nav, parentPath, debouncedQuery]);
 
-  const loadSyncInfo = async (list: ArtifactEntry[]) => {
-    const map = new Map<string, CloudSyncInfo>();
-    await Promise.all(
-      list.map(async (e) => {
-        try {
-          const info = await invoke<CloudSyncInfo | null>(
-            "get_cloud_sync_info",
-            { artifactId: e.id },
-          );
-          if (info) map.set(e.id, info);
-        } catch {
-          /* ignore */
-        }
-      }),
-    );
-    setSyncInfoMap(map);
+  const loadSyncInfo = (list: ArtifactEntry[]) => {
+    // Load incrementally — each result updates state as it arrives,
+    // so the UI is never blocked waiting for all results.
+    for (const e of list) {
+      invoke<CloudSyncInfo | null>("get_cloud_sync_info", {
+        artifactId: e.id,
+      })
+        .then((info) => {
+          if (info) {
+            setSyncInfoMap((prev) => new Map(prev).set(e.id, info));
+          }
+        })
+        .catch(() => {});
+    }
   };
 
   useEffect(() => {
@@ -1712,19 +1717,36 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
     }
   };
 
-  const handleSyncNow = async (e: ArtifactEntry) => {
+  const handleSyncNow = (e: ArtifactEntry) => {
     setError(null);
-    try {
-      const updated = await invoke<CloudSyncInfo>("sync_artifact_now", {
-        artifactId: e.id,
+    // Optimistic: mark as syncing immediately
+    setSyncInfoMap((prev) => {
+      const next = new Map(prev);
+      const info = next.get(e.id);
+      if (info) next.set(e.id, { ...info, status: "syncing" as const });
+      return next;
+    });
+    // Fire and forget
+    invoke<CloudSyncInfo>("sync_artifact_now", { artifactId: e.id })
+      .then((updated) => {
+        setSyncInfoMap((prev) => new Map(prev).set(e.id, updated));
+        invoke<StorageUsage>("get_storage_usage")
+          .then(setStorageUsage)
+          .catch(() => {});
+      })
+      .catch((err) => {
+        setSyncInfoMap((prev) => {
+          const next = new Map(prev);
+          const info = next.get(e.id);
+          if (info)
+            next.set(e.id, {
+              ...info,
+              status: "error" as const,
+              sync_error: String(err),
+            });
+          return next;
+        });
       });
-      setSyncInfoMap((prev) => new Map(prev).set(e.id, updated));
-      invoke<StorageUsage>("get_storage_usage")
-        .then(setStorageUsage)
-        .catch(() => {});
-    } catch (err) {
-      setError(String(err));
-    }
   };
 
   const handleSyncAll = async () => {
@@ -1753,23 +1775,50 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
 
   const handleUpload = () => uploadInputRef.current?.click();
 
-  const handleFileInput = async (ev: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = (ev: React.ChangeEvent<HTMLInputElement>) => {
     const files = ev.target.files;
     if (!files || files.length === 0) return;
     const svcId = nav.kind === "service" ? nav.id : null;
-    try {
-      for (const file of Array.from(files)) {
-        const buffer = await file.arrayBuffer();
-        await invoke("write_artifact_bytes", {
-          serviceId: svcId,
-          parentPath,
-          fileName: file.name,
-          data: Array.from(new Uint8Array(buffer)),
+
+    for (const file of Array.from(files)) {
+      const placeholderId = `uploading-${file.name}-${Date.now()}`;
+      addUpload({
+        id: placeholderId,
+        name: file.name,
+        previewUrl: URL.createObjectURL(file),
+        size: file.size,
+        status: "uploading",
+        serviceId: svcId,
+        parentPath,
+      });
+
+      // Upload in background — non-blocking
+      file
+        .arrayBuffer()
+        .then((buffer) =>
+          invoke<ArtifactEntry>("write_artifact_bytes", {
+            serviceId: svcId,
+            parentPath,
+            fileName: file.name,
+            data: Array.from(new Uint8Array(buffer)),
+          }),
+        )
+        .then((entry) => {
+          updateUpload(placeholderId, {
+            status: "done",
+            realEntry: entry,
+          });
+          // Append to entries so it appears in the real list
+          setEntries((prev) => [entry, ...prev.filter((e) => e.id !== entry.id)]);
+          // Clean up placeholder after entry is in the list
+          removeUpload(placeholderId);
+        })
+        .catch((err) => {
+          updateUpload(placeholderId, {
+            status: "error",
+            error: String(err),
+          });
         });
-      }
-      await loadEntries();
-    } catch (err) {
-      setError(String(err));
     }
     ev.target.value = "";
   };
@@ -2102,7 +2151,39 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {visible.length === 0 ? (
+                          {/* Uploading placeholders */}
+                          {pendingUploads
+                            .filter((u) => u.status === "uploading")
+                            .map((u) => (
+                              <tr
+                                key={u.id}
+                                className="animate-pulse border-b border-line/40"
+                              >
+                                <td className="px-3 py-2.5">
+                                  {u.previewUrl ? (
+                                    <img
+                                      src={u.previewUrl}
+                                      alt=""
+                                      className="h-8 w-8 rounded object-cover opacity-60"
+                                    />
+                                  ) : (
+                                    <div className="h-8 w-8 rounded bg-bg-3" />
+                                  )}
+                                </td>
+                                <td className="px-3 py-2.5 text-xs text-ink-3">
+                                  {u.name}
+                                </td>
+                                <td
+                                  colSpan={4}
+                                  className="px-3 py-2.5 font-mono text-[10px] text-muted"
+                                >
+                                  Uploading…
+                                </td>
+                              </tr>
+                            ))}
+                          {visible.length === 0 &&
+                          pendingUploads.filter((u) => u.status === "uploading")
+                            .length === 0 ? (
                             <tr>
                               <td
                                 colSpan={6}
@@ -2185,7 +2266,31 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
                   nav.kind !== "cloud_shared" &&
                   viewMode === "grid" && (
                     <div className="flex flex-1 flex-wrap content-start gap-3 overflow-y-auto p-5">
-                      {visible.length === 0 ? (
+                      {/* Upload placeholders */}
+                      {pendingUploads
+                        .filter((u) => u.status === "uploading")
+                        .map((u) => (
+                          <div
+                            key={u.id}
+                            className="relative flex w-[88px] animate-pulse cursor-default flex-col items-center gap-[6px] rounded-[4px] border border-line/40 px-2 py-3"
+                          >
+                            {u.previewUrl ? (
+                              <img
+                                src={u.previewUrl}
+                                alt=""
+                                className="h-10 w-10 rounded object-cover opacity-60"
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded bg-bg-3" />
+                            )}
+                            <span className="w-full truncate text-center text-[10px] text-ink-3">
+                              {u.name}
+                            </span>
+                          </div>
+                        ))}
+                      {visible.length === 0 &&
+                      pendingUploads.filter((u) => u.status === "uploading")
+                        .length === 0 ? (
                         <p className="w-full py-16 text-center text-xs text-muted">
                           {query ? "No results." : "No files here yet."}
                         </p>

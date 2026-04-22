@@ -321,7 +321,7 @@ impl ArtifactsDb {
 
 // ─── Thumbnail generation ─────────────────────────────────────────────────────
 
-fn generate_thumbnail(abs_path: &std::path::Path, base_dir: &std::path::Path) -> Option<String> {
+pub fn generate_thumbnail(abs_path: &std::path::Path, base_dir: &std::path::Path) -> Option<String> {
     let mime = mime_guess::from_path(abs_path).first_or_octet_stream();
     if !mime.to_string().starts_with("image/") {
         return None;
@@ -462,6 +462,46 @@ pub fn write_artifact_bytes(
         created_at_ms: now_ms(),
         modified_at_ms: now_ms(),
         thumbnail_path,
+    };
+    db.upsert(&entry)?;
+    Ok(entry)
+}
+
+/// Same as `write_artifact_bytes` but skips thumbnail generation.
+/// Used when thumbnails are generated in a background thread.
+pub fn write_artifact_bytes_no_thumb(
+    db: &mut ArtifactsDb,
+    service_id: Option<String>,
+    parent_path: Option<String>,
+    file_name: String,
+    data: Vec<u8>,
+) -> Result<ArtifactEntry> {
+    safe_name(&file_name)?;
+    db.ensure_base_dir()?;
+    let bucket = parent_path
+        .clone()
+        .unwrap_or_else(|| service_id.as_deref().unwrap_or("_local").to_string());
+    let rel = format!("{bucket}/{file_name}");
+    let dest = db.abs_path(&rel);
+    if let Some(p) = dest.parent() {
+        std::fs::create_dir_all(p)?;
+    }
+    std::fs::write(&dest, &data)
+        .with_context(|| format!("write artifact: {}", dest.display()))?;
+    let mime_type = mime_guess::from_path(&dest).first().map(|m| m.to_string());
+    let entry = ArtifactEntry {
+        id: new_id(),
+        service_id,
+        path: rel,
+        name: file_name,
+        is_dir: false,
+        parent_path: Some(bucket),
+        size_bytes: Some(data.len() as i64),
+        mime_type,
+        starred: false,
+        created_at_ms: now_ms(),
+        modified_at_ms: now_ms(),
+        thumbnail_path: None,
     };
     db.upsert(&entry)?;
     Ok(entry)

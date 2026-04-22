@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ShareDialog } from "../ShareDialog";
 import { ConfirmDialog } from "../ui/confirm-dialog";
 import { invoke } from "../../lib/tauri";
+import {
+  addUpload,
+  updateUpload,
+  removeUpload,
+} from "../../stores/upload-store";
 import type {
   ArtifactCategory,
   ArtifactEntry,
@@ -168,7 +173,7 @@ export function AssetsScreen() {
           serviceId: svcId,
         });
         setEntries(list);
-        await loadSyncInfo(list);
+        loadSyncInfo(list);
         return;
       }
 
@@ -208,28 +213,24 @@ export function AssetsScreen() {
         }
       }
       setEntries(list);
-      await loadSyncInfo(list);
+      loadSyncInfo(list);
     } catch (e) {
       setError(String(e));
     }
   }, [nav, parentPath, debouncedQuery]);
 
-  const loadSyncInfo = async (list: ArtifactEntry[]) => {
-    const map = new Map<string, CloudSyncInfo>();
-    await Promise.all(
-      list.map(async (e) => {
-        try {
-          const info = await invoke<CloudSyncInfo | null>(
-            "get_cloud_sync_info",
-            { artifactId: e.id },
-          );
-          if (info) map.set(e.id, info);
-        } catch {
-          /* ignore */
-        }
-      }),
-    );
-    setSyncInfoMap(map);
+  const loadSyncInfo = (list: ArtifactEntry[]) => {
+    for (const e of list) {
+      invoke<CloudSyncInfo | null>("get_cloud_sync_info", {
+        artifactId: e.id,
+      })
+        .then((info) => {
+          if (info) {
+            setSyncInfoMap((prev) => new Map(prev).set(e.id, info));
+          }
+        })
+        .catch(() => {});
+    }
   };
 
   useEffect(() => {
@@ -338,19 +339,34 @@ export function AssetsScreen() {
     }
   };
 
-  const handleSyncNow = async (e: ArtifactEntry) => {
+  const handleSyncNow = (e: ArtifactEntry) => {
     setError(null);
-    try {
-      const updated = await invoke<CloudSyncInfo>("sync_artifact_now", {
-        artifactId: e.id,
+    setSyncInfoMap((prev) => {
+      const next = new Map(prev);
+      const info = next.get(e.id);
+      if (info) next.set(e.id, { ...info, status: "syncing" as const });
+      return next;
+    });
+    invoke<CloudSyncInfo>("sync_artifact_now", { artifactId: e.id })
+      .then((updated) => {
+        setSyncInfoMap((prev) => new Map(prev).set(e.id, updated));
+        invoke<StorageUsage>("get_storage_usage")
+          .then(setStorageUsage)
+          .catch(() => {});
+      })
+      .catch((err) => {
+        setSyncInfoMap((prev) => {
+          const next = new Map(prev);
+          const info = next.get(e.id);
+          if (info)
+            next.set(e.id, {
+              ...info,
+              status: "error" as const,
+              sync_error: String(err),
+            });
+          return next;
+        });
       });
-      setSyncInfoMap((prev) => new Map(prev).set(e.id, updated));
-      invoke<StorageUsage>("get_storage_usage")
-        .then(setStorageUsage)
-        .catch(() => {});
-    } catch (err) {
-      setError(String(err));
-    }
   };
 
   const handleSyncAll = async () => {
@@ -379,23 +395,41 @@ export function AssetsScreen() {
 
   const handleUpload = () => uploadInputRef.current?.click();
 
-  const handleFileInput = async (ev: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = (ev: React.ChangeEvent<HTMLInputElement>) => {
     const files = ev.target.files;
     if (!files || files.length === 0) return;
     const svcId = nav.kind === "service" ? nav.id : null;
-    try {
-      for (const file of Array.from(files)) {
-        const buffer = await file.arrayBuffer();
-        await invoke("write_artifact_bytes", {
-          serviceId: svcId,
-          parentPath,
-          fileName: file.name,
-          data: Array.from(new Uint8Array(buffer)),
+
+    for (const file of Array.from(files)) {
+      const placeholderId = `uploading-${file.name}-${Date.now()}`;
+      addUpload({
+        id: placeholderId,
+        name: file.name,
+        previewUrl: URL.createObjectURL(file),
+        size: file.size,
+        status: "uploading",
+        serviceId: svcId,
+        parentPath,
+      });
+
+      file
+        .arrayBuffer()
+        .then((buffer) =>
+          invoke<ArtifactEntry>("write_artifact_bytes", {
+            serviceId: svcId,
+            parentPath,
+            fileName: file.name,
+            data: Array.from(new Uint8Array(buffer)),
+          }),
+        )
+        .then((entry) => {
+          updateUpload(placeholderId, { status: "done", realEntry: entry });
+          setEntries((prev) => [entry, ...prev.filter((e) => e.id !== entry.id)]);
+          removeUpload(placeholderId);
+        })
+        .catch((err) => {
+          updateUpload(placeholderId, { status: "error", error: String(err) });
         });
-      }
-      await loadEntries();
-    } catch (err) {
-      setError(String(err));
     }
     ev.target.value = "";
   };

@@ -77,15 +77,13 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
     upload,
   } = bg;
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      await upload(file);
-      setTab("uploaded");
-    } catch (err) {
-      console.error("Background upload failed:", err);
-    }
+    setTab("uploaded");
+    upload(file).catch((err) =>
+      console.error("Background upload failed:", err),
+    );
     e.target.value = "";
   };
 

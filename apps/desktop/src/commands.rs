@@ -3079,10 +3079,44 @@ pub fn write_artifact_bytes(
     file_name: String,
     data: Vec<u8>,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<ArtifactEntry, String> {
-    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
-    crate::artifacts::write_artifact_bytes(&mut db, service_id, parent_path, file_name, data)
-        .map_err(|e| e.to_string())
+    let entry = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::artifacts::write_artifact_bytes_no_thumb(
+            &mut db,
+            service_id,
+            parent_path,
+            file_name,
+            data,
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    // Generate thumbnail in background so the command returns immediately.
+    let entry_id = entry.id.clone();
+    let abs_path = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        db.abs_path(&entry.path)
+    };
+    let base_dir = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        std::path::PathBuf::from(&db.settings().base_path)
+    };
+    let db_arc = state.artifacts_db.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
+            if let Ok(db) = db_arc.lock() {
+                if let Ok(Some(mut e)) = db.get_by_id(&entry_id) {
+                    e.thumbnail_path = Some(thumb);
+                    let _ = db.upsert(&e);
+                }
+            }
+            let _ = app.emit("artifacts://thumbnail-ready", &entry_id);
+        }
+    });
+
+    Ok(entry)
 }
 
 #[tauri::command]
