@@ -86,12 +86,35 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
   const blobUrls = useRef<string[]>([]);
   const uploadedLoaded = useRef(false);
 
-  // Fast mount: load only presets + active background ID (no file I/O)
+  // Fast mount: load presets + active background ID.
+  // If active bg is an artifact, eagerly resolve just that one (not all uploaded).
   useEffect(() => {
     Promise.all([getDisplayBackground(), listPresetBackgrounds()])
-      .then(([bg, p]) => {
+      .then(async ([bg, p]) => {
         setActiveId(bg);
         setPresets(p);
+
+        // Eagerly resolve the active background if it's an artifact
+        if (bg?.startsWith("artifact:")) {
+          const artId = bg.replace("artifact:", "");
+          // Fetch the bg_type to know if it's a video
+          try {
+            const all = await listUploadedBackgrounds();
+            const active = all.find((u) => u.id === bg);
+            if (active) {
+              const url = await resolveArtifactUrl(
+                artId,
+                active.bg_type,
+              );
+              if (url) {
+                if (url.startsWith("blob:")) blobUrls.current.push(url);
+                setUploaded([{ ...active, value: url }]);
+              }
+            }
+          } catch {
+            // non-critical — bg picker will load all later
+          }
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -102,7 +125,7 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
     };
   }, []);
 
-  // Lazy: load uploaded backgrounds on demand (called when picker opens)
+  // Lazy: load ALL uploaded backgrounds on demand (called when picker opens)
   const loadUploaded = useCallback(() => {
     if (uploadedLoaded.current) return;
     uploadedLoaded.current = true;
@@ -112,7 +135,12 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
         for (const r of resolved) {
           if (r.value.startsWith("blob:")) blobUrls.current.push(r.value);
         }
-        setUploaded(resolved);
+        // Merge with any eagerly-loaded active background
+        setUploaded((prev) => {
+          const prevIds = new Set(prev.map((p) => p.id));
+          const newItems = resolved.filter((r) => !prevIds.has(r.id));
+          return [...prev, ...newItems];
+        });
       })
       .catch(() => {});
   }, []);
