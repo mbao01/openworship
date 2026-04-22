@@ -9,9 +9,9 @@ function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
   return (
     <kbd
       className={cn(
-        "font-mono text-[10px] px-[4px] py-[1px]",
-        "bg-bg-4 rounded-[2px] text-ink-3 leading-none",
-        className
+        "px-[4px] py-[1px] font-mono text-[10px]",
+        "rounded-[2px] bg-bg-4 leading-none text-ink-3",
+        className,
       )}
       {...props}
     />

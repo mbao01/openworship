@@ -68,7 +68,11 @@ export async function pushAnnouncementToDisplay(id: string): Promise<void> {
 /**
  * Pushes an ad-hoc custom slide (title + body + optional image) to the display.
  */
-export async function pushCustomSlide(title: string, body?: string, imageUrl?: string): Promise<void> {
+export async function pushCustomSlide(
+  title: string,
+  body?: string,
+  imageUrl?: string,
+): Promise<void> {
   return invoke("push_custom_slide", { title, body: body ?? "", imageUrl });
 }
 

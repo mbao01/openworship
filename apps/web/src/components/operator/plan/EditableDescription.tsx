@@ -24,13 +24,13 @@ export function EditableDescription({
 
   if (isReadOnly) {
     return initialValue ? (
-      <p className="text-xs text-ink-3 mt-1.5 m-0">{initialValue}</p>
+      <p className="m-0 mt-1.5 text-xs text-ink-3">{initialValue}</p>
     ) : null;
   }
 
   return (
     <input
-      className="w-full mt-1.5 px-0 py-0.5 bg-transparent border-0 border-b border-transparent text-ink text-sm placeholder:text-muted focus:border-b-line-strong focus:outline-none"
+      className="mt-1.5 w-full border-0 border-b border-transparent bg-transparent px-0 py-0.5 text-sm text-ink placeholder:text-muted focus:border-b-line-strong focus:outline-none"
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={commit}

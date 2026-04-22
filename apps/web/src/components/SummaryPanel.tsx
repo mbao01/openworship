@@ -22,16 +22,16 @@ function SummaryRow({
   });
 
   return (
-    <li className="flex items-center justify-between gap-2 py-[5px] px-2 rounded-sm bg-bg-1">
-      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-        <span className="text-[11px] font-medium text-ink whitespace-nowrap overflow-hidden text-ellipsis">
+    <li className="flex items-center justify-between gap-2 rounded-sm bg-bg-1 px-2 py-[5px]">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="overflow-hidden text-[11px] font-medium text-ellipsis whitespace-nowrap text-ink">
           {summary.service_name}
         </span>
         <div className="flex items-center gap-1">
-          <span className="text-[10px] text-muted font-mono">{date}</span>
+          <span className="font-mono text-[10px] text-muted">{date}</span>
           {summary.email_sent && (
             <span
-              className="inline-block text-[9px] px-[5px] py-px rounded-[2px] font-semibold uppercase tracking-[0.06em] bg-[rgba(100,200,120,0.15)] text-[#64c878]"
+              className="inline-block rounded-[2px] bg-[rgba(100,200,120,0.15)] px-[5px] py-px text-[9px] font-semibold tracking-[0.06em] text-[#64c878] uppercase"
               title="Email sent"
             >
               ✓ Sent
@@ -39,10 +39,10 @@ function SummaryRow({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex shrink-0 items-center gap-1">
         <button
           data-qa={`summary-view-btn-${summary.id}`}
-          className="text-[10px] font-sans rounded-sm px-[7px] py-0.5 cursor-pointer border border-line bg-transparent text-ink-3 transition-all hover:brightness-125"
+          className="cursor-pointer rounded-sm border border-line bg-transparent px-[7px] py-0.5 font-sans text-[10px] text-ink-3 transition-all hover:brightness-125"
           onClick={() => onView(summary)}
           title="View summary"
         >
@@ -51,7 +51,7 @@ function SummaryRow({
         {!summary.email_sent && (
           <button
             data-qa={`summary-send-btn-${summary.id}`}
-            className="text-[10px] font-sans rounded-sm px-[7px] py-0.5 cursor-pointer border border-accent text-accent bg-transparent transition-all hover:brightness-125"
+            className="cursor-pointer rounded-sm border border-accent bg-transparent px-[7px] py-0.5 font-sans text-[10px] text-accent transition-all hover:brightness-125"
             onClick={() => onSendEmail(summary.id)}
             title="Send to email subscribers"
           >
@@ -60,7 +60,7 @@ function SummaryRow({
         )}
         <button
           data-qa={`summary-delete-btn-${summary.id}`}
-          className="text-[10px] font-sans rounded-sm px-[7px] py-0.5 cursor-pointer border border-transparent text-muted bg-transparent transition-all hover:brightness-125"
+          className="cursor-pointer rounded-sm border border-transparent bg-transparent px-[7px] py-0.5 font-sans text-[10px] text-muted transition-all hover:brightness-125"
           onClick={() => onDelete(summary.id)}
           title="Delete summary"
         >
@@ -84,51 +84,59 @@ function SummaryDetailModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-[1000]"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="Service summary"
     >
       <div
-        className="bg-bg-2 border border-line rounded-md w-[min(640px,90vw)] max-h-[80vh] flex flex-col overflow-hidden"
+        className="flex max-h-[80vh] w-[min(640px,90vw)] flex-col overflow-hidden rounded-md border border-line bg-bg-2"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-line">
-          <span className="font-sans text-[13px] font-semibold text-ink">{summary.service_name}</span>
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <span className="font-sans text-[13px] font-semibold text-ink">
+            {summary.service_name}
+          </span>
           <button
             data-qa="summary-detail-close"
-            className="bg-transparent border-none text-base text-muted cursor-pointer leading-none px-1 py-0"
+            className="cursor-pointer border-none bg-transparent px-1 py-0 text-base leading-none text-muted"
             onClick={onClose}
             aria-label="Close"
           >
             ×
           </button>
         </div>
-        <div className="overflow-y-auto p-4 flex flex-col gap-2">
+        <div className="flex flex-col gap-2 overflow-y-auto p-4">
           {lines.map((line, i) => {
             const trimmed = line.trim();
             if (!trimmed) return <br key={i} />;
             if (trimmed.startsWith("## "))
               return (
-                <h3 key={i} className="font-sans text-[13px] font-bold text-ink uppercase tracking-[0.06em] mt-2 mb-0">
+                <h3
+                  key={i}
+                  className="mt-2 mb-0 font-sans text-[13px] font-bold tracking-[0.06em] text-ink uppercase"
+                >
                   {trimmed.slice(3)}
                 </h3>
               );
             if (trimmed.startsWith("# "))
               return (
-                <h2 key={i} className="font-serif text-base font-bold text-ink mt-2 mb-0">
+                <h2
+                  key={i}
+                  className="mt-2 mb-0 font-serif text-base font-bold text-ink"
+                >
                   {trimmed.slice(2)}
                 </h2>
               );
             if (trimmed.startsWith("- "))
               return (
-                <li key={i} className="text-xs text-ink-3 leading-[1.5] ml-3">
+                <li key={i} className="ml-3 text-xs leading-[1.5] text-ink-3">
                   {trimmed.slice(2)}
                 </li>
               );
             return (
-              <p key={i} className="text-xs text-ink-3 leading-relaxed m-0">
+              <p key={i} className="m-0 text-xs leading-relaxed text-ink-3">
                 {trimmed}
               </p>
             );
@@ -174,7 +182,9 @@ export function SummaryPanel() {
     setSendingId(id);
     setError(null);
     try {
-      const sent: string[] = await invoke("send_summary_email", { summaryId: id });
+      const sent: string[] = await invoke("send_summary_email", {
+        summaryId: id,
+      });
       // Refresh to get updated email_sent flag.
       await load();
       if (sent.length === 0) {
@@ -190,13 +200,16 @@ export function SummaryPanel() {
   return (
     <>
       {viewing && (
-        <SummaryDetailModal summary={viewing} onClose={() => setViewing(null)} />
+        <SummaryDetailModal
+          summary={viewing}
+          onClose={() => setViewing(null)}
+        />
       )}
 
       <div className="shrink-0">
         {/* Header */}
         <div
-          className="flex items-center justify-between py-2 px-3 cursor-pointer select-none"
+          className="flex cursor-pointer items-center justify-between px-3 py-2 select-none"
           onClick={() => setCollapsed((v) => !v)}
         >
           <span className="font-sans text-[9px] font-semibold tracking-[0.12em] text-muted uppercase">
@@ -210,14 +223,14 @@ export function SummaryPanel() {
         {!collapsed && (
           <>
             {error && (
-              <p className="text-[11px] text-danger px-3 pb-2 m-0">{error}</p>
+              <p className="m-0 px-3 pb-2 text-[11px] text-danger">{error}</p>
             )}
             {summaries.length === 0 ? (
-              <p className="text-[11px] text-muted px-3 pb-2 m-0 leading-[1.5]">
+              <p className="m-0 px-3 pb-2 text-[11px] leading-[1.5] text-muted">
                 No service summaries yet. Close a service to generate one.
               </p>
             ) : (
-              <ul className="list-none m-0 px-2 pb-2 flex flex-col gap-0.5">
+              <ul className="m-0 flex list-none flex-col gap-0.5 px-2 pb-2">
                 {summaries.map((s) => (
                   <SummaryRow
                     key={s.id}

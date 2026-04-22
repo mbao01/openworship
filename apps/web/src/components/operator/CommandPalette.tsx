@@ -56,7 +56,10 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     }
     try {
       const [scripture, songs] = await Promise.all([
-        invoke<VerseResult[]>("search_scriptures", { query: q, translation: null }),
+        invoke<VerseResult[]>("search_scriptures", {
+          query: q,
+          translation: null,
+        }),
         invoke<Song[]>("search_songs", { query: q, limit: 5 }),
       ]);
       setScriptureResults(scripture.slice(0, 5));
@@ -76,7 +79,11 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
 
   const handlePushScripture = async (v: VerseResult) => {
     try {
-      await invoke("push_to_display", { reference: v.reference, text: v.text, translation: v.translation });
+      await invoke("push_to_display", {
+        reference: v.reference,
+        text: v.text,
+        translation: v.translation,
+      });
       onClose();
     } catch (e) {
       toastError("Failed to push")(e);
@@ -98,7 +105,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     groups.push({
       group: "Scripture",
       items: scriptureResults.map((v) => ({
-        glyph: <BookOpenIcon className="w-3.5 h-3.5 shrink-0" />,
+        glyph: <BookOpenIcon className="h-3.5 w-3.5 shrink-0" />,
         main: `${v.reference} · “${v.text.slice(0, 50)}…”`,
         sub: `${v.translation} · library`,
         onSelect: () => handlePushScripture(v),
@@ -109,7 +116,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     groups.push({
       group: "Lyrics",
       items: songResults.map((s) => ({
-        glyph: <MusicIcon className="w-3.5 h-3.5 shrink-0" />,
+        glyph: <MusicIcon className="h-3.5 w-3.5 shrink-0" />,
         main: s.title,
         sub: `${s.artist || "Hymn"} · in library`,
         onSelect: () => handlePushSong(s),
@@ -120,7 +127,15 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     groups.push({
       group: "Actions",
       items: [
-        { glyph: <SquareIcon className="w-3.5 h-3.5 shrink-0" />, main: "Black display", sub: "Action", onSelect: () => { clearLive().catch(toastError("Failed to clear display")); onClose(); } },
+        {
+          glyph: <SquareIcon className="h-3.5 w-3.5 shrink-0" />,
+          main: "Black display",
+          sub: "Action",
+          onSelect: () => {
+            clearLive().catch(toastError("Failed to clear display"));
+            onClose();
+          },
+        },
       ],
     });
   }
@@ -145,28 +160,28 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-start justify-center pt-[14vh]"
+      className="fixed inset-0 z-[300] flex items-start justify-center bg-black/50 pt-[14vh] backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="w-[640px] max-w-[92vw] bg-bg-1 border border-line-strong rounded-lg overflow-hidden"
+        className="w-[640px] max-w-[92vw] overflow-hidden rounded-lg border border-line-strong bg-bg-1"
         style={{ boxShadow: "0 40px 100px -20px rgba(0,0,0,0.6)" }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         {/* Input */}
-        <div className="flex items-center gap-3 px-[22px] py-[18px] border-b border-line">
-          <span className="text-accent flex items-center">
-            <SearchIcon className="w-5 h-5 shrink-0" />
+        <div className="flex items-center gap-3 border-b border-line px-[22px] py-[18px]">
+          <span className="flex items-center text-accent">
+            <SearchIcon className="h-5 w-5 shrink-0" />
           </span>
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent border-0 font-serif text-[22px] text-ink tracking-[-0.01em] placeholder:text-ink-3 placeholder:italic outline-none focus:ring-0"
+            className="flex-1 border-0 bg-transparent font-serif text-[22px] tracking-[-0.01em] text-ink outline-none placeholder:text-ink-3 placeholder:italic focus:ring-0"
             placeholder="Search scripture, lyrics, slides, or commands ..."
             value={query}
             onChange={handleChange}
           />
-          <span className="font-mono text-[10px] text-ink-3 tracking-[0.1em] uppercase">
+          <span className="font-mono text-[10px] tracking-[0.1em] text-ink-3 uppercase">
             {totalCount} results
           </span>
         </div>
@@ -175,7 +190,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
         <div className="max-h-[50vh] overflow-y-auto py-2">
           {groups.map((g) => (
             <div key={g.group}>
-              <div className="px-[22px] pt-2 pb-1 font-mono text-[9.5px] text-ink-3 tracking-[0.14em] uppercase">
+              <div className="px-[22px] pt-2 pb-1 font-mono text-[9.5px] tracking-[0.14em] text-ink-3 uppercase">
                 {g.group}
               </div>
               {g.items.map((item) => {
@@ -183,26 +198,26 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                 return (
                   <div
                     key={`${g.group}-${idx}`}
-                    className={`grid grid-cols-[28px_1fr_auto] gap-3.5 px-[22px] py-2.5 cursor-pointer items-center transition-colors ${
+                    className={`grid cursor-pointer grid-cols-[28px_1fr_auto] items-center gap-3.5 px-[22px] py-2.5 transition-colors ${
                       idx === selected
                         ? "bg-accent-soft"
                         : "hover:bg-accent-soft"
                     }`}
                     onClick={item.onSelect}
                   >
-                    <span className="text-accent flex items-center">
+                    <span className="flex items-center text-accent">
                       {item.glyph}
                     </span>
                     <div>
-                      <div className="text-[13.5px] text-ink truncate">
+                      <div className="truncate text-[13.5px] text-ink">
                         {item.main}
                       </div>
-                      <div className="font-mono text-[10px] text-ink-3 tracking-[0.06em] mt-0.5 uppercase">
+                      <div className="mt-0.5 font-mono text-[10px] tracking-[0.06em] text-ink-3 uppercase">
                         {item.sub}
                       </div>
                     </div>
-                    <span className="text-ink-3 flex items-center">
-                      <CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" />
+                    <span className="flex items-center text-ink-3">
+                      <CornerDownLeftIcon className="h-3.5 w-3.5 shrink-0" />
                     </span>
                   </div>
                 );
@@ -217,27 +232,27 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex gap-4 items-center px-[22px] py-2.5 border-t border-line font-mono text-[10px] text-ink-3 tracking-[0.08em] uppercase">
+        <div className="flex items-center gap-4 border-t border-line px-[22px] py-2.5 font-mono text-[10px] tracking-[0.08em] text-ink-3 uppercase">
           <span>
-            <kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">
+            <kbd className="mr-1 rounded-sm bg-bg-3 px-1.5 py-0.5 text-ink-2">
               ↑↓
             </kbd>{" "}
             navigate
           </span>
           <span>
-            <kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">
+            <kbd className="mr-1 rounded-sm bg-bg-3 px-1.5 py-0.5 text-ink-2">
               ↵
             </kbd>{" "}
             push
           </span>
           <span>
-            <kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">
+            <kbd className="mr-1 rounded-sm bg-bg-3 px-1.5 py-0.5 text-ink-2">
               ⇧↵
             </kbd>{" "}
             queue
           </span>
           <span>
-            <kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">
+            <kbd className="mr-1 rounded-sm bg-bg-3 px-1.5 py-0.5 text-ink-2">
               esc
             </kbd>{" "}
             close

@@ -65,7 +65,9 @@ export async function addEmailSubscriber(
 /**
  * Removes a subscriber from the mailing list.
  */
-export async function removeEmailSubscriber(subscriberId: string): Promise<void> {
+export async function removeEmailSubscriber(
+  subscriberId: string,
+): Promise<void> {
   return invoke("remove_email_subscriber", { subscriberId });
 }
 

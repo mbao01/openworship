@@ -20,7 +20,7 @@ function DialogOverlay({
         "bg-bg/70 backdrop-blur-sm",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        className
+        className,
       )}
       {...props}
     />
@@ -41,21 +41,21 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed left-1/2 top-1/2 z-[200] -translate-x-1/2 -translate-y-1/2",
+          "fixed top-1/2 left-1/2 z-[200] -translate-x-1/2 -translate-y-1/2",
           "w-full max-w-lg",
-          "bg-bg-1 border border-line-strong rounded-lg",
+          "rounded-lg border border-line-strong bg-bg-1",
           "shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]",
           "p-6",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-          className
+          className,
         )}
         {...props}
       >
         {children}
         {showClose && (
-          <DialogClose className="absolute right-4 top-4 rounded-[3px] text-ink-3 hover:text-ink transition-colors focus-visible:outline focus-visible:outline-[1px] focus-visible:outline-accent">
+          <DialogClose className="absolute top-4 right-4 rounded-[3px] text-ink-3 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-[1px] focus-visible:outline-accent">
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
           </DialogClose>
@@ -92,7 +92,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("font-serif text-xl text-ink leading-snug", className)}
+      className={cn("font-serif text-xl leading-snug text-ink", className)}
       {...props}
     />
   );

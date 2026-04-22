@@ -1,5 +1,9 @@
 import { useEffect } from "react";
-import { listen, type UnlistenFn, type EventCallback } from "@tauri-apps/api/event";
+import {
+  listen,
+  type UnlistenFn,
+  type EventCallback,
+} from "@tauri-apps/api/event";
 
 /**
  * Subscribes to a Tauri backend event and automatically unsubscribes on unmount.
@@ -8,7 +12,10 @@ import { listen, type UnlistenFn, type EventCallback } from "@tauri-apps/api/eve
  * @param event  Tauri event name, e.g. "detection://queue-updated"
  * @param handler  Callback invoked on each event payload
  */
-export function useTauriEvent<T>(event: string, handler: EventCallback<T>): void {
+export function useTauriEvent<T>(
+  event: string,
+  handler: EventCallback<T>,
+): void {
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
 

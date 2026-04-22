@@ -39,11 +39,11 @@ export function ConfirmDialog({
         <DialogHeader>
           <div className="flex items-start gap-3">
             {variant === "danger" && (
-              <div className="shrink-0 w-9 h-9 rounded-full bg-danger/10 flex items-center justify-center">
-                <AlertTriangleIcon className="w-4.5 h-4.5 text-danger" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger/10">
+                <AlertTriangleIcon className="h-4.5 w-4.5 text-danger" />
               </div>
             )}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <DialogTitle className="text-base">{title}</DialogTitle>
               {description && (
                 <DialogDescription className="mt-1.5 text-[13px] leading-[1.5]">

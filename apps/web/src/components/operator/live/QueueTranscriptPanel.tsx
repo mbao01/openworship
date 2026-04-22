@@ -13,7 +13,9 @@ export function QueueTranscriptPanel() {
   const [micActive, setMicActive] = useState(false);
 
   useEffect(() => {
-    getSttStatus().then(s => setMicActive(s === "running")).catch(() => {});
+    getSttStatus()
+      .then((s) => setMicActive(s === "running"))
+      .catch(() => {});
   }, []);
 
   const handleMicToggle = async () => {
@@ -27,21 +29,21 @@ export function QueueTranscriptPanel() {
   };
 
   return (
-    <section className="flex flex-col w-[340px] shrink-0 border-l border-line overflow-hidden">
+    <section className="flex w-[340px] flex-1 shrink-0 flex-col overflow-hidden border-l border-line">
       {/* Queue */}
-      <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
-        <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-line bg-bg-1 px-3.5">
+        <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
           Queue ·{" "}
-          <strong className="text-ink-2 font-medium">AI-detected</strong>
+          <strong className="font-medium text-ink-2">AI-detected</strong>
         </span>
         <span className="font-mono text-[10px] text-ink-3">
           {visible.length} items
         </span>
       </div>
 
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Queue items - equal third */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {visible.map((item) => (
             <QueueItemCard
               key={item.id}
@@ -55,37 +57,37 @@ export function QueueTranscriptPanel() {
             />
           ))}
           {visible.length === 0 && (
-            <div className="px-3.5 py-6 flex flex-col items-center justify-center gap-2 text-xs text-muted">
-              <SearchIcon className="w-5 h-5" />
+            <div className="flex flex-col items-center justify-center gap-2 px-3.5 py-6 text-xs text-muted">
+              <SearchIcon className="h-5 w-5" />
               No detections yet
             </div>
           )}
         </div>
 
         {/* Context panel - equal third */}
-        <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex min-h-0 flex-1 flex-col">
           <ContextPanel live={live} />
         </div>
 
         {/* Transcript header */}
-        <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-t border-line border-b border-line bg-bg-1">
-          <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+        <div className="flex h-9 shrink-0 items-center justify-between border-t border-b border-line bg-bg-1 px-3.5">
+          <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
             Transcript ·{" "}
-            <strong className="text-ink-2 font-medium">live</strong>
+            <strong className="font-medium text-ink-2">live</strong>
           </span>
           <div className="flex items-center gap-2">
             <button
-              className={`px-2 py-0.5 font-mono text-[9px] tracking-[0.1em] uppercase border rounded transition-colors cursor-pointer ${
+              className={`cursor-pointer rounded border px-2 py-0.5 font-mono text-[9px] tracking-[0.1em] uppercase transition-colors ${
                 micActive
-                  ? "text-live border-live/40 hover:bg-live/10"
-                  : "text-ink-3 border-line hover:text-ink hover:border-line-strong"
+                  ? "border-live/40 text-live hover:bg-live/10"
+                  : "border-line text-ink-3 hover:border-line-strong hover:text-ink"
               }`}
               onClick={handleMicToggle}
             >
               {micActive ? (
-                <MicIcon className="w-3 h-3 shrink-0 inline mr-1" />
+                <MicIcon className="mr-1 inline h-3 w-3 shrink-0" />
               ) : (
-                <MicOffIcon className="w-3 h-3 shrink-0 inline mr-1" />
+                <MicOffIcon className="mr-1 inline h-3 w-3 shrink-0" />
               )}
               {micActive ? "Stop" : "Start"}
             </button>
@@ -94,7 +96,7 @@ export function QueueTranscriptPanel() {
         </div>
 
         {/* Transcript body - equal third */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <TranscriptBody />
         </div>
       </div>

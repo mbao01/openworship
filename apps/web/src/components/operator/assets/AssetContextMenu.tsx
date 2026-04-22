@@ -63,9 +63,9 @@ export function AssetContextMenu({
     danger?: boolean,
   ) => (
     <button
-      className={`flex items-center gap-2.5 w-full text-left bg-transparent border-none font-sans text-[12px] px-3 py-1.5 cursor-pointer transition-colors whitespace-nowrap rounded-sm ${
+      className={`flex w-full cursor-pointer items-center gap-2.5 rounded-sm border-none bg-transparent px-3 py-1.5 text-left font-sans text-[12px] whitespace-nowrap transition-colors ${
         danger
-          ? "text-ink hover:text-danger hover:bg-danger/10"
+          ? "text-ink hover:bg-danger/10 hover:text-danger"
           : "text-ink hover:bg-bg-2"
       }`}
       onClick={() => {
@@ -81,14 +81,14 @@ export function AssetContextMenu({
     </button>
   );
 
-  const sep = <div className="h-px bg-line my-1 mx-2" />;
+  const sep = <div className="mx-2 my-1 h-px bg-line" />;
   const icn = "w-3.5 h-3.5 shrink-0";
 
   return (
     <div
       ref={ref}
       data-qa="artifacts-ctx-menu"
-      className="fixed z-[1000] bg-bg-1 border border-line-strong rounded-lg py-1.5 min-w-[200px] shadow-lg"
+      className="fixed z-[1000] min-w-[200px] rounded-lg border border-line-strong bg-bg-1 py-1.5 shadow-lg"
       style={{ top: menu.y, left: menu.x }}
     >
       {!menu.entry.is_dir &&

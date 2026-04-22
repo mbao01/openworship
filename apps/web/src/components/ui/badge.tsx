@@ -8,21 +8,21 @@ const badgeVariants = cva(
     variants: {
       variant: {
         /** Live — red indicator for the active display item. */
-        live:     "bg-live/20 text-live",
+        live: "bg-live/20 text-live",
         /** Next — accent-coloured for the queued-next item. */
-        next:     "bg-accent-soft text-accent",
+        next: "bg-accent-soft text-accent",
         /** Default — muted for detected/pending items. */
-        default:  "bg-bg-3 text-ink-3",
+        default: "bg-bg-3 text-ink-3",
         /** Success — green for confirmed/synced state. */
-        success:  "bg-success/15 text-success",
+        success: "bg-success/15 text-success",
         /** Danger — red for error states. */
-        danger:   "bg-danger/15 text-danger",
+        danger: "bg-danger/15 text-danger",
       },
     },
     defaultVariants: {
       variant: "default",
     },
-  }
+  },
 );
 
 function Badge({

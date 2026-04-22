@@ -10,12 +10,12 @@ import {
 } from "lucide-react";
 
 export const TYPE_ICONS: Record<string, React.ReactNode> = {
-  song: <MusicIcon className="w-3.5 h-3.5 shrink-0" />,
-  scripture: <BookOpenIcon className="w-3.5 h-3.5 shrink-0" />,
-  prayer: <HeartHandshakeIcon className="w-3.5 h-3.5 shrink-0" />,
-  announcement: <MegaphoneIcon className="w-3.5 h-3.5 shrink-0" />,
-  sermon: <PenLineIcon className="w-3.5 h-3.5 shrink-0" />,
-  other: <DiamondIcon className="w-3.5 h-3.5 shrink-0" />,
+  song: <MusicIcon className="h-3.5 w-3.5 shrink-0" />,
+  scripture: <BookOpenIcon className="h-3.5 w-3.5 shrink-0" />,
+  prayer: <HeartHandshakeIcon className="h-3.5 w-3.5 shrink-0" />,
+  announcement: <MegaphoneIcon className="h-3.5 w-3.5 shrink-0" />,
+  sermon: <PenLineIcon className="h-3.5 w-3.5 shrink-0" />,
+  other: <DiamondIcon className="h-3.5 w-3.5 shrink-0" />,
 };
 
 export const TYPE_LABELS: Record<string, string> = {
@@ -27,9 +27,22 @@ export const TYPE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-export const ITEM_TYPES = ["song", "scripture", "prayer", "announcement", "sermon", "other"] as const;
+export const ITEM_TYPES = [
+  "song",
+  "scripture",
+  "prayer",
+  "announcement",
+  "sermon",
+  "other",
+] as const;
 
-export const TASK_STATUSES: TaskStatus[] = ["backlog", "todo", "in_progress", "done", "cancelled"];
+export const TASK_STATUSES: TaskStatus[] = [
+  "backlog",
+  "todo",
+  "in_progress",
+  "done",
+  "cancelled",
+];
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   backlog: "Backlog",
@@ -55,9 +68,16 @@ export function formatDate(ms: number): string {
   });
 }
 
-export function formatComputedTime(baseMs: number, cumulativeSecs: number): string {
+export function formatComputedTime(
+  baseMs: number,
+  cumulativeSecs: number,
+): string {
   const d = new Date(baseMs + cumulativeSecs * 1000);
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return d.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 export function formatDuration(secs: number): string {

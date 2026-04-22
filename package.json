@@ -11,6 +11,8 @@
     "test": "pnpm --filter @openworship/web test"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "@tauri-apps/cli": "^2",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.7.2"
   }
 }

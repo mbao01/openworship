@@ -34,19 +34,25 @@ function ProjectItemRow({
 }) {
   return (
     <li
-      className={`relative flex items-center gap-[6px] bg-bg-1 border border-line/40 border-l-2 rounded-sm py-2 px-3 pr-7 outline-none transition-all group${
+      className={`relative flex items-center gap-[6px] rounded-sm border border-l-2 border-line/40 bg-bg-1 px-3 py-2 pr-7 transition-all outline-none group${
         isLive
-          ? " !border-l-accent bg-bg-2"
-          : " border-l-transparent hover:bg-bg-2 hover:border-line-strong hover:border-l-muted focus-within:bg-bg-2 focus-within:border-line-strong focus-within:border-l-muted"
+          ? "!border-l-accent bg-bg-2"
+          : "border-l-transparent focus-within:border-line-strong focus-within:border-l-muted focus-within:bg-bg-2 hover:border-line-strong hover:border-l-muted hover:bg-bg-2"
       }`}
       draggable={!isReadOnly}
       onDragStart={() => onDragStart?.(item.id)}
-      onDragOver={(e) => { e.preventDefault(); onDragOver?.(e); }}
-      onDrop={(e) => { e.preventDefault(); onDrop?.(item.id); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOver?.(e);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop?.(item.id);
+      }}
     >
       {!isReadOnly && (
         <span
-          className="shrink-0 text-muted text-[13px] cursor-grab opacity-0 transition-opacity select-none group-hover:opacity-100"
+          className="shrink-0 cursor-grab text-[13px] text-muted opacity-0 transition-opacity select-none group-hover:opacity-100"
           aria-hidden="true"
           title="Drag to reorder"
         >
@@ -54,27 +60,33 @@ function ProjectItemRow({
         </span>
       )}
       <div
-        className="flex-1 min-w-0 cursor-pointer"
+        className="min-w-0 flex-1 cursor-pointer"
         role="button"
         tabIndex={0}
         onClick={() => onPush(item)}
         onKeyDown={(e) => e.key === "Enter" && onPush(item)}
       >
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-[11px] font-medium text-ink tracking-[0.04em]">{item.reference}</span>
-          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">{item.translation}</span>
+        <div className="mb-0.5 flex items-center gap-2">
+          <span className="text-[11px] font-medium tracking-[0.04em] text-ink">
+            {item.reference}
+          </span>
+          <span className="font-mono text-[10px] tracking-[0.08em] text-ink-3">
+            {item.translation}
+          </span>
           {isLive && (
             <span
-              className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
+              className="ml-auto h-[6px] w-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)]"
               aria-label="Live"
             />
           )}
         </div>
-        <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">{item.text}</p>
+        <p className="m-0 line-clamp-2 text-[11px] leading-[1.45] text-ink-3">
+          {item.text}
+        </p>
       </div>
       {!isReadOnly && (
         <button
-          className="absolute top-1/2 right-[6px] -translate-y-1/2 bg-transparent border-none text-muted text-sm leading-none cursor-pointer px-1 py-0.5 rounded-[2px] opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 hover:text-danger"
+          className="absolute top-1/2 right-[6px] -translate-y-1/2 cursor-pointer rounded-[2px] border-none bg-transparent px-1 py-0.5 text-sm leading-none text-muted opacity-0 transition-all group-focus-within:opacity-100 group-hover:opacity-100 hover:text-danger"
           title="Remove from schedule"
           aria-label={`Remove ${item.reference} from schedule`}
           onClick={(e) => {
@@ -89,7 +101,11 @@ function ProjectItemRow({
   );
 }
 
-function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void }) {
+function NewProjectForm({
+  onCreated,
+}: {
+  onCreated: (p: ServiceProject) => void;
+}) {
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,7 +120,9 @@ function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void 
     if (!trimmed) return;
     setSaving(true);
     try {
-      const project = await invoke<ServiceProject>("create_service_project", { name: trimmed });
+      const project = await invoke<ServiceProject>("create_service_project", {
+        name: trimmed,
+      });
       onCreated(project);
     } catch (e) {
       toastError("Failed to create service")(e);
@@ -114,10 +132,10 @@ function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void 
   };
 
   return (
-    <form className="flex gap-2 mb-3 shrink-0" onSubmit={handleSubmit}>
+    <form className="mb-3 flex shrink-0 gap-2" onSubmit={handleSubmit}>
       <input
         ref={inputRef}
-        className="flex-1 bg-transparent border-none border-b border-b-line/60 outline-none py-2 text-ink font-sans text-[13px] transition-colors placeholder:text-muted focus:border-b-accent disabled:opacity-50"
+        className="flex-1 border-b border-none border-b-line/60 bg-transparent py-2 font-sans text-[13px] text-ink transition-colors outline-none placeholder:text-muted focus:border-b-accent disabled:opacity-50"
         placeholder="Service name ..."
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -125,7 +143,7 @@ function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void 
         autoComplete="off"
       />
       <button
-        className="font-sans text-[10px] font-medium tracking-[0.08em] text-accent-foreground bg-accent border-none rounded-sm px-[10px] py-1 cursor-pointer uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        className="cursor-pointer rounded-sm border-none bg-accent px-[10px] py-1 font-sans text-[10px] font-medium tracking-[0.08em] text-accent-foreground uppercase transition-all disabled:cursor-not-allowed disabled:opacity-40"
         type="submit"
         disabled={saving || !name.trim()}
       >
@@ -137,7 +155,11 @@ function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void 
 
 // ─── Content bank (bottom collapsible section) ────────────────────────────────
 
-function ContentBankSection({ liveReference }: { liveReference: string | null }) {
+function ContentBankSection({
+  liveReference,
+}: {
+  liveReference: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [bankResults, setBankResults] = useState<ContentBankEntry[]>([]);
@@ -164,37 +186,37 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
     }
   }, [open]);
 
-  const runSearch = useCallback(
-    async (q: string, t: string) => {
-      if (!q.trim()) {
-        setSearchResults([]);
-        setSongResults([]);
-        invoke<ContentBankEntry[]>("search_content_bank", { query: "" })
-          .then(setBankResults)
-          .catch(toastError("Failed to load content bank"));
-        return;
-      }
-      setIsSearching(true);
-      try {
-        const [scripture, bank, songs] = await Promise.all([
-          invoke<VerseResult[]>("search_scriptures", { query: q, translation: t || null }),
-          invoke<ContentBankEntry[]>("search_content_bank", { query: q }),
-          invoke<Song[]>("search_songs", { query: q, limit: 10 }),
-        ]);
-        setSearchResults(scripture);
-        setBankResults(bank);
-        setSongResults(songs);
-      } catch (e) {
-        toastError("Search failed")(e);
-        setSearchResults([]);
-        setBankResults([]);
-        setSongResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    },
-    []
-  );
+  const runSearch = useCallback(async (q: string, t: string) => {
+    if (!q.trim()) {
+      setSearchResults([]);
+      setSongResults([]);
+      invoke<ContentBankEntry[]>("search_content_bank", { query: "" })
+        .then(setBankResults)
+        .catch(toastError("Failed to load content bank"));
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const [scripture, bank, songs] = await Promise.all([
+        invoke<VerseResult[]>("search_scriptures", {
+          query: q,
+          translation: t || null,
+        }),
+        invoke<ContentBankEntry[]>("search_content_bank", { query: q }),
+        invoke<Song[]>("search_songs", { query: q, limit: 10 }),
+      ]);
+      setSearchResults(scripture);
+      setBankResults(bank);
+      setSongResults(songs);
+    } catch (e) {
+      toastError("Search failed")(e);
+      setSearchResults([]);
+      setBankResults([]);
+      setSongResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -225,13 +247,15 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
 
   const resultCls = (isLive: boolean) =>
     `bg-bg-1 border border-l-2 rounded-sm py-2 px-3 cursor-pointer outline-none transition-all hover:bg-bg-2 hover:border-line-strong focus:bg-bg-2 focus:border-line-strong${
-      isLive ? " border-l-accent/60 bg-bg-2 border-line/40" : " border-l-transparent border-line/40"
+      isLive
+        ? " border-l-accent/60 bg-bg-2 border-line/40"
+        : " border-l-transparent border-line/40"
     }`;
 
   return (
-    <div className="shrink-0 mt-3 border-t border-line">
+    <div className="mt-3 shrink-0 border-t border-line">
       <button
-        className="w-full flex items-center justify-between bg-transparent border-none text-muted font-sans text-[10px] font-medium tracking-[0.1em] uppercase cursor-pointer pt-3 pb-0 px-0 transition-colors hover:text-ink-3"
+        className="flex w-full cursor-pointer items-center justify-between border-none bg-transparent px-0 pt-3 pb-0 font-sans text-[10px] font-medium tracking-[0.1em] text-muted uppercase transition-colors hover:text-ink-3"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
@@ -242,12 +266,12 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
       </button>
 
       {open && (
-        <div className="pt-3 max-h-[280px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-sm">
+        <div className="max-h-[280px] overflow-y-auto pt-3 [scrollbar-color:var(--color-line-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb]:bg-line">
           {/* Search controls */}
-          <div className="flex gap-2 items-center mb-2">
-            <div className="flex-1 relative">
+          <div className="mb-2 flex items-center gap-2">
+            <div className="relative flex-1">
               <input
-                className="w-full bg-transparent border-none border-b border-b-line/60 outline-none py-2 text-ink font-sans text-xs transition-colors box-border placeholder:text-muted focus:border-b-accent"
+                className="box-border w-full border-b border-none border-b-line/60 bg-transparent py-2 font-sans text-xs text-ink transition-colors outline-none placeholder:text-muted focus:border-b-accent"
                 type="text"
                 placeholder={"Search — e.g. John 3:16 or “shepherd”"}
                 value={query}
@@ -256,11 +280,11 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                 spellCheck={false}
               />
               {isSearching && (
-                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border border-muted border-t-accent animate-spin" />
+                <span className="absolute top-1/2 right-0 h-2 w-2 -translate-y-1/2 animate-spin rounded-full border border-muted border-t-accent" />
               )}
             </div>
             <select
-              className="bg-bg-1 border-none border-b border-b-line/60 text-ink-3 font-mono text-[10px] tracking-[0.06em] py-2 px-1 outline-none cursor-pointer min-w-[46px] focus:border-b-accent"
+              className="min-w-[46px] cursor-pointer border-b border-none border-b-line/60 bg-bg-1 px-1 py-2 font-mono text-[10px] tracking-[0.06em] text-ink-3 outline-none focus:border-b-accent"
               value={translation}
               onChange={(e) => {
                 setTranslation(e.target.value);
@@ -278,11 +302,11 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
           {/* Bank results */}
           {bankResults.length > 0 && (
             <>
-              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">
+              <p className="mx-0 my-2 text-[10px] font-medium tracking-[0.1em] text-muted uppercase">
                 {query.trim() ? "Past services" : "Recently used"}
               </p>
               <ul
-                className="list-none m-0 p-0 flex flex-col gap-px"
+                className="m-0 flex list-none flex-col gap-px p-0"
                 role="list"
               >
                 {bankResults.map((entry) => {
@@ -311,11 +335,11 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                         )
                       }
                     >
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[11px] font-medium text-ink tracking-[0.04em]">
+                      <div className="mb-0.5 flex items-center gap-2">
+                        <span className="text-[11px] font-medium tracking-[0.04em] text-ink">
                           {entry.reference}
                         </span>
-                        <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">
+                        <span className="font-mono text-[10px] tracking-[0.08em] text-ink-3">
                           {entry.translation}
                         </span>
                         {entry.use_count > 1 && (
@@ -325,12 +349,12 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                         )}
                         {isLive && (
                           <span
-                            className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
+                            className="ml-auto h-[6px] w-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)]"
                             aria-label="Live"
                           />
                         )}
                       </div>
-                      <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">
+                      <p className="m-0 line-clamp-2 text-[11px] leading-[1.45] text-ink-3">
                         {entry.text}
                       </p>
                     </li>
@@ -343,11 +367,11 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
           {/* Scripture search results */}
           {searchResults.length > 0 && (
             <>
-              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">
+              <p className="mx-0 my-2 text-[10px] font-medium tracking-[0.1em] text-muted uppercase">
                 Scripture
               </p>
               <ul
-                className="list-none m-0 p-0 flex flex-col gap-px"
+                className="m-0 flex list-none flex-col gap-px p-0"
                 role="list"
               >
                 {searchResults
@@ -372,16 +396,16 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                           handlePush(v.reference, v.text, v.translation)
                         }
                       >
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[11px] font-medium text-ink tracking-[0.04em]">
+                        <div className="mb-0.5 flex items-center gap-2">
+                          <span className="text-[11px] font-medium tracking-[0.04em] text-ink">
                             {v.reference}
                           </span>
-                          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">
+                          <span className="font-mono text-[10px] tracking-[0.08em] text-ink-3">
                             {v.translation}
                           </span>
                           {v.score != null && v.score < 1.0 && (
                             <span
-                              className="text-[9px] text-muted font-mono ml-auto opacity-70"
+                              className="ml-auto font-mono text-[9px] text-muted opacity-70"
                               title={`${Math.round(v.score * 100)}% relevance`}
                             >
                               {Math.round(v.score * 100)}%
@@ -389,12 +413,12 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                           )}
                           {isLive && (
                             <span
-                              className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
+                              className="ml-auto h-[6px] w-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)]"
                               aria-label="Live"
                             />
                           )}
                         </div>
-                        <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">
+                        <p className="m-0 line-clamp-2 text-[11px] leading-[1.45] text-ink-3">
                           {v.text}
                         </p>
                       </li>
@@ -407,11 +431,11 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
           {/* Song results */}
           {songResults.length > 0 && (
             <>
-              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">
+              <p className="mx-0 my-2 text-[10px] font-medium tracking-[0.1em] text-muted uppercase">
                 Songs
               </p>
               <ul
-                className="list-none m-0 p-0 flex flex-col gap-px"
+                className="m-0 flex list-none flex-col gap-px p-0"
                 role="list"
               >
                 {songResults.map((song) => {
@@ -430,22 +454,22 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                     >
                       <div className="flex items-center gap-2">
                         <span
-                          className="text-[10px] text-accent leading-none"
+                          className="text-[10px] leading-none text-accent"
                           aria-hidden="true"
                         >
                           ♪
                         </span>
-                        <span className="text-[11px] font-medium text-ink tracking-[0.04em]">
+                        <span className="text-[11px] font-medium tracking-[0.04em] text-ink">
                           {song.title}
                         </span>
                         {song.artist && (
-                          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">
+                          <span className="font-mono text-[10px] tracking-[0.08em] text-ink-3">
                             {song.artist}
                           </span>
                         )}
                         {isLive && (
                           <span
-                            className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
+                            className="ml-auto h-[6px] w-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)]"
                             aria-label="Live"
                           />
                         )}
@@ -462,7 +486,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
             searchResults.length === 0 &&
             bankResults.length === 0 &&
             songResults.length === 0 && (
-              <p className="text-[11px] text-muted py-2 m-0">
+              <p className="m-0 py-2 text-[11px] text-muted">
                 No results for "{query}"
               </p>
             )}
@@ -475,7 +499,9 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
 // ─── Main SchedulePanel ───────────────────────────────────────────────────────
 
 export function SchedulePanel() {
-  const [activeProject, setActiveProject] = useState<ServiceProject | null>(null);
+  const [activeProject, setActiveProject] = useState<ServiceProject | null>(
+    null,
+  );
   const [projects, setProjects] = useState<ServiceProject[]>([]);
   const [liveReference, setLiveReference] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -521,7 +547,10 @@ export function SchedulePanel() {
 
   const handleRemoveItem = async (itemId: string) => {
     try {
-      const updated = await invoke<ServiceProject>("remove_item_from_active_project", { itemId });
+      const updated = await invoke<ServiceProject>(
+        "remove_item_from_active_project",
+        { itemId },
+      );
       setActiveProject(updated);
     } catch (e) {
       toastError("Failed to remove item from schedule")(e);
@@ -542,7 +571,10 @@ export function SchedulePanel() {
     ids.splice(fromIdx, 1);
     ids.splice(toIdx, 0, sourceId);
     try {
-      const updated = await invoke<ServiceProject>("reorder_active_project_items", { itemIds: ids });
+      const updated = await invoke<ServiceProject>(
+        "reorder_active_project_items",
+        { itemIds: ids },
+      );
       setActiveProject(updated);
     } catch (e) {
       toastError("Failed to reorder schedule items")(e);
@@ -566,7 +598,9 @@ export function SchedulePanel() {
 
   const handleOpenProject = async (id: string) => {
     try {
-      const project = await invoke<ServiceProject>("open_service_project", { id });
+      const project = await invoke<ServiceProject>("open_service_project", {
+        id,
+      });
       setActiveProject(project.closed_at_ms === null ? project : null);
       loadProjects();
     } catch (e) {
@@ -575,13 +609,13 @@ export function SchedulePanel() {
   };
 
   const pastProjects = projects.filter(
-    (p) => p.closed_at_ms !== null && p.id !== activeProject?.id
+    (p) => p.closed_at_ms !== null && p.id !== activeProject?.id,
   );
 
   return (
-    <div className="flex flex-col h-full min-h-0 gap-0">
+    <div className="flex h-full min-h-0 flex-col gap-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 shrink-0">
+      <div className="mb-3 flex shrink-0 items-center justify-between">
         <span className="text-[11px] font-medium tracking-[0.12em] text-ink-3 uppercase">
           SCHEDULE
         </span>
@@ -589,7 +623,7 @@ export function SchedulePanel() {
           <>
             <button
               data-qa="schedule-summarize-btn"
-              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-accent-foreground bg-danger border-none mr-0.5 transition-all hover:brightness-110"
+              className="mr-0.5 cursor-pointer rounded-sm border-none bg-danger px-2 py-[3px] font-sans text-[10px] font-medium tracking-[0.08em] text-accent-foreground uppercase transition-all hover:brightness-110"
               onClick={() => handleCloseProject(true)}
               title="End service and generate AI summary"
             >
@@ -597,7 +631,7 @@ export function SchedulePanel() {
             </button>
             <button
               data-qa="schedule-end-btn"
-              className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-accent-foreground bg-accent border-none transition-all hover:brightness-110"
+              className="cursor-pointer rounded-sm border-none bg-accent px-2 py-[3px] font-sans text-[10px] font-medium tracking-[0.08em] text-accent-foreground uppercase transition-all hover:brightness-110"
               onClick={() => handleCloseProject(false)}
               title="End this service without summary"
             >
@@ -607,7 +641,7 @@ export function SchedulePanel() {
         ) : (
           <button
             data-qa="schedule-new-btn"
-            className="font-sans text-[10px] font-medium tracking-[0.08em] rounded-sm px-2 py-[3px] cursor-pointer uppercase text-ink bg-transparent border border-line transition-colors hover:border-line-strong"
+            className="cursor-pointer rounded-sm border border-line bg-transparent px-2 py-[3px] font-sans text-[10px] font-medium tracking-[0.08em] text-ink uppercase transition-colors hover:border-line-strong"
             onClick={() => setShowNewForm((v) => !v)}
             title="Start a new service"
           >
@@ -629,16 +663,16 @@ export function SchedulePanel() {
 
       {/* Active project */}
       {activeProject ? (
-        <div className="flex-1 overflow-y-auto min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-sm">
-          <p className="text-xs font-medium text-ink m-0 mb-3 tracking-[0.02em] whitespace-nowrap overflow-hidden text-ellipsis">
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:var(--color-line-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb]:bg-line">
+          <p className="m-0 mb-3 overflow-hidden text-xs font-medium tracking-[0.02em] text-ellipsis whitespace-nowrap text-ink">
             {activeProject.name}
           </p>
           {activeProject.items.length === 0 ? (
-            <p className="text-xs text-muted m-0 leading-[1.5]">
+            <p className="m-0 text-xs leading-[1.5] text-muted">
               Push scripture to display — items appear here automatically.
             </p>
           ) : (
-            <ul className="list-none m-0 p-0 flex flex-col gap-px" role="list">
+            <ul className="m-0 flex list-none flex-col gap-px p-0" role="list">
               {activeProject.items
                 .slice()
                 .sort((a, b) => a.position - b.position)
@@ -660,15 +694,15 @@ export function SchedulePanel() {
           )}
         </div>
       ) : !showNewForm ? (
-        <p className="text-xs text-muted m-0 leading-[1.5]">
+        <p className="m-0 text-xs leading-[1.5] text-muted">
           No active service. Start one to track your content.
         </p>
       ) : null}
 
       {/* Past projects */}
-      <div className="shrink-0 mt-3 border-t border-line pt-3">
+      <div className="mt-3 shrink-0 border-t border-line pt-3">
         <button
-          className="w-full flex items-center justify-between bg-transparent border-none text-muted font-sans text-[10px] font-medium tracking-[0.1em] uppercase cursor-pointer p-0 mb-2 transition-colors hover:text-ink-3"
+          className="mb-2 flex w-full cursor-pointer items-center justify-between border-none bg-transparent p-0 font-sans text-[10px] font-medium tracking-[0.1em] text-muted uppercase transition-colors hover:text-ink-3"
           onClick={() => setShowPastProjects((v) => !v)}
           aria-expanded={showPastProjects}
         >
@@ -680,27 +714,27 @@ export function SchedulePanel() {
         </button>
         {showPastProjects &&
           (pastProjects.length === 0 ? (
-            <p className="text-[11px] text-muted m-0 leading-[1.5]">
+            <p className="m-0 text-[11px] leading-[1.5] text-muted">
               No past services. Close an active service to archive it here.
             </p>
           ) : (
             <ul
-              className="list-none m-0 p-0 flex flex-col gap-px max-h-[120px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent]"
+              className="m-0 flex max-h-[120px] list-none flex-col gap-px overflow-y-auto p-0 [scrollbar-color:var(--color-line-strong)_transparent] [scrollbar-width:thin]"
               role="list"
             >
               {pastProjects.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center gap-2 py-2 px-2 rounded-sm transition-colors hover:bg-white/[0.04]"
+                  className="flex items-center gap-2 rounded-sm px-2 py-2 transition-colors hover:bg-white/[0.04]"
                 >
-                  <span className="flex-1 text-xs text-ink whitespace-nowrap overflow-hidden text-ellipsis">
+                  <span className="flex-1 overflow-hidden text-xs text-ellipsis whitespace-nowrap text-ink">
                     {p.name}
                   </span>
-                  <span className="font-mono text-[10px] text-muted whitespace-nowrap">
+                  <span className="font-mono text-[10px] whitespace-nowrap text-muted">
                     {p.items.length} item{p.items.length !== 1 ? "s" : ""}
                   </span>
                   <button
-                    className="font-sans text-[10px] font-medium tracking-[0.06em] text-ink-3 bg-transparent border border-line rounded-sm px-[6px] py-0.5 cursor-pointer uppercase shrink-0 transition-colors hover:text-ink hover:border-line-strong"
+                    className="shrink-0 cursor-pointer rounded-sm border border-line bg-transparent px-[6px] py-0.5 font-sans text-[10px] font-medium tracking-[0.06em] text-ink-3 uppercase transition-colors hover:border-line-strong hover:text-ink"
                     onClick={() => handleOpenProject(p.id)}
                     title="Load this service"
                   >

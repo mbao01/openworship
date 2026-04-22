@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-export function AddTaskForm({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
+export function AddTaskForm({
+  onAdd,
+}: {
+  onAdd: (title: string) => Promise<void>;
+}) {
   const [title, setTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -18,16 +22,16 @@ export function AddTaskForm({ onAdd }: { onAdd: (title: string) => Promise<void>
   };
 
   return (
-    <form className="flex gap-2 mt-3" onSubmit={handleSubmit}>
+    <form className="mt-3 flex gap-2" onSubmit={handleSubmit}>
       <input
-        className="flex-1 px-3 py-2 bg-bg-2 border border-line rounded text-ink text-sm"
+        className="flex-1 rounded border border-line bg-bg-2 px-3 py-2 text-sm text-ink"
         placeholder="Add a task..."
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
       <button
         type="submit"
-        className="px-3 py-2 bg-accent text-accent-foreground text-xs font-semibold rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="cursor-pointer rounded bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
         disabled={!title.trim() || submitting}
       >
         Add

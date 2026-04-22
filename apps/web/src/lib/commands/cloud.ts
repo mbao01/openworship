@@ -14,7 +14,9 @@ import type { AclEntry, ArtifactEntry, CloudSyncInfo } from "../types";
  * Returns the cloud sync metadata for a specific artifact.
  * Includes sync status, last sync time, and any sync errors.
  */
-export async function getCloudSyncInfo(artifactId: string): Promise<CloudSyncInfo | null> {
+export async function getCloudSyncInfo(
+  artifactId: string,
+): Promise<CloudSyncInfo | null> {
   return invoke<CloudSyncInfo | null>("get_cloud_sync_info", { artifactId });
 }
 
@@ -40,7 +42,9 @@ export async function syncArtifactNow(artifactId: string): Promise<void> {
  * Downloads an artifact from cloud storage to the local filesystem.
  * Returns the updated sync info on success.
  */
-export async function downloadArtifactFromCloud(artifactId: string): Promise<CloudSyncInfo> {
+export async function downloadArtifactFromCloud(
+  artifactId: string,
+): Promise<CloudSyncInfo> {
   return invoke<CloudSyncInfo>("download_artifact_from_cloud", { artifactId });
 }
 

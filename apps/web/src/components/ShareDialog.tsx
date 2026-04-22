@@ -22,7 +22,7 @@ function PermSelect({
 }) {
   return (
     <select
-      className="appearance-none bg-bg-1 border border-line text-ink font-sans text-[11px] px-[8px] py-[4px] pr-[22px] rounded-[3px] cursor-pointer outline-none focus:border-accent transition-colors disabled:opacity-50 disabled:cursor-default"
+      className="cursor-pointer appearance-none rounded-[3px] border border-line bg-bg-1 px-[8px] py-[4px] pr-[22px] font-sans text-[11px] text-ink transition-colors outline-none focus:border-accent disabled:cursor-default disabled:opacity-50"
       style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234a4a4a' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
         backgroundRepeat: "no-repeat",
@@ -43,7 +43,13 @@ function PermSelect({
 
 function FileIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M5 2.5h7l4 4v11H5v-15Z"
         stroke="currentColor"
@@ -76,8 +82,11 @@ function BranchAvatar({ name }: { name: string }) {
 
   return (
     <div
-      className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-ink shrink-0"
-      style={{ background: `hsl(${hue}, 30%, 28%)`, border: `1px solid hsl(${hue}, 30%, 35%)` }}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-ink"
+      style={{
+        background: `hsl(${hue}, 30%, 28%)`,
+        border: `1px solid hsl(${hue}, 30%, 35%)`,
+      }}
     >
       {initials}
     </div>
@@ -116,7 +125,9 @@ export function ShareDialog({
   }, []);
 
   useEffect(() => {
-    invoke<[AclEntry[], AccessLevel]>("get_artifact_acl", { artifactId: artifact.id })
+    invoke<[AclEntry[], AccessLevel]>("get_artifact_acl", {
+      artifactId: artifact.id,
+    })
       .then(([entries, level]) => {
         setAcl(entries);
         setAccessLevel(level);
@@ -128,7 +139,11 @@ export function ShareDialog({
     setSaving(true);
     setError(null);
     try {
-      await invoke("set_artifact_acl", { artifactId: artifact.id, acl, accessLevel });
+      await invoke("set_artifact_acl", {
+        artifactId: artifact.id,
+        acl,
+        accessLevel,
+      });
       onClose();
     } catch (e) {
       setError(String(e));
@@ -148,7 +163,11 @@ export function ShareDialog({
       const existing = new Set(prev.map((e) => e.branch_name.toLowerCase()));
       const toAdd = names
         .filter((name) => !existing.has(name.toLowerCase()))
-        .map((name) => ({ branch_id: name, branch_name: name, permission: newPerm }));
+        .map((name) => ({
+          branch_id: name,
+          branch_name: name,
+          permission: newPerm,
+        }));
       return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
     });
     setSearchQuery("");
@@ -159,13 +178,18 @@ export function ShareDialog({
 
   const updatePerm = (branchId: string, perm: BranchPermission) =>
     setAcl((prev) =>
-      prev.map((e) => (e.branch_id === branchId ? { ...e, permission: perm } : e))
+      prev.map((e) =>
+        e.branch_id === branchId ? { ...e, permission: perm } : e,
+      ),
     );
 
   const handleSyncToggle = async () => {
     const enable = !syncInfo?.sync_enabled;
     try {
-      await invoke("toggle_artifact_cloud_sync", { artifactId: artifact.id, enabled: enable });
+      await invoke("toggle_artifact_cloud_sync", {
+        artifactId: artifact.id,
+        enabled: enable,
+      });
       onSyncToggled();
     } catch (e) {
       setError(String(e));
@@ -205,29 +229,29 @@ export function ShareDialog({
   return (
     <div
       data-qa="share-dialog-overlay"
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-[1000]"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70"
       onClick={onClose}
     >
       <div
         data-qa="share-dialog"
-        className="bg-bg-2 border border-line rounded-[8px] w-[480px] max-h-[85vh] overflow-y-auto flex flex-col shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
+        className="flex max-h-[85vh] w-[480px] flex-col overflow-y-auto rounded-[8px] border border-line bg-bg-2 shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ───────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between px-5 pt-5 pb-4">
           <div className="flex flex-col gap-[6px]">
-            <h2 className="text-[15px] font-semibold text-ink m-0">Share</h2>
+            <h2 className="m-0 text-[15px] font-semibold text-ink">Share</h2>
             <div className="flex items-center gap-[7px]">
               <span className="text-muted">
                 <FileIcon />
               </span>
-              <span className="text-[12px] text-ink-3 font-mono overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
+              <span className="max-w-[280px] overflow-hidden font-mono text-[12px] text-ellipsis whitespace-nowrap text-ink-3">
                 {artifact.name}
               </span>
             </div>
           </div>
           <button
-            className="bg-transparent border-none text-muted cursor-pointer text-[13px] p-1 rounded transition-colors hover:text-ink mt-[2px]"
+            className="mt-[2px] cursor-pointer rounded border-none bg-transparent p-1 text-[13px] text-muted transition-colors hover:text-ink"
             onClick={onClose}
             aria-label="Close"
           >
@@ -237,12 +261,12 @@ export function ShareDialog({
 
         {/* ── Cloud sync prompt (if not synced) ───────────────────────────── */}
         {!syncInfo?.sync_enabled && (
-          <div className="mx-5 mb-4 px-3 py-3 rounded-[5px] bg-bg-1 border border-line flex items-center justify-between gap-3">
+          <div className="mx-5 mb-4 flex items-center justify-between gap-3 rounded-[5px] border border-line bg-bg-1 px-3 py-3">
             <span className="text-[11px] text-ink-3">
               Enable cloud sync to share with other branches
             </span>
             <button
-              className="shrink-0 bg-accent text-accent-foreground font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
+              className="shrink-0 cursor-pointer rounded-[3px] border-none bg-accent px-3 py-[5px] font-sans text-[11px] font-semibold text-accent-foreground transition-[filter] hover:brightness-[1.1]"
               onClick={handleSyncToggle}
             >
               Enable Sync
@@ -252,13 +276,13 @@ export function ShareDialog({
 
         {/* ── Add people / branches ────────────────────────────────────────── */}
         <div className="px-5 pb-4">
-          <p className="text-[9px] font-semibold tracking-[0.14em] uppercase text-muted m-0 mb-[8px]">
+          <p className="m-0 mb-[8px] text-[9px] font-semibold tracking-[0.14em] text-muted uppercase">
             Add People or Branches
           </p>
           <div className="flex items-center gap-[6px]">
             <input
               data-qa="share-search-input"
-              className="flex-1 bg-bg-1 border border-line rounded-[4px] text-ink font-sans text-[12px] px-[10px] py-[6px] outline-none transition-colors focus:border-accent/60 placeholder:text-muted"
+              className="flex-1 rounded-[4px] border border-line bg-bg-1 px-[10px] py-[6px] font-sans text-[12px] text-ink transition-colors outline-none placeholder:text-muted focus:border-accent/60"
               placeholder="Search branches or enter email…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -269,7 +293,7 @@ export function ShareDialog({
             <PermSelect value={newPerm} onChange={setNewPerm} />
             <button
               data-qa="share-add-btn"
-              className="bg-accent text-accent-foreground font-sans text-[11px] font-semibold px-4 py-[6px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default whitespace-nowrap shrink-0"
+              className="shrink-0 cursor-pointer rounded-[3px] border-none bg-accent px-4 py-[6px] font-sans text-[11px] font-semibold whitespace-nowrap text-accent-foreground transition-[filter] hover:brightness-[1.1] disabled:cursor-default disabled:opacity-40"
               onClick={handleShare}
               disabled={!searchQuery.trim()}
             >
@@ -278,25 +302,25 @@ export function ShareDialog({
           </div>
         </div>
 
-        <div className="h-px bg-line mx-0" />
+        <div className="mx-0 h-px bg-line" />
 
         {/* ── Who has access ───────────────────────────────────────────────── */}
         <div className="px-5 py-4">
-          <p className="text-[9px] font-semibold tracking-[0.14em] uppercase text-muted m-0 mb-[12px]">
+          <p className="m-0 mb-[12px] text-[9px] font-semibold tracking-[0.14em] text-muted uppercase">
             Who Has Access
           </p>
 
-          <ul className="list-none m-0 p-0 flex flex-col gap-[4px]">
+          <ul className="m-0 flex list-none flex-col gap-[4px] p-0">
             {/* Current branch (always owner) */}
             <li className="flex items-center gap-3 py-[6px]">
               <BranchAvatar name={currentBranchName} />
-              <div className="flex-1 min-w-0">
-                <span className="block text-[12px] text-ink font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+              <div className="min-w-0 flex-1">
+                <span className="block overflow-hidden text-[12px] font-medium text-ellipsis whitespace-nowrap text-ink">
                   {currentBranchName}
-                  <span className="text-muted font-normal"> (You)</span>
+                  <span className="font-normal text-muted"> (You)</span>
                 </span>
               </div>
-              <span className="shrink-0 px-[8px] py-[3px] rounded-[3px] text-[10px] font-semibold tracking-[0.06em] uppercase bg-accent-soft text-accent border border-accent/20">
+              <span className="shrink-0 rounded-[3px] border border-accent/20 bg-accent-soft px-[8px] py-[3px] text-[10px] font-semibold tracking-[0.06em] text-accent uppercase">
                 Owner
               </span>
             </li>
@@ -304,14 +328,25 @@ export function ShareDialog({
             {/* Public access row */}
             {isPublic && (
               <li className="flex items-center gap-3 py-[6px]">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/20 border border-line shrink-0">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-muted/20">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.1" className="text-muted" />
-                    <path d="M7 4.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 4.5c-2 0-3.5.9-3.5 2h7c0-1.1-1.5-2-3.5-2z" fill="currentColor" className="text-muted" />
+                    <circle
+                      cx="7"
+                      cy="7"
+                      r="5.5"
+                      stroke="currentColor"
+                      strokeWidth="1.1"
+                      className="text-muted"
+                    />
+                    <path
+                      d="M7 4.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 4.5c-2 0-3.5.9-3.5 2h7c0-1.1-1.5-2-3.5-2z"
+                      fill="currentColor"
+                      className="text-muted"
+                    />
                   </svg>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className="block text-[12px] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
+                <div className="min-w-0 flex-1">
+                  <span className="block overflow-hidden text-[12px] text-ellipsis whitespace-nowrap text-ink">
                     Church Shared (Public)
                   </span>
                 </div>
@@ -321,20 +356,23 @@ export function ShareDialog({
 
             {/* ACL entries */}
             {acl.map((entry) => (
-              <li key={entry.branch_id} className="flex items-center gap-3 py-[6px]">
+              <li
+                key={entry.branch_id}
+                className="flex items-center gap-3 py-[6px]"
+              >
                 <BranchAvatar name={entry.branch_name} />
-                <div className="flex-1 min-w-0">
-                  <span className="block text-[12px] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
+                <div className="min-w-0 flex-1">
+                  <span className="block overflow-hidden text-[12px] text-ellipsis whitespace-nowrap text-ink">
                     {entry.branch_name}
                   </span>
                 </div>
-                <div className="flex items-center gap-[6px] shrink-0">
+                <div className="flex shrink-0 items-center gap-[6px]">
                   <PermSelect
                     value={entry.permission}
                     onChange={(p) => updatePerm(entry.branch_id, p)}
                   />
                   <button
-                    className="bg-transparent border-none text-muted cursor-pointer p-[3px] rounded transition-colors hover:text-danger text-[12px]"
+                    className="cursor-pointer rounded border-none bg-transparent p-[3px] text-[12px] text-muted transition-colors hover:text-danger"
                     onClick={() => removeBranch(entry.branch_id)}
                     aria-label="Remove"
                   >
@@ -348,45 +386,45 @@ export function ShareDialog({
 
         {/* ── General access toggle ────────────────────────────────────────── */}
         <div className="px-5 pb-4">
-          <label className="flex items-center gap-3 cursor-pointer group">
+          <label className="group flex cursor-pointer items-center gap-3">
             <div
               className={[
-                "relative w-9 h-5 rounded-full transition-colors",
+                "relative h-5 w-9 rounded-full transition-colors",
                 isPublic ? "bg-accent/80" : "bg-line",
               ].join(" ")}
               onClick={() =>
                 setAccessLevel((prev) =>
-                  prev === "all_branches" ? "restricted" : "all_branches"
+                  prev === "all_branches" ? "restricted" : "all_branches",
                 )
               }
             >
               <div
                 className={[
-                  "absolute top-[3px] w-[14px] h-[14px] rounded-full bg-ink transition-[left] duration-200",
+                  "absolute top-[3px] h-[14px] w-[14px] rounded-full bg-ink transition-[left] duration-200",
                   isPublic ? "left-[19px]" : "left-[3px]",
                 ].join(" ")}
               />
             </div>
-            <span className="text-[12px] text-ink-3 group-hover:text-ink transition-colors">
+            <span className="text-[12px] text-ink-3 transition-colors group-hover:text-ink">
               Anyone in the church can view
             </span>
           </label>
         </div>
 
         {syncConfirmPending && (
-          <div className="mx-5 mb-4 px-3 py-3 rounded-[5px] bg-bg-1 border border-accent/40 flex items-center justify-between gap-3">
+          <div className="mx-5 mb-4 flex items-center justify-between gap-3 rounded-[5px] border border-accent/40 bg-bg-1 px-3 py-3">
             <span className="text-[11px] text-ink-3">
               Sharing requires cloud sync. Enable sync now?
             </span>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex shrink-0 items-center gap-2">
               <button
-                className="bg-transparent border border-line text-ink-3 font-sans text-[11px] px-3 py-[5px] rounded-[3px] cursor-pointer hover:text-ink hover:border-line-strong transition-colors"
+                className="cursor-pointer rounded-[3px] border border-line bg-transparent px-3 py-[5px] font-sans text-[11px] text-ink-3 transition-colors hover:border-line-strong hover:text-ink"
                 onClick={() => setSyncConfirmPending(false)}
               >
                 Cancel
               </button>
               <button
-                className="bg-accent text-accent-foreground font-sans text-[11px] font-semibold px-3 py-[5px] rounded-[3px] border-none cursor-pointer transition-[filter] hover:brightness-[1.1]"
+                className="cursor-pointer rounded-[3px] border-none bg-accent px-3 py-[5px] font-sans text-[11px] font-semibold text-accent-foreground transition-[filter] hover:brightness-[1.1]"
                 onClick={handleConfirmSyncAndCopy}
               >
                 Enable &amp; Copy
@@ -396,7 +434,7 @@ export function ShareDialog({
         )}
 
         {error && (
-          <p className="text-[11px] text-danger px-5 pb-2 m-0">{error}</p>
+          <p className="m-0 px-5 pb-2 text-[11px] text-danger">{error}</p>
         )}
 
         <div className="h-px bg-line" />
@@ -405,19 +443,35 @@ export function ShareDialog({
         <div className="flex items-center justify-between px-5 py-4">
           <button
             data-qa="share-copy-link-btn"
-            className="flex items-center gap-[7px] bg-transparent border border-line text-ink-3 font-sans text-[11px] px-[12px] py-[6px] rounded-[4px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+            className="flex cursor-pointer items-center gap-[7px] rounded-[4px] border border-line bg-transparent px-[12px] py-[6px] font-sans text-[11px] text-ink-3 transition-colors hover:border-line-strong hover:text-ink"
             onClick={handleCopyLink}
           >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-              <path d="M5 7a2.5 2.5 0 0 0 3.536.036l1.5-1.5a2.5 2.5 0 0 0-3.536-3.536L5.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              <path d="M8 6a2.5 2.5 0 0 0-3.536-.036L3 7.464a2.5 2.5 0 0 0 3.536 3.536L7.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 13 13"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 7a2.5 2.5 0 0 0 3.536.036l1.5-1.5a2.5 2.5 0 0 0-3.536-3.536L5.5 3.5"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M8 6a2.5 2.5 0 0 0-3.536-.036L3 7.464a2.5 2.5 0 0 0 3.536 3.536L7.5 9.5"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
             </svg>
             {copied ? "✓ Copied!" : "Copy link"}
           </button>
 
           <button
             data-qa="share-done-btn"
-            className="bg-accent text-accent-foreground border-none rounded-[4px] font-sans text-[12px] font-semibold px-5 py-[7px] cursor-pointer transition-[filter] hover:brightness-[1.1] disabled:opacity-40 disabled:cursor-default"
+            className="cursor-pointer rounded-[4px] border-none bg-accent px-5 py-[7px] font-sans text-[12px] font-semibold text-accent-foreground transition-[filter] hover:brightness-[1.1] disabled:cursor-default disabled:opacity-40"
             onClick={handleSave}
             disabled={saving}
           >

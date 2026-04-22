@@ -36,7 +36,9 @@ export interface UseDisplayBackgroundReturn {
  */
 async function loadArtifactBlobUrl(artifactId: string): Promise<string | null> {
   try {
-    const bytes = await invoke<number[]>("read_artifact_bytes", { id: artifactId });
+    const bytes = await invoke<number[]>("read_artifact_bytes", {
+      id: artifactId,
+    });
     const blob = new Blob([new Uint8Array(bytes)]);
     return URL.createObjectURL(blob);
   } catch {

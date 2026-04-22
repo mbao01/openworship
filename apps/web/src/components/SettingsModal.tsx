@@ -38,15 +38,26 @@ export function SettingsModal({ identity, onClose }: SettingsModalProps) {
       <div className="absolute inset-0 bg-bg/70 backdrop-blur-sm" />
 
       {/* Panel */}
-      <div className="relative z-10 w-[800px] h-[600px] rounded-lg overflow-hidden border border-line-strong shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
+      <div className="relative z-10 h-[600px] w-[800px] overflow-hidden rounded-lg border border-line-strong shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]">
         <button
           data-qa="settings-close-x-btn"
-          className="absolute top-3 right-3 z-10 flex items-center justify-center w-6 h-6 rounded-[3px] text-ink-3 hover:text-ink hover:bg-bg-3 transition-colors"
+          className="absolute top-3 right-3 z-10 flex h-6 w-6 items-center justify-center rounded-[3px] text-ink-3 transition-colors hover:bg-bg-3 hover:text-ink"
           onClick={onClose}
           aria-label="Close settings"
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-            <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M1 1l8 8M9 1L1 9"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 

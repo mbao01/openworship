@@ -42,18 +42,18 @@ export function AddItemSearch({
     <div>
       <input
         ref={inputRef}
-        className="w-full px-3 py-2 bg-bg-2 border border-line rounded text-ink text-sm mb-2"
+        className="mb-2 w-full rounded border border-line bg-bg-2 px-3 py-2 text-sm text-ink"
         placeholder="Search scripture ..."
         value={query}
         onChange={(e) => handleSearch(e.target.value)}
       />
-      {loading && <div className="text-xs text-ink-3 py-2">Searching...</div>}
+      {loading && <div className="py-2 text-xs text-ink-3">Searching...</div>}
       {results.length > 0 && (
-        <div className="border border-line rounded-lg overflow-hidden mb-2">
+        <div className="mb-2 overflow-hidden rounded-lg border border-line">
           {results.map((v, i) => (
             <button
               key={`${v.reference}-${v.translation}-${i}`}
-              className="w-full text-left px-3.5 py-2.5 border-b border-line last:border-b-0 transition-colors hover:bg-bg-2 cursor-pointer"
+              className="w-full cursor-pointer border-b border-line px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-bg-2"
               onClick={async () => {
                 try {
                   await onAdd(v);
@@ -63,10 +63,10 @@ export function AddItemSearch({
               }}
             >
               <span className="text-[12.5px] text-ink">{v.reference}</span>
-              <span className="ml-2 font-mono text-[9.5px] text-ink-3 tracking-[0.08em] uppercase">
+              <span className="ml-2 font-mono text-[9.5px] tracking-[0.08em] text-ink-3 uppercase">
                 {v.translation}
               </span>
-              <span className="block text-xs text-ink-3 mt-0.5 line-clamp-1">
+              <span className="mt-0.5 line-clamp-1 block text-xs text-ink-3">
                 {v.text}
               </span>
             </button>

@@ -15,7 +15,9 @@ describe("ConfirmDialog", () => {
   it("renders title and description when open", () => {
     render(<ConfirmDialog {...defaultProps} />);
     expect(screen.getByText("Delete item?")).toBeInTheDocument();
-    expect(screen.getByText("This action cannot be undone.")).toBeInTheDocument();
+    expect(
+      screen.getByText("This action cannot be undone."),
+    ).toBeInTheDocument();
   });
 
   it("renders nothing when closed", () => {
@@ -27,9 +29,7 @@ describe("ConfirmDialog", () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
 
-    render(
-      <ConfirmDialog {...defaultProps} onOpenChange={onOpenChange} />,
-    );
+    render(<ConfirmDialog {...defaultProps} onOpenChange={onOpenChange} />);
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -39,9 +39,7 @@ describe("ConfirmDialog", () => {
     const user = userEvent.setup();
     const onConfirm = vi.fn();
 
-    render(
-      <ConfirmDialog {...defaultProps} onConfirm={onConfirm} />,
-    );
+    render(<ConfirmDialog {...defaultProps} onConfirm={onConfirm} />);
 
     await user.click(screen.getByRole("button", { name: "Confirm" }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
@@ -56,7 +54,9 @@ describe("ConfirmDialog", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Yes, delete" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Yes, delete" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keep it" })).toBeInTheDocument();
   });
 

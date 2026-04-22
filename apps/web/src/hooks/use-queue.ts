@@ -61,7 +61,9 @@ export function useQueue(): UseQueueReturn {
 
   useEffect(() => {
     loadQueue();
-    getBlackout().then((v) => setBlackout(v === true)).catch(() => {});
+    getBlackout()
+      .then((v) => setBlackout(v === true))
+      .catch(() => {});
 
     let unlisten: (() => void) | undefined;
     listen("detection://queue-updated", () => {
@@ -82,14 +84,47 @@ export function useQueue(): UseQueueReturn {
     queue,
     live,
     blackout,
-    approve:    useCallback(async (id) => { await approveItem(id);    await loadQueue(); }, [loadQueue]),
-    dismiss:    useCallback(async (id) => { await dismissItem(id);    await loadQueue(); }, [loadQueue]),
-    skip:       useCallback(async (id) => { await skipItem(id);       await loadQueue(); }, [loadQueue]),
-    rejectLive: useCallback(async ()   => { await rejectLiveItem();   await loadQueue(); }, [loadQueue]),
-    next:       useCallback(async ()   => { await nextItem();         await loadQueue(); }, [loadQueue]),
-    prev:       useCallback(async ()   => { await prevItem();         await loadQueue(); }, [loadQueue]),
-    clearLive:  useCallback(async ()   => { await clearLive();        await loadQueue(); }, [loadQueue]),
-    clearQueue: useCallback(async ()   => { await clearQueue();       await loadQueue(); }, [loadQueue]),
+    approve: useCallback(
+      async (id) => {
+        await approveItem(id);
+        await loadQueue();
+      },
+      [loadQueue],
+    ),
+    dismiss: useCallback(
+      async (id) => {
+        await dismissItem(id);
+        await loadQueue();
+      },
+      [loadQueue],
+    ),
+    skip: useCallback(
+      async (id) => {
+        await skipItem(id);
+        await loadQueue();
+      },
+      [loadQueue],
+    ),
+    rejectLive: useCallback(async () => {
+      await rejectLiveItem();
+      await loadQueue();
+    }, [loadQueue]),
+    next: useCallback(async () => {
+      await nextItem();
+      await loadQueue();
+    }, [loadQueue]),
+    prev: useCallback(async () => {
+      await prevItem();
+      await loadQueue();
+    }, [loadQueue]),
+    clearLive: useCallback(async () => {
+      await clearLive();
+      await loadQueue();
+    }, [loadQueue]),
+    clearQueue: useCallback(async () => {
+      await clearQueue();
+      await loadQueue();
+    }, [loadQueue]),
     toggleBlackout: useCallback(async () => {
       const val = await toggleBlackout();
       setBlackout(val);

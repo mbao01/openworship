@@ -43,7 +43,13 @@ interface DisplayContentProps {
 const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"]);
 const VIDEO_EXTS = new Set(["mp4", "webm", "mov"]);
 
-function ArtifactImage({ artifactRef, filename }: { artifactRef: string; filename?: string }) {
+function ArtifactImage({
+  artifactRef,
+  filename,
+}: {
+  artifactRef: string;
+  filename?: string;
+}) {
   const [src, setSrc] = useState<string | null>(null);
   const artifactId = artifactRef.replace("artifact:", "");
   const ext = (filename || artifactId).split(".").pop()?.toLowerCase() || "";
@@ -59,12 +65,27 @@ function ArtifactImage({ artifactRef, filename }: { artifactRef: string; filenam
         setSrc(url);
       })
       .catch(() => setSrc(null));
-    return () => { revoked = true; if (url) URL.revokeObjectURL(url); };
+    return () => {
+      revoked = true;
+      if (url) URL.revokeObjectURL(url);
+    };
   }, [artifactId]);
 
   if (!src) return null;
-  if (VIDEO_EXTS.has(ext)) return <video src={src} autoPlay loop muted className="max-w-full max-h-full object-contain" />;
-  if (IMAGE_EXTS.has(ext) || !ext) return <img src={src} alt="" className="max-w-full max-h-full object-contain" />;
+  if (VIDEO_EXTS.has(ext))
+    return (
+      <video
+        src={src}
+        autoPlay
+        loop
+        muted
+        className="max-h-full max-w-full object-contain"
+      />
+    );
+  if (IMAGE_EXTS.has(ext) || !ext)
+    return (
+      <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+    );
   return null;
 }
 
@@ -96,7 +117,7 @@ export function DisplayContent({
   return (
     <div
       style={{ width: REF_WIDTH, height: REF_HEIGHT }}
-      className="relative bg-[#050403] text-[#F5EFDF] overflow-hidden"
+      className="relative overflow-hidden bg-[#050403] text-[#F5EFDF]"
     >
       {/* Background */}
       {backgroundValue && (
@@ -107,18 +128,18 @@ export function DisplayContent({
               autoPlay
               loop
               muted
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
             />
           ) : backgroundValue.startsWith("data:image/") ||
             backgroundValue.startsWith("blob:") ? (
             <img
               src={backgroundValue}
               alt=""
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
             />
           ) : (
             <div
-              className="w-full h-full"
+              className="h-full w-full"
               style={{ background: backgroundValue }}
             />
           )}
@@ -150,7 +171,7 @@ export function DisplayContent({
             ) : isSong ? (
               <>
                 <div
-                  className="flex flex-col cursor-pointer outline-none"
+                  className="flex cursor-pointer flex-col outline-none"
                   style={{ gap: 22 }}
                   onClick={onAdvanceLyric}
                   role="button"
@@ -158,7 +179,7 @@ export function DisplayContent({
                   onKeyDown={(e) => e.key === " " && onAdvanceLyric?.()}
                 >
                   <div
-                    className="font-mono tracking-[0.22em] uppercase text-accent"
+                    className="font-mono tracking-[0.22em] text-accent uppercase"
                     style={{ fontSize: 18, marginBottom: 10 }}
                   >
                     {content.reference}
@@ -172,7 +193,7 @@ export function DisplayContent({
                     return isHeader ? (
                       <p
                         key={i}
-                        className="m-0 font-sans font-medium tracking-[0.18em] uppercase text-muted"
+                        className="m-0 font-sans font-medium tracking-[0.18em] text-muted uppercase"
                         style={{ fontSize: 15 }}
                       >
                         {line || "\u00A0"}
@@ -180,7 +201,7 @@ export function DisplayContent({
                     ) : (
                       <p
                         key={i}
-                        className="m-0 font-serif font-semibold leading-[1.2] text-[#F5EFDF]"
+                        className="m-0 font-serif leading-[1.2] font-semibold text-[#F5EFDF]"
                         style={{ fontSize: 72 }}
                       >
                         {line || "\u00A0"}
@@ -201,14 +222,14 @@ export function DisplayContent({
               <div className="flex flex-col" style={{ gap: 22 }}>
                 {content.reference && (
                   <span
-                    className="font-mono tracking-[0.22em] uppercase text-accent"
+                    className="font-mono tracking-[0.22em] text-accent uppercase"
                     style={{ fontSize: 18 }}
                   >
                     {content.reference}
                   </span>
                 )}
                 <span
-                  className={`font-mono font-semibold leading-none tracking-[0.05em] transition-colors duration-500 ${
+                  className={`font-mono leading-none font-semibold tracking-[0.05em] transition-colors duration-500 ${
                     (countdownSecs ?? 0) <= 10
                       ? "text-danger"
                       : "text-[#F5EFDF]"
@@ -222,7 +243,7 @@ export function DisplayContent({
               /* Scripture / announcement */
               <div className="flex flex-col" style={{ gap: 16 }}>
                 <div
-                  className="font-mono tracking-[0.22em] uppercase text-accent"
+                  className="font-mono tracking-[0.22em] text-accent uppercase"
                   style={{ fontSize: 18 }}
                 >
                   {content.reference}
@@ -236,7 +257,7 @@ export function DisplayContent({
                   )}
                 </div>
                 <div
-                  className="font-serif italic leading-[1.35] tracking-[-0.01em] text-[#F5EFDF]"
+                  className="font-serif leading-[1.35] tracking-[-0.01em] text-[#F5EFDF] italic"
                   style={{ fontSize: 72, maxWidth: 1344 /* ~70% of 1920 */ }}
                 >
                   &ldquo;{content.text}&rdquo;
@@ -246,7 +267,7 @@ export function DisplayContent({
           </>
         ) : showEmptyState ? (
           <div
-            className="font-mono tracking-[0.2em] uppercase text-center w-full text-[#3A332C]"
+            className="w-full text-center font-mono tracking-[0.2em] text-[#3A332C] uppercase"
             style={{ fontSize: 14 }}
           >
             — no content on screen —

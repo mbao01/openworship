@@ -6,17 +6,12 @@ import type {
   ServiceProject,
   TranslationInfo,
 } from "@/lib/types";
-import {
-  switchLiveTranslation,
-} from "@/lib/commands/content";
+import { switchLiveTranslation } from "@/lib/commands/content";
 import {
   closeActiveProject,
   updateServiceProject,
 } from "@/lib/commands/projects";
-import {
-  setAudioSettings,
-  setEmailSettings,
-} from "@/lib/commands/settings";
+import { setAudioSettings, setEmailSettings } from "@/lib/commands/settings";
 import { Toggle } from "../../ui/toggle";
 import { ConfirmDialog } from "../../ui/confirm-dialog";
 import { EditableName } from "./EditableName";
@@ -50,12 +45,12 @@ export function ServiceDetail({
   const [endConfirm, setEndConfirm] = useState(false);
 
   return (
-    <div className="px-10 py-8 w-full max-w-[960px]">
+    <div className="w-full max-w-[960px] px-10 py-8">
       {/* Project header */}
-      <div className="mb-6 border border-line rounded-lg px-5 py-4 bg-bg-1">
+      <div className="mb-6 rounded-lg border border-line bg-bg-1 px-5 py-4">
         {/* Row 1: Name + date + created */}
         <div className="flex items-start gap-4">
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <EditableName
               name={project.name}
               isReadOnly={isReadOnly}
@@ -69,10 +64,10 @@ export function ServiceDetail({
               }}
             />
           </div>
-          <div className="shrink-0 flex items-center gap-3 pt-1">
+          <div className="flex shrink-0 items-center gap-3 pt-1">
             <input
               type="datetime-local"
-              className="px-2 py-1 bg-bg-2 border border-line rounded text-ink text-xs disabled:text-muted disabled:cursor-not-allowed"
+              className="rounded border border-line bg-bg-2 px-2 py-1 text-xs text-ink disabled:cursor-not-allowed disabled:text-muted"
               value={(() => {
                 const ms = project.scheduled_at_ms ?? project.created_at_ms;
                 const d = new Date(ms);
@@ -90,11 +85,11 @@ export function ServiceDetail({
               }}
             />
             {isReadOnly && (
-              <span className="text-muted text-[10px] italic">read-only</span>
+              <span className="text-[10px] text-muted italic">read-only</span>
             )}
             {!isReadOnly && (
               <button
-                className="px-3 py-1.5 text-xs font-medium rounded border border-danger/40 text-danger bg-transparent cursor-pointer transition-colors hover:bg-danger/10"
+                className="cursor-pointer rounded border border-danger/40 bg-transparent px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10"
                 onClick={() => setEndConfirm(true)}
               >
                 End service
@@ -118,13 +113,13 @@ export function ServiceDetail({
         />
 
         {/* Row 3: Inline settings */}
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-line">
+        <div className="mt-3 flex items-center gap-4 border-t border-line pt-3">
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-ink-3 uppercase tracking-[0.06em]">
+            <span className="text-[10px] tracking-[0.06em] text-ink-3 uppercase">
               Translation
             </span>
             <select
-              className="px-1.5 py-0.5 bg-bg-2 border border-line rounded text-ink text-[11px]"
+              className="rounded border border-line bg-bg-2 px-1.5 py-0.5 text-[11px] text-ink"
               value={activeTranslation}
               onChange={(e) => {
                 const value = e.target.value;
@@ -141,11 +136,11 @@ export function ServiceDetail({
             </select>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-ink-3 uppercase tracking-[0.06em]">
+            <span className="text-[10px] tracking-[0.06em] text-ink-3 uppercase">
               Context
             </span>
             <select
-              className="px-1.5 py-0.5 bg-bg-2 border border-line rounded text-ink text-[11px]"
+              className="rounded border border-line bg-bg-2 px-1.5 py-0.5 text-[11px] text-ink"
               value={audioSettings?.semantic_threshold_auto ?? 10}
               onChange={(e) => {
                 if (!audioSettings) return;
@@ -164,7 +159,7 @@ export function ServiceDetail({
               <option value={15}>15s</option>
             </select>
           </div>
-          <div className="flex items-center gap-1.5 ml-auto">
+          <div className="ml-auto flex items-center gap-1.5">
             <Toggle
               checked={emailSettings?.auto_send ?? false}
               onCheckedChange={() => {

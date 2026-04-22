@@ -4,10 +4,21 @@ import { useAudioLevel } from "@/hooks/use-audio-level";
 import { Section, SettingRow } from "@/components/ui/section";
 import { Toggle } from "@/components/ui/toggle";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { VuMeter } from "@/components/ui/vu-meter";
 import { Button } from "@/components/ui/button";
-import { listAudioInputDevices, listSttProviders, startAudioMonitor, stopAudioMonitor } from "@/lib/commands/audio";
+import {
+  listAudioInputDevices,
+  listSttProviders,
+  startAudioMonitor,
+  stopAudioMonitor,
+} from "@/lib/commands/audio";
 import { setAnthropicApiKey } from "@/lib/commands/settings";
 import { ProviderConfigPanel } from "@/components/settings/ProviderConfigPanel";
 import type { AudioInputDevice, ProviderInfo } from "@/lib/types";
@@ -29,10 +40,14 @@ export function AudioSection() {
   // Poll for audio device changes every 3s to detect hot-plug
   useEffect(() => {
     const refresh = () => {
-      listAudioInputDevices().then(setDevices).catch(() => {});
+      listAudioInputDevices()
+        .then(setDevices)
+        .catch(() => {});
     };
     refresh();
-    listSttProviders().then(setProviders).catch(() => {});
+    listSttProviders()
+      .then(setProviders)
+      .catch(() => {});
     const interval = setInterval(refresh, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -52,7 +67,9 @@ export function AudioSection() {
     if (micTesting) {
       try {
         await stopAudioMonitor();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       setMicTesting(false);
     } else {
       try {
@@ -77,14 +94,15 @@ export function AudioSection() {
 
   if (loading || !settings) {
     return (
-      <div className="flex-1 p-6 flex items-center justify-center text-ink-3 text-sm">
+      <div className="flex flex-1 items-center justify-center p-6 text-sm text-ink-3">
         Loading…
       </div>
     );
   }
 
   const activeProvider = providers.find((p) => p.id === settings.backend);
-  const providerConfig = (settings.provider_config?.[settings.backend] ?? {}) as Record<string, unknown>;
+  const providerConfig = (settings.provider_config?.[settings.backend] ??
+    {}) as Record<string, unknown>;
 
   const handleProviderConfigChange = (key: string, value: unknown) => {
     const updated = { ...providerConfig, [key]: value };
@@ -97,8 +115,8 @@ export function AudioSection() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-0">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 mb-6 pb-3 border-b border-line">
+    <div className="flex-1 space-y-0 overflow-y-auto p-6">
+      <h2 className="mb-6 border-b border-line pb-3 font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">
         Audio
       </h2>
 
@@ -146,7 +164,7 @@ export function AudioSection() {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-ant-…"
-              className="h-7 w-44 rounded bg-bg-2 border border-line px-2 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+              className="h-7 w-44 rounded border border-line bg-bg-2 px-2 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
             />
             <Button
               variant="outline"

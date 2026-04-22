@@ -44,7 +44,9 @@ export async function getActiveTranslation(): Promise<string> {
  * Switches the active translation for the live display.
  * Takes effect immediately on the display window.
  */
-export async function switchLiveTranslation(translation: string): Promise<void> {
+export async function switchLiveTranslation(
+  translation: string,
+): Promise<void> {
   return invoke("switch_live_translation", { translation });
 }
 
@@ -68,6 +70,8 @@ export async function pushToDisplay(
  * Searches the content bank (recently used / curated scripture entries).
  * Returns entries ordered by recency and use count.
  */
-export async function searchContentBank(query: string): Promise<ContentBankEntry[]> {
+export async function searchContentBank(
+  query: string,
+): Promise<ContentBankEntry[]> {
   return invoke<ContentBankEntry[]>("search_content_bank", { query });
 }

@@ -8,7 +8,7 @@ describe("App", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <App />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     // invoke mock returns undefined → identity becomes undefined → onboarding
     // "openworship" appears in the onboarding logo after the async check resolves
@@ -19,7 +19,7 @@ describe("App", () => {
     render(
       <MemoryRouter initialEntries={["/display"]}>
         <App />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     // Display root renders without crashing (WebSocket won't connect in test env)
     expect(document.querySelector(".display-root")).toBeDefined();

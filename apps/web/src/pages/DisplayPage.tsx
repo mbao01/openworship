@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DisplayContent, REF_WIDTH, REF_HEIGHT, type DisplayContentEvent } from "@/components/display/DisplayContent";
+import {
+  DisplayContent,
+  REF_WIDTH,
+  REF_HEIGHT,
+  type DisplayContentEvent,
+} from "@/components/display/DisplayContent";
 
 interface ContentEvent extends DisplayContentEvent {
   line_index?: number;
@@ -23,7 +28,9 @@ function splitLyrics(lyrics: string): string[] {
     const line = rawLine.trim();
     const isSectionHeader =
       /^\[.*\]$/.test(line) ||
-      /^(verse|chorus|bridge|pre-chorus|prechorus|intro|outro|tag)\b/i.test(line);
+      /^(verse|chorus|bridge|pre-chorus|prechorus|intro|outro|tag)\b/i.test(
+        line,
+      );
 
     if (isSectionHeader) {
       if (current.length > 0) {
@@ -115,14 +122,16 @@ export function DisplayPage() {
             setLyricChunks(chunks);
             setChunkIndex(event.line_index ?? 0);
             setCountdownSecs(null);
-            if (countdownInterval.current) clearInterval(countdownInterval.current);
+            if (countdownInterval.current)
+              clearInterval(countdownInterval.current);
             setContent(event);
           } else if (event.kind === "song_advance") {
             setChunkIndex(event.line_index ?? 0);
           } else if (event.kind === "countdown") {
             setLyricChunks([]);
             setChunkIndex(0);
-            if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+            if (autoAdvanceTimer.current)
+              clearTimeout(autoAdvanceTimer.current);
             setContent(event);
             startCountdown(event.duration_secs ?? 60);
           } else if (event.kind === "sermon_note") {
@@ -131,8 +140,10 @@ export function DisplayPage() {
             setLyricChunks([]);
             setChunkIndex(0);
             setCountdownSecs(null);
-            if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
-            if (countdownInterval.current) clearInterval(countdownInterval.current);
+            if (autoAdvanceTimer.current)
+              clearTimeout(autoAdvanceTimer.current);
+            if (countdownInterval.current)
+              clearInterval(countdownInterval.current);
             setContent(event);
           }
         } catch {
@@ -157,7 +168,7 @@ export function DisplayPage() {
 
   const isSong = content?.kind === "song";
   const currentChunk =
-    isSong && lyricChunks.length > 0 ? lyricChunks[chunkIndex] ?? "" : null;
+    isSong && lyricChunks.length > 0 ? (lyricChunks[chunkIndex] ?? "") : null;
 
   // Scale to fill the entire viewport — stretch independently on X and Y
   // so the content covers the full display regardless of aspect ratio.
@@ -174,7 +185,10 @@ export function DisplayPage() {
   }, []);
 
   return (
-    <div data-qa="display-root" className="fixed inset-0 overflow-hidden font-sans bg-[#050403]">
+    <div
+      data-qa="display-root"
+      className="fixed inset-0 overflow-hidden bg-[#050403] font-sans"
+    >
       <div
         style={{
           width: REF_WIDTH,

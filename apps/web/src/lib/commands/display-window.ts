@@ -21,7 +21,9 @@ export async function listMonitors(): Promise<MonitorInfo[]> {
  * Opens the display output window on the specified monitor.
  * Pass null to use the saved monitor preference.
  */
-export async function openDisplayWindow(monitorIndex: number | null): Promise<void> {
+export async function openDisplayWindow(
+  monitorIndex: number | null,
+): Promise<void> {
   return invoke("open_display_window", { monitor_index: monitorIndex });
 }
 

@@ -14,18 +14,16 @@ describe("EditableName", () => {
     render(
       <EditableName name="Sunday Service" isReadOnly={false} onSave={onSave} />,
     );
-    expect(
-      screen.getByRole("heading", { level: 1 }),
-    ).toHaveTextContent("Sunday Service");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Sunday Service",
+    );
   });
 
   it('shows "Untitled service" when name is empty', () => {
-    render(
-      <EditableName name="" isReadOnly={false} onSave={onSave} />,
+    render(<EditableName name="" isReadOnly={false} onSave={onSave} />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Untitled service",
     );
-    expect(
-      screen.getByRole("heading", { level: 1 }),
-    ).toHaveTextContent("Untitled service");
   });
 
   it("clicking the name enables edit mode", async () => {
@@ -50,9 +48,7 @@ describe("EditableName", () => {
     await user.click(screen.getByRole("heading", { level: 1 }));
 
     // Should still be an h1, not an input
-    expect(
-      screen.getByRole("heading", { level: 1 }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
@@ -98,8 +94,8 @@ describe("EditableName", () => {
     await user.keyboard("{Escape}");
 
     expect(onSave).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole("heading", { level: 1 }),
-    ).toHaveTextContent("Sunday Service");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Sunday Service",
+    );
   });
 });

@@ -15,20 +15,26 @@ interface SectionProps {
  * Uses tonal background shift instead of decorative borders.
  * `<Section title="Audio" description="...">`
  */
-function Section({ title, description, children, className, separator }: SectionProps) {
+function Section({
+  title,
+  description,
+  children,
+  className,
+  separator,
+}: SectionProps) {
   return (
     <section
       data-slot="section"
       className={cn(
         "space-y-4",
-        separator && "pt-6 border-t border-line",
-        className
+        separator && "border-t border-line pt-6",
+        className,
       )}
     >
       <div className="space-y-0.5">
-        <h3 className="text-sm font-semibold text-ink leading-none">{title}</h3>
+        <h3 className="text-sm leading-none font-semibold text-ink">{title}</h3>
         {description && (
-          <p className="text-xs text-ink-3 leading-relaxed">{description}</p>
+          <p className="text-xs leading-relaxed text-ink-3">{description}</p>
         )}
       </div>
       <div className="space-y-3">{children}</div>
@@ -47,20 +53,27 @@ interface SettingRowProps {
  * A single settings row with label/description on the left and control on the right.
  * Matches the `.setting-row` pattern from the OW design.
  */
-function SettingRow({ label, description, children, className }: SettingRowProps) {
+function SettingRow({
+  label,
+  description,
+  children,
+  className,
+}: SettingRowProps) {
   return (
     <div
       data-slot="setting-row"
       className={cn(
         "flex items-center justify-between gap-6",
-        "py-3 border-b border-line last:border-b-0",
-        className
+        "border-b border-line py-3 last:border-b-0",
+        className,
       )}
     >
-      <div className="space-y-0.5 min-w-0">
-        <div className="text-sm text-ink-2 leading-none">{label}</div>
+      <div className="min-w-0 space-y-0.5">
+        <div className="text-sm leading-none text-ink-2">{label}</div>
         {description && (
-          <div className="text-xs text-ink-3 leading-relaxed">{description}</div>
+          <div className="text-xs leading-relaxed text-ink-3">
+            {description}
+          </div>
         )}
       </div>
       <div className="shrink-0">{children}</div>

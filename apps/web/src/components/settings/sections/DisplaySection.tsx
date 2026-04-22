@@ -9,8 +9,8 @@ export function DisplaySection() {
   const { isOpen, monitors, obsUrl, openOn, close } = useDisplayWindow();
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-0">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 mb-6 pb-3 border-b border-line">
+    <div className="flex-1 space-y-0 overflow-y-auto p-6">
+      <h2 className="mb-6 border-b border-line pb-3 font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">
         Display
       </h2>
 
@@ -22,10 +22,12 @@ export function DisplaySection() {
             {monitors.map((m) => (
               <div
                 key={m.id}
-                className="flex items-center justify-between py-2 border-b border-line last:border-b-0"
+                className="flex items-center justify-between border-b border-line py-2 last:border-b-0"
               >
                 <div className="space-y-0.5">
-                  <div className="text-sm text-ink-2">{m.name} ({m.is_primary ? "Built-in" : "External"})</div>
+                  <div className="text-sm text-ink-2">
+                    {m.name} ({m.is_primary ? "Built-in" : "External"})
+                  </div>
                   <div className="font-mono text-[10px] text-ink-3">
                     {m.width}×{m.height}
                   </div>
@@ -52,9 +54,13 @@ export function DisplaySection() {
         )}
       </Section>
 
-      <Section title="OBS browser source" separator description="Copy this URL to OBS as a Browser Source.">
+      <Section
+        title="OBS browser source"
+        separator
+        description="Copy this URL to OBS as a Browser Source."
+      >
         <div className="flex items-center gap-2">
-          <span className="flex-1 font-mono text-[10.5px] text-accent bg-bg-2 border border-line rounded px-3 py-1.5 overflow-hidden text-ellipsis whitespace-nowrap">
+          <span className="flex-1 overflow-hidden rounded border border-line bg-bg-2 px-3 py-1.5 font-mono text-[10.5px] text-ellipsis whitespace-nowrap text-accent">
             {obsUrl ?? "ws://127.0.0.1:9000"}
           </span>
           <Button

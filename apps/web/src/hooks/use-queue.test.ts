@@ -14,7 +14,7 @@ const mockPrevItem = vi.fn().mockResolvedValue(undefined);
 const mockRejectLiveItem = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/commands/detection", () => ({
-  getQueue: (...args: unknown[]) => mockGetQueue(...args as []),
+  getQueue: (...args: unknown[]) => mockGetQueue(...(args as [])),
   approveItem: (...args: unknown[]) => mockApproveItem(...args),
   dismissItem: (...args: unknown[]) => mockDismissItem(...args),
   skipItem: (...args: unknown[]) => mockSkipItem(...args),

@@ -5,21 +5,72 @@ import type { TranslationInfo, VerseResult } from "../lib/types";
 // ─── Bible book list (canonical names matching Rust normalize_book) ────────────
 
 const BIBLE_BOOKS = [
-  "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy",
-  "Joshua", "Judges", "Ruth",
-  "1 Samuel", "2 Samuel", "1 Kings", "2 Kings",
-  "1 Chronicles", "2 Chronicles",
-  "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
-  "Ecclesiastes", "Song of Solomon",
-  "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel",
-  "Hosea", "Joel", "Amos", "Obadiah", "Jonah", "Micah",
-  "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi",
-  "Matthew", "Mark", "Luke", "John", "Acts", "Romans",
-  "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians",
-  "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians",
-  "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews",
-  "James", "1 Peter", "2 Peter", "1 John", "2 John", "3 John",
-  "Jude", "Revelation",
+  "Genesis",
+  "Exodus",
+  "Leviticus",
+  "Numbers",
+  "Deuteronomy",
+  "Joshua",
+  "Judges",
+  "Ruth",
+  "1 Samuel",
+  "2 Samuel",
+  "1 Kings",
+  "2 Kings",
+  "1 Chronicles",
+  "2 Chronicles",
+  "Ezra",
+  "Nehemiah",
+  "Esther",
+  "Job",
+  "Psalms",
+  "Proverbs",
+  "Ecclesiastes",
+  "Song of Solomon",
+  "Isaiah",
+  "Jeremiah",
+  "Lamentations",
+  "Ezekiel",
+  "Daniel",
+  "Hosea",
+  "Joel",
+  "Amos",
+  "Obadiah",
+  "Jonah",
+  "Micah",
+  "Nahum",
+  "Habakkuk",
+  "Zephaniah",
+  "Haggai",
+  "Zechariah",
+  "Malachi",
+  "Matthew",
+  "Mark",
+  "Luke",
+  "John",
+  "Acts",
+  "Romans",
+  "1 Corinthians",
+  "2 Corinthians",
+  "Galatians",
+  "Ephesians",
+  "Philippians",
+  "Colossians",
+  "1 Thessalonians",
+  "2 Thessalonians",
+  "1 Timothy",
+  "2 Timothy",
+  "Titus",
+  "Philemon",
+  "Hebrews",
+  "James",
+  "1 Peter",
+  "2 Peter",
+  "1 John",
+  "2 John",
+  "3 John",
+  "Jude",
+  "Revelation",
 ];
 
 // Extract the book-name portion of a query (text before the first digit)
@@ -36,7 +87,10 @@ function isTypingBookName(input: string): boolean {
 function matchingBooks(prefix: string): string[] {
   if (!prefix || prefix.length < 1) return [];
   const lower = prefix.toLowerCase();
-  return BIBLE_BOOKS.filter((b) => b.toLowerCase().startsWith(lower)).slice(0, 7);
+  return BIBLE_BOOKS.filter((b) => b.toLowerCase().startsWith(lower)).slice(
+    0,
+    7,
+  );
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -47,7 +101,10 @@ export function ScriptureSearch() {
   const [translations, setTranslations] = useState<TranslationInfo[]>([]);
   const [results, setResults] = useState<VerseResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [pushed, setPushed] = useState<{ reference: string; translation: string } | null>(null);
+  const [pushed, setPushed] = useState<{
+    reference: string;
+    translation: string;
+  } | null>(null);
 
   // Combobox state
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -87,24 +144,22 @@ export function ScriptureSearch() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => runSearch(q, t), 220);
     },
-    [runSearch]
+    [runSearch],
   );
 
   // Derive suggestions from current input
   const prefix = bookPrefix(query);
-  const suggestions = dropdownOpen && isTypingBookName(query) ? matchingBooks(prefix) : [];
+  const suggestions =
+    dropdownOpen && isTypingBookName(query) ? matchingBooks(prefix) : [];
 
-  const selectBook = useCallback(
-    (book: string) => {
-      const next = book + " ";
-      setQuery(next);
-      setDropdownOpen(false);
-      setHighlighted(0);
-      inputRef.current?.focus();
-      // Don't fire a search yet — wait for user to add chapter
-    },
-    []
-  );
+  const selectBook = useCallback((book: string) => {
+    const next = book + " ";
+    setQuery(next);
+    setDropdownOpen(false);
+    setHighlighted(0);
+    inputRef.current?.focus();
+    // Don't fire a search yet — wait for user to add chapter
+  }, []);
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -157,19 +212,20 @@ export function ScriptureSearch() {
   return (
     <div className="flex flex-col gap-2">
       {/* Controls row */}
-      <div className="flex gap-3 items-center">
-        <div className="flex-1 relative">
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
           <input
             ref={inputRef}
             data-qa="scripture-search-input"
-            className="w-full bg-transparent border-none border-b border-b-line/60 outline-none py-2 text-ink font-sans text-sm tracking-wide transition-colors placeholder:text-muted focus:border-b-accent focus:[box-shadow:0_2px_0_-1px_rgba(201,168,76,0.15)]"
+            className="w-full border-b border-none border-b-line/60 bg-transparent py-2 font-sans text-sm tracking-wide text-ink transition-colors outline-none placeholder:text-muted focus:border-b-accent focus:[box-shadow:0_2px_0_-1px_rgba(201,168,76,0.15)]"
             type="text"
             placeholder={"Book, chapter:verse or keyword"}
             value={query}
             onChange={handleQueryChange}
             onKeyDown={handleKeyDown}
             onFocus={() => {
-              if (isTypingBookName(query) && query.trim().length > 0) setDropdownOpen(true);
+              if (isTypingBookName(query) && query.trim().length > 0)
+                setDropdownOpen(true);
             }}
             onBlur={() => {
               // Delay so click on suggestion registers first
@@ -183,7 +239,7 @@ export function ScriptureSearch() {
           />
           {isSearching && (
             <span
-              className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border border-muted border-t-accent animate-spin"
+              className="absolute top-1/2 right-0 h-2.5 w-2.5 -translate-y-1/2 animate-spin rounded-full border border-muted border-t-accent"
               aria-hidden="true"
             />
           )}
@@ -193,14 +249,14 @@ export function ScriptureSearch() {
             <ul
               ref={listRef}
               role="listbox"
-              className="absolute left-0 right-0 top-full mt-1 z-50 bg-bg-1 border border-line rounded-sm shadow-lg overflow-hidden"
+              className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-sm border border-line bg-bg-1 shadow-lg"
             >
               {suggestions.map((book, i) => (
                 <li
                   key={book}
                   role="option"
                   aria-selected={i === highlighted}
-                  className={`px-3 py-1.5 text-sm cursor-pointer transition-colors font-sans tracking-wide ${
+                  className={`cursor-pointer px-3 py-1.5 font-sans text-sm tracking-wide transition-colors ${
                     i === highlighted
                       ? "bg-line text-ink"
                       : "text-ink-3 hover:bg-line/60 hover:text-ink"
@@ -219,7 +275,7 @@ export function ScriptureSearch() {
         </div>
         <select
           data-qa="scripture-search-translation"
-          className="bg-bg-1 border-none border-b border-b-line/60 text-ink-3 font-mono text-[11px] tracking-[0.06em] py-2 px-1 outline-none cursor-pointer min-w-[52px] transition-colors focus:border-b-accent focus:text-ink"
+          className="min-w-[52px] cursor-pointer border-b border-none border-b-line/60 bg-bg-1 px-1 py-2 font-mono text-[11px] tracking-[0.06em] text-ink-3 transition-colors outline-none focus:border-b-accent focus:text-ink"
           value={translation}
           onChange={handleTranslationChange}
         >
@@ -233,34 +289,37 @@ export function ScriptureSearch() {
 
       {/* Results list */}
       {results.length > 0 && (
-        <ul className="list-none mt-2 p-0 flex flex-col gap-px" role="list">
+        <ul className="mt-2 flex list-none flex-col gap-px p-0" role="list">
           {results.map((v, i) => {
             const isLive =
-              pushed?.reference === v.reference && pushed?.translation === v.translation;
+              pushed?.reference === v.reference &&
+              pushed?.translation === v.translation;
             return (
               <li
                 key={`${v.translation}-${v.reference}-${i}`}
-                className={`bg-bg-1 border rounded-sm px-4 py-3 cursor-pointer outline-none transition-all hover:bg-bg-2 hover:border-line-strong focus:bg-bg-2 focus:border-line-strong${isLive ? " border-accent/60 bg-bg-2" : " border-line/40"}`}
+                className={`cursor-pointer rounded-sm border bg-bg-1 px-4 py-3 transition-all outline-none hover:border-line-strong hover:bg-bg-2 focus:bg-bg-2 focus:border-line-strong${isLive ? "border-accent/60 bg-bg-2" : "border-line/40"}`}
                 onClick={() => handlePush(v)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === "Enter" && handlePush(v)}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-ink tracking-[0.04em]">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="text-xs font-medium tracking-[0.04em] text-ink">
                     {v.reference}
                   </span>
-                  <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">
+                  <span className="font-mono text-[10px] tracking-[0.08em] text-ink-3">
                     {v.translation}
                   </span>
                   {isLive && (
                     <span
-                      className="w-2 h-2 rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
+                      className="ml-auto h-2 w-2 rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)]"
                       aria-label="Live"
                     />
                   )}
                 </div>
-                <p className="m-0 text-[13px] leading-[1.55] text-ink-3">{v.text}</p>
+                <p className="m-0 text-[13px] leading-[1.55] text-ink-3">
+                  {v.text}
+                </p>
               </li>
             );
           })}
@@ -269,7 +328,7 @@ export function ScriptureSearch() {
 
       {/* Empty state */}
       {query.trim() && !isSearching && results.length === 0 && (
-        <p className="text-xs text-muted py-4 m-0">No results for "{query}"</p>
+        <p className="m-0 py-4 text-xs text-muted">No results for "{query}"</p>
       )}
     </div>
   );

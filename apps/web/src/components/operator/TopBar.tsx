@@ -20,16 +20,24 @@ const MODES: { value: DetectionMode; label: string }[] = [
   { value: "offline", label: "Offline" },
 ];
 
-export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) {
+export function TopBar({
+  mode,
+  onModeChange,
+  onOpenCmdK,
+  onPush,
+}: TopBarProps) {
   const [micActive, setMicActive] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [inputLabel, setInputLabel] = useState("INPUT");
 
   // Subscribe to stt://transcript events for mic_active state
   useEffect(() => {
-    const unlisten = listen<{ mic_active: boolean }>("stt://transcript", (event) => {
-      setMicActive(event.payload.mic_active);
-    });
+    const unlisten = listen<{ mic_active: boolean }>(
+      "stt://transcript",
+      (event) => {
+        setMicActive(event.payload.mic_active);
+      },
+    );
     return () => {
       unlisten.then((fn) => fn());
     };
@@ -42,7 +50,9 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
       return;
     }
     const id = setInterval(() => {
-      getAudioLevel().then(setAudioLevel).catch(() => {});
+      getAudioLevel()
+        .then(setAudioLevel)
+        .catch(() => {});
     }, 100);
     return () => clearInterval(id);
   }, [micActive]);
@@ -50,7 +60,9 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
   // Load audio settings on mount
   useEffect(() => {
     try {
-      getAudioSettings().then((s) => setInputLabel(s.audio_input_device || "INPUT"));
+      getAudioSettings().then((s) =>
+        setInputLabel(s.audio_input_device || "INPUT"),
+      );
     } catch {
       // ignore
     }
@@ -81,23 +93,26 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
   }
 
   return (
-    <header data-qa="operator-titlebar" className="h-[52px] shrink-0 grid grid-cols-[auto_1fr_auto] items-center gap-6 px-[18px] bg-bg-1 border-b border-line">
+    <header
+      data-qa="operator-titlebar"
+      className="grid h-[52px] shrink-0 grid-cols-[auto_1fr_auto] items-center gap-6 border-b border-line bg-bg-1 px-[18px]"
+    >
       {/* Brand */}
-      <div className="flex items-center gap-2.5 font-serif text-[17px] tracking-[-0.01em] text-ink pr-[18px] border-r border-line h-[52px]">
+      <div className="flex h-[52px] items-center gap-2.5 border-r border-line pr-[18px] font-serif text-[17px] tracking-[-0.01em] text-ink">
         <BrandMark />
         <span data-qa="operator-appname">openworship</span>
       </div>
 
       {/* Center: mode switcher + mic */}
-      <div className="flex items-center gap-2.5 justify-center">
-        <div className="flex border border-line-strong rounded overflow-hidden bg-bg-2">
+      <div className="flex items-center justify-center gap-2.5">
+        <div className="flex overflow-hidden rounded border border-line-strong bg-bg-2">
           {MODES.map((m) => (
             <button
               key={m.value}
-              className={`px-3.5 py-1.5 font-mono text-[10px] tracking-[0.12em] uppercase transition-all border-r border-line last:border-r-0 cursor-pointer ${
+              className={`cursor-pointer border-r border-line px-3.5 py-1.5 font-mono text-[10px] tracking-[0.12em] uppercase transition-all last:border-r-0 ${
                 mode === m.value
-                  ? "bg-accent text-accent-foreground font-semibold"
-                  : "text-ink-3 hover:text-ink hover:bg-bg-3"
+                  ? "bg-accent font-semibold text-accent-foreground"
+                  : "text-ink-3 hover:bg-bg-3 hover:text-ink"
               }`}
               onClick={() => handleModeChange(m.value)}
             >
@@ -108,17 +123,17 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
 
         {/* Mic group */}
         <button
-          className="flex items-center gap-2.5 pl-3 border-l border-line h-[52px] cursor-pointer hover:bg-bg-2/50 transition-colors"
+          className="flex h-[52px] cursor-pointer items-center gap-2.5 border-l border-line pl-3 transition-colors hover:bg-bg-2/50"
           onClick={handleMicToggle}
           title={micActive ? "Stop microphone" : "Start microphone"}
         >
           <span
-            className={`w-2 h-2 rounded-full ${
-              micActive ? "bg-live animate-[blink_2s_infinite]" : "bg-bg-4"
+            className={`h-2 w-2 rounded-full ${
+              micActive ? "animate-[blink_2s_infinite] bg-live" : "bg-bg-4"
             }`}
           />
           <LevelBars level={audioLevel} active={micActive} />
-          <span className="font-mono text-[10.5px] tracking-[0.05em] uppercase text-ink-3">
+          <span className="font-mono text-[10.5px] tracking-[0.05em] text-ink-3 uppercase">
             {inputLabel}
           </span>
         </button>
@@ -127,21 +142,21 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
       {/* Right */}
       <div className="flex items-center gap-1.5">
         <button
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-ink-2 rounded border border-line bg-bg-2 transition-all hover:text-ink hover:border-line-strong hover:bg-bg-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-line bg-bg-2 px-3 py-1.5 text-xs text-ink-2 transition-all hover:border-line-strong hover:bg-bg-3 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
           onClick={onOpenCmdK}
         >
           <SearchIcon />
           Search
-          <kbd className="font-mono text-[10px] px-1 py-px bg-bg-4 rounded-sm text-ink-3">
+          <kbd className="rounded-sm bg-bg-4 px-1 py-px font-mono text-[10px] text-ink-3">
             ⌘K
           </kbd>
         </button>
         <button
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground transition-all hover:bg-accent-hover cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-accent bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground transition-all hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           onClick={onPush}
         >
           Push
-          <kbd className="font-mono text-[10px] px-1 py-px bg-black/20 rounded-sm text-black/60">
+          <kbd className="rounded-sm bg-black/20 px-1 py-px font-mono text-[10px] text-black/60">
             Space
           </kbd>
         </button>
@@ -155,8 +170,8 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
 
 function BrandMark() {
   return (
-    <span className="relative w-2 h-5 bg-ink">
-      <span className="absolute left-full ml-0.5 top-0 w-0.5 h-5 bg-accent" />
+    <span className="relative h-5 w-2 bg-ink">
+      <span className="absolute top-0 left-full ml-0.5 h-5 w-0.5 bg-accent" />
     </span>
   );
 }
@@ -170,7 +185,7 @@ function LevelBars({ level, active }: { level: number; active?: boolean }) {
   });
 
   return (
-    <span className="flex gap-[2px] items-end h-4">
+    <span className="flex h-4 items-end gap-[2px]">
       {bars.map((v, i) => {
         const h = Math.max(2, v * 16);
         const hot = v > 0.85;
@@ -201,16 +216,23 @@ function Clock() {
   const s = String(time.getSeconds()).padStart(2, "0");
 
   return (
-    <div className="font-mono text-[11px] text-ink-3 tracking-[0.08em] px-3 border-l border-line h-[52px] flex items-center gap-2">
+    <div className="flex h-[52px] items-center gap-2 border-l border-line px-3 font-mono text-[11px] tracking-[0.08em] text-ink-3">
       <span>Service</span>
-      <strong className="text-ink font-medium">{`${h}:${m}:${s}`}</strong>
+      <strong className="font-medium text-ink">{`${h}:${m}:${s}`}</strong>
     </div>
   );
 }
 
 function SearchIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" />
     </svg>

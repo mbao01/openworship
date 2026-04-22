@@ -15,8 +15,7 @@ const buttonVariants = cva(
         outline:
           "border border-line-strong bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong hover:bg-bg-3",
         /** No background — for icon rows, menus. */
-        ghost:
-          "text-ink-3 hover:text-ink hover:bg-bg-3",
+        ghost: "text-ink-3 hover:text-ink hover:bg-bg-3",
         /** Ghost with accent text — for links and accent actions. */
         "ghost-accent":
           "text-accent hover:text-accent-hover hover:bg-accent-soft",
@@ -29,10 +28,10 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-8 px-3 py-1.5",
-        sm:      "h-7 px-2.5 py-1 text-xs",
-        lg:      "h-9 px-4 py-2",
-        xs:      "h-6 px-2 py-0.5 text-xs gap-1",
-        icon:    "size-8",
+        sm: "h-7 px-2.5 py-1 text-xs",
+        lg: "h-9 px-4 py-2",
+        xs: "h-6 px-2 py-0.5 text-xs gap-1",
+        icon: "size-8",
         "icon-sm": "size-7",
         "icon-xs": "size-6",
         "icon-lg": "size-9",
@@ -42,7 +41,7 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 function Button({

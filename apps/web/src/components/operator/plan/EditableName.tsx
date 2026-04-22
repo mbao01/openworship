@@ -38,7 +38,7 @@ export function EditableName({
     return (
       <input
         ref={inputRef}
-        className="font-serif text-xl font-normal tracking-[-0.015em] text-ink w-full bg-transparent border-b-2 border-accent outline-none py-0.5"
+        className="w-full border-b-2 border-accent bg-transparent py-0.5 font-serif text-xl font-normal tracking-[-0.015em] text-ink outline-none"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={commit}
@@ -56,10 +56,9 @@ export function EditableName({
 
   return (
     <h1
-      className={`font-serif text-xl font-normal tracking-[-0.015em] mb-0 ${
+      className={`mb-0 font-serif text-xl font-normal tracking-[-0.015em] ${
         name ? "text-ink" : "text-muted"
-      } ${!isReadOnly ? "cursor-pointer hover:text-accent transition-colors" : ""}
-      }`}
+      } ${!isReadOnly ? "cursor-pointer transition-colors hover:text-accent" : ""} }`}
       onClick={() => {
         if (!isReadOnly) setEditing(true);
       }}

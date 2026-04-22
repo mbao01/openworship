@@ -8,8 +8,8 @@ interface PulseIndicatorProps {
 }
 
 const variantClasses: Record<PulseVariant, string> = {
-  live:    "bg-live",
-  accent:  "bg-accent",
+  live: "bg-live",
+  accent: "bg-accent",
   success: "bg-success",
 };
 
@@ -22,10 +22,10 @@ function PulseIndicator({ variant = "live", className }: PulseIndicatorProps) {
     <span
       data-slot="pulse-indicator"
       className={cn(
-        "block w-2 h-2 rounded-full",
+        "block h-2 w-2 rounded-full",
         "animate-[blink_2s_infinite]",
         variantClasses[variant],
-        className
+        className,
       )}
     />
   );

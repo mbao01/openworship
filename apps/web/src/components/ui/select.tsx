@@ -21,11 +21,11 @@ function SelectTrigger({
       data-size={size}
       className={cn(
         "flex w-full items-center justify-between gap-2 rounded",
-        "bg-bg-2 border border-line text-ink text-sm",
+        "border border-line bg-bg-2 text-sm text-ink",
         "px-3 py-1.5",
         "transition-colors",
         "hover:border-line-strong hover:bg-bg-3",
-        "focus:outline-none focus:border-accent",
+        "focus:border-accent focus:outline-none",
         "disabled:pointer-events-none disabled:opacity-50",
         "data-placeholder:text-muted",
         size === "sm" && "h-7 px-2.5 text-xs",
@@ -36,7 +36,7 @@ function SelectTrigger({
     >
       <span className="truncate">{children}</span>
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-3 text-ink-3 shrink-0" />
+        <ChevronDownIcon className="size-3 shrink-0 text-ink-3" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -48,7 +48,10 @@ function SelectScrollUpButton({
 }: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton>) {
   return (
     <SelectPrimitive.ScrollUpButton
-      className={cn("flex cursor-pointer items-center justify-center py-1", className)}
+      className={cn(
+        "flex cursor-pointer items-center justify-center py-1",
+        className,
+      )}
       {...props}
     >
       <ChevronUpIcon className="size-3 text-ink-3" />
@@ -62,7 +65,10 @@ function SelectScrollDownButton({
 }: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton>) {
   return (
     <SelectPrimitive.ScrollDownButton
-      className={cn("flex cursor-pointer items-center justify-center py-1", className)}
+      className={cn(
+        "flex cursor-pointer items-center justify-center py-1",
+        className,
+      )}
       {...props}
     >
       <ChevronDownIcon className="size-3 text-ink-3" />
@@ -89,7 +95,7 @@ function SelectContent({
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",
           position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1 min-w-(--radix-select-trigger-width)",
+            "min-w-(--radix-select-trigger-width) data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1",
           className,
         )}
         {...props}
@@ -116,8 +122,8 @@ function SelectLabel({
   return (
     <SelectPrimitive.Label
       className={cn(
-        "px-2 py-1 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-3",
-        className
+        "px-2 py-1 font-mono text-[10px] tracking-[0.06em] text-ink-3 uppercase",
+        className,
       )}
       {...props}
     />
@@ -133,8 +139,8 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm",
-        "py-1.5 pl-2 pr-8 text-sm",
+        "relative flex w-full cursor-pointer items-center gap-2 rounded-sm select-none",
+        "py-1.5 pr-8 pl-2 text-sm",
         "outline-none",
         "focus:bg-bg-3 focus:text-ink",
         "data-[state=checked]:text-accent",

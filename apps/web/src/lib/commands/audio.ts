@@ -84,11 +84,7 @@ export async function downloadWhisperModel(model?: string): Promise<void> {
 
 // ─── Generic STT Provider commands ──────────────────────────────────────────
 
-import type {
-  ProviderInfo,
-  ProviderStatus,
-  ModelInfo,
-} from "../types";
+import type { ProviderInfo, ProviderStatus, ModelInfo } from "../types";
 
 /**
  * List all available STT providers with their metadata and config fields.

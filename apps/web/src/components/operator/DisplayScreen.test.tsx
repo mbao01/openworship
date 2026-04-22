@@ -15,9 +15,7 @@ vi.mock("../../hooks/use-queue", () => ({
 }));
 
 vi.mock("../../lib/commands/display-window", () => ({
-  getObsDisplayUrl: vi
-    .fn()
-    .mockResolvedValue("http://localhost:7411/display"),
+  getObsDisplayUrl: vi.fn().mockResolvedValue("http://localhost:7411/display"),
   openDisplayWindow: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -52,8 +50,6 @@ describe("DisplayScreen", () => {
 
   it("shows 'no content on screen' when nothing is live", () => {
     render(<DisplayScreen />);
-    expect(
-      screen.getByText(/no content on screen/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no content on screen/)).toBeInTheDocument();
   });
 });

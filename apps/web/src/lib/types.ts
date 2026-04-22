@@ -24,7 +24,12 @@ export interface ProjectItem {
   asset_ids: string[];
 }
 
-export type TaskStatus = "backlog" | "todo" | "in_progress" | "done" | "cancelled";
+export type TaskStatus =
+  | "backlog"
+  | "todo"
+  | "in_progress"
+  | "done"
+  | "cancelled";
 
 /** A task within a service project. */
 export interface ServiceTask {
@@ -184,7 +189,6 @@ export interface BranchSyncStatus {
   hq_branch_name: string | null;
   error: string | null;
 }
-
 
 /** Matches Rust `QueueStatus` enum. */
 export type QueueStatus = "pending" | "live" | "dismissed";

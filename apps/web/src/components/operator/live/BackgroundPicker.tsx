@@ -21,7 +21,7 @@ function BackgroundTile({
   return (
     <button
       type="button"
-      className={`relative aspect-video rounded overflow-hidden border-2 transition-all cursor-pointer ${
+      className={`relative aspect-video cursor-pointer overflow-hidden rounded border-2 transition-all ${
         isActive
           ? "border-accent ring-1 ring-accent"
           : isPreview
@@ -33,26 +33,27 @@ function BackgroundTile({
       title={bg.name}
     >
       {isGradient ? (
-        <div
-          className="w-full h-full"
-          style={{ background: bg.value }}
-        />
+        <div className="h-full w-full" style={{ background: bg.value }} />
       ) : bg.value.startsWith("blob:") || bg.value.startsWith("data:image/") ? (
-        <img src={bg.value} alt={bg.name} className="w-full h-full object-cover" />
+        <img
+          src={bg.value}
+          alt={bg.name}
+          className="h-full w-full object-cover"
+        />
       ) : bg.value.startsWith("data:video/") ? (
-        <video src={bg.value} muted className="w-full h-full object-cover" />
+        <video src={bg.value} muted className="h-full w-full object-cover" />
       ) : (
-        <div className="w-full h-full bg-bg-3 flex items-center justify-center text-ink-3 text-[8px] font-mono uppercase">
+        <div className="flex h-full w-full items-center justify-center bg-bg-3 font-mono text-[8px] text-ink-3 uppercase">
           {bg.bg_type === "video" ? "Video" : "Image"}
         </div>
       )}
-      <div className="absolute bottom-0 inset-x-0 bg-black/60 px-1.5 py-0.5">
-        <span className="text-[8px] font-mono text-white/80 truncate block">
+      <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1.5 py-0.5">
+        <span className="block truncate font-mono text-[8px] text-white/80">
           {bg.name}
         </span>
       </div>
       {isActive && (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-accent" />
+        <div className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
       )}
     </button>
   );
@@ -105,39 +106,39 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
     <div className="relative" ref={ref}>
       <button
         type="button"
-        className={`inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase border rounded transition-colors cursor-pointer ${
+        className={`inline-flex cursor-pointer items-center gap-1.5 rounded border px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase transition-colors ${
           open
-            ? "text-accent border-accent bg-accent-soft"
-            : "text-ink-2 border-line bg-bg-2 hover:bg-bg-3 hover:text-ink hover:border-line-strong"
+            ? "border-accent bg-accent-soft text-accent"
+            : "border-line bg-bg-2 text-ink-2 hover:border-line-strong hover:bg-bg-3 hover:text-ink"
         }`}
         onClick={() => setOpen(!open)}
         title="Display background"
       >
-        <PaletteIcon className="w-3.5 h-3.5" />
+        <PaletteIcon className="h-3.5 w-3.5" />
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 mb-2 w-[320px] bg-bg-1 border border-line rounded-lg shadow-xl z-[200] overflow-hidden">
+        <div className="absolute right-0 bottom-full z-[200] mb-2 w-[320px] overflow-hidden rounded-lg border border-line bg-bg-1 shadow-xl">
           {/* Header */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-line">
-            <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-2">
+          <div className="flex items-center justify-between border-b border-line px-3 py-2">
+            <span className="font-mono text-[10px] tracking-[0.12em] text-ink-2 uppercase">
               Backgrounds
             </span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                className="p-1 rounded text-ink-3 hover:text-accent hover:bg-accent-soft transition-colors cursor-pointer"
+                className="cursor-pointer rounded p-1 text-ink-3 transition-colors hover:bg-accent-soft hover:text-accent"
                 onClick={() => fileRef.current?.click()}
                 title="Upload background"
               >
-                <UploadIcon className="w-3.5 h-3.5" />
+                <UploadIcon className="h-3.5 w-3.5" />
               </button>
               <button
                 type="button"
-                className="p-1 rounded text-ink-3 hover:text-ink hover:bg-bg-2 transition-colors cursor-pointer"
+                className="cursor-pointer rounded p-1 text-ink-3 transition-colors hover:bg-bg-2 hover:text-ink"
                 onClick={() => setOpen(false)}
               >
-                <XIcon className="w-3.5 h-3.5" />
+                <XIcon className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
@@ -148,9 +149,9 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
               <button
                 key={t}
                 type="button"
-                className={`flex-1 py-1.5 font-mono text-[9px] tracking-[0.1em] uppercase transition-colors cursor-pointer ${
+                className={`flex-1 cursor-pointer py-1.5 font-mono text-[9px] tracking-[0.1em] uppercase transition-colors ${
                   tab === t
-                    ? "text-accent border-b-2 border-accent"
+                    ? "border-b-2 border-accent text-accent"
                     : "text-ink-3 hover:text-ink-2"
                 }`}
                 onClick={() => setTab(t)}
@@ -161,9 +162,9 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
           </div>
 
           {/* Grid */}
-          <div className="p-2 max-h-[240px] overflow-y-auto">
+          <div className="max-h-[240px] overflow-y-auto p-2">
             {items.length === 0 ? (
-              <div className="py-6 text-center text-ink-3 text-xs">
+              <div className="py-6 text-center text-xs text-ink-3">
                 {tab === "uploaded"
                   ? "No uploaded backgrounds yet"
                   : "No presets available"}
@@ -185,10 +186,10 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-3 py-2 border-t border-line bg-bg">
+          <div className="flex items-center justify-between border-t border-line bg-bg px-3 py-2">
             <button
               type="button"
-              className="font-mono text-[9px] tracking-[0.1em] uppercase text-ink-3 hover:text-ink transition-colors cursor-pointer"
+              className="cursor-pointer font-mono text-[9px] tracking-[0.1em] text-ink-3 uppercase transition-colors hover:text-ink"
               onClick={() => {
                 clearBackground();
                 setOpen(false);
@@ -198,7 +199,7 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
             </button>
             <button
               type="button"
-              className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-accent text-accent-foreground bg-accent rounded transition-colors hover:bg-accent-hover cursor-pointer disabled:opacity-40"
+              className="cursor-pointer rounded border border-accent bg-accent px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] text-accent-foreground uppercase transition-colors hover:bg-accent-hover disabled:opacity-40"
               disabled={!previewId || previewId === activeId}
               onClick={() => {
                 if (previewId) {

@@ -31,14 +31,18 @@ export function TranscriptBody() {
         }
         return updated;
       });
-    }).then((fn) => { unlisten = fn; });
-    return () => { unlisten?.(); };
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      unlisten?.();
+    };
   }, []);
 
   const nonEmpty = sentences.filter((s) => s.trim());
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-3.5 font-serif text-[15px] leading-[1.55] text-ink-3 tracking-[-0.003em]">
+    <div className="flex-1 overflow-y-auto px-4 py-3.5 font-serif text-[15px] leading-[1.55] tracking-[-0.003em] text-ink-3">
       {nonEmpty.map((sentence, i) => {
         const isLast =
           i === nonEmpty.length - 1 &&
@@ -50,8 +54,8 @@ export function TranscriptBody() {
         );
       })}
       {nonEmpty.length === 0 && (
-        <div className="text-muted italic flex items-center gap-2 justify-center">
-          {micActive ? null : <MicOffIcon className="w-4 h-4" />}
+        <div className="flex items-center justify-center gap-2 text-muted italic">
+          {micActive ? null : <MicOffIcon className="h-4 w-4" />}
           {"\u00B7"} {micActive ? "listening" : "mic off"} {"\u00B7"}
         </div>
       )}

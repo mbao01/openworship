@@ -57,7 +57,7 @@ export function ContextPanel({ live }: { live: QueueItem | null }) {
         setSelectedIndices(new Set());
       })
       .catch(() => setContextVerses([]));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when reference or kind changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when reference or kind changes
   }, [live?.reference, live?.kind]);
 
   const contextLabel = live?.reference ?? "none";
@@ -135,15 +135,15 @@ export function ContextPanel({ live }: { live: QueueItem | null }) {
   return (
     <>
       {/* Context header */}
-      <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-t border-line border-b border-line bg-bg-1">
-        <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+      <div className="flex h-9 shrink-0 items-center justify-between border-t border-b border-line bg-bg-1 px-3.5">
+        <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
           Context ·{" "}
-          <strong className="text-ink-2 font-medium">{contextLabel}</strong>
+          <strong className="font-medium text-ink-2">{contextLabel}</strong>
         </span>
       </div>
 
       {/* Context content */}
-      <div className="relative flex-1 min-h-0 overflow-y-auto">
+      <div className="relative min-h-0 flex-1 overflow-y-auto">
         {live?.kind === "scripture" &&
           contextVerses.map((v, i) => {
             const isActive = live.reference === v.reference;
@@ -151,24 +151,24 @@ export function ContextPanel({ live }: { live: QueueItem | null }) {
             return (
               <div
                 key={`${v.reference}-${i}`}
-                className={`group flex items-center gap-2 px-3.5 py-2 transition-colors cursor-pointer hover:bg-bg-2 ${
+                className={`group flex cursor-pointer items-center gap-2 px-3.5 py-2 transition-colors hover:bg-bg-2 ${
                   isSelected
-                    ? "bg-accent-soft border-l-2 border-l-accent"
+                    ? "border-l-2 border-l-accent bg-accent-soft"
                     : isActive
                       ? "bg-accent-soft"
                       : ""
                 }`}
                 onClick={(e) => handleVerseClick(e, i)}
               >
-                <span className="font-mono text-[9px] text-ink-3 shrink-0 w-5 text-right">
+                <span className="w-5 shrink-0 text-right font-mono text-[9px] text-ink-3">
                   {v.reference.split(":").pop()}
                 </span>
-                <span className="flex-1 text-xs text-ink-2 leading-[1.4] line-clamp-2">
+                <span className="line-clamp-2 flex-1 text-xs leading-[1.4] text-ink-2">
                   {v.text}
                 </span>
                 <button
                   type="button"
-                  className="shrink-0 p-1.5 rounded text-ink-3 hover:text-accent hover:bg-accent-soft transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                  className="shrink-0 cursor-pointer rounded p-1.5 text-ink-3 opacity-0 transition-colors group-hover:opacity-100 hover:bg-accent-soft hover:text-accent"
                   title="Push to live"
                   onClick={(e) => {
                     e.preventDefault();
@@ -178,7 +178,7 @@ export function ContextPanel({ live }: { live: QueueItem | null }) {
                     );
                   }}
                 >
-                  <PlayIcon className="w-4 h-4" />
+                  <PlayIcon className="h-4 w-4" />
                 </button>
               </div>
             );
@@ -190,11 +190,11 @@ export function ContextPanel({ live }: { live: QueueItem | null }) {
               key={i}
               className="flex items-start gap-2 px-3.5 py-2 transition-colors hover:bg-bg-2"
             >
-              <span className="flex-1 text-xs text-ink-2 leading-[1.5] whitespace-pre-line">
+              <span className="flex-1 text-xs leading-[1.5] whitespace-pre-line text-ink-2">
                 {section.trim()}
               </span>
               <button
-                className="shrink-0 p-1 rounded text-ink-3 hover:text-accent hover:bg-accent-soft transition-colors mt-0.5"
+                className="mt-0.5 shrink-0 rounded p-1 text-ink-3 transition-colors hover:bg-accent-soft hover:text-accent"
                 title="Push to live"
                 onClick={() =>
                   pushToDisplay(live.reference, section.trim(), "").catch(
@@ -202,40 +202,40 @@ export function ContextPanel({ live }: { live: QueueItem | null }) {
                   )
                 }
               >
-                <PlayIcon className="w-3.5 h-3.5" />
+                <PlayIcon className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
 
         {(!live || (live.kind !== "scripture" && live.kind !== "song")) && (
-          <div className="px-3.5 py-6 flex flex-col items-center justify-center gap-2 text-xs text-muted">
-            <CircleIcon className="w-5 h-5" />
+          <div className="flex flex-col items-center justify-center gap-2 px-3.5 py-6 text-xs text-muted">
+            <CircleIcon className="h-5 w-5" />
             No content on screen
           </div>
         )}
 
         {/* Multi-select action bar */}
         {selectedIndices.size >= 2 && (
-          <div className="sticky bottom-0 flex items-center justify-between px-3.5 py-2 bg-bg-1 border-t border-line">
+          <div className="sticky bottom-0 flex items-center justify-between border-t border-line bg-bg-1 px-3.5 py-2">
             <span className="text-xs text-ink-3">
               {selectedIndices.size} verses selected
             </span>
             <div className="flex gap-1.5">
               <button
                 onClick={handlePushSelected}
-                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-accent text-accent-foreground bg-accent rounded transition-colors hover:bg-accent-hover cursor-pointer"
+                className="cursor-pointer rounded border border-accent bg-accent px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] text-accent-foreground uppercase transition-colors hover:bg-accent-hover"
               >
                 Push to live
               </button>
               <button
                 onClick={handleQueueSelected}
-                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase border border-line text-ink-2 rounded bg-bg-2 transition-colors hover:bg-bg-3 hover:text-ink cursor-pointer"
+                className="cursor-pointer rounded border border-line bg-bg-2 px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] text-ink-2 uppercase transition-colors hover:bg-bg-3 hover:text-ink"
               >
                 Queue
               </button>
               <button
                 onClick={() => setSelectedIndices(new Set())}
-                className="px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] uppercase text-ink-3 rounded transition-colors hover:text-ink hover:bg-bg-2 cursor-pointer"
+                className="cursor-pointer rounded px-2.5 py-1 font-mono text-[9px] tracking-[0.1em] text-ink-3 uppercase transition-colors hover:bg-bg-2 hover:text-ink"
               >
                 Clear
               </button>

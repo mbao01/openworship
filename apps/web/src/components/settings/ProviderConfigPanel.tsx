@@ -88,7 +88,7 @@ export function ProviderConfigPanel({
           }
         >
           {installed ? (
-            <span className="font-mono text-[10.5px] text-success uppercase tracking-[0.05em]">
+            <span className="font-mono text-[10.5px] tracking-[0.05em] text-success uppercase">
               Installed
             </span>
           ) : (
@@ -127,7 +127,9 @@ function ConfigFieldRenderer({
   providerId: string;
   onChange: (value: unknown) => void;
 }) {
-  const [localValue, setLocalValue] = useState(String(value ?? field.default ?? ""));
+  const [localValue, setLocalValue] = useState(
+    String(value ?? field.default ?? ""),
+  );
   const [saving, setSaving] = useState(false);
 
   // For secret fields, we show a save button instead of live-updating
@@ -181,7 +183,7 @@ function ConfigFieldRenderer({
                 }
               }}
               placeholder={field.label}
-              className="h-7 w-44 rounded bg-bg-2 border border-line px-2 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+              className="h-7 w-44 rounded border border-line bg-bg-2 px-2 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
             />
             {isSecret && (
               <Button
@@ -205,7 +207,7 @@ function ConfigFieldRenderer({
             value={String(value ?? field.default ?? "")}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.label}
-            className="h-7 w-44 rounded bg-bg-2 border border-line px-2 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+            className="h-7 w-44 rounded border border-line bg-bg-2 px-2 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
           />
         </SettingRow>
       );
@@ -226,7 +228,8 @@ function ConfigFieldRenderer({
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes >= 1_000_000_000) return `~${(bytes / 1_000_000_000).toFixed(1)} GB`;
+  if (bytes >= 1_000_000_000)
+    return `~${(bytes / 1_000_000_000).toFixed(1)} GB`;
   if (bytes >= 1_000_000) return `~${Math.round(bytes / 1_000_000)} MB`;
   return `${bytes} B`;
 }

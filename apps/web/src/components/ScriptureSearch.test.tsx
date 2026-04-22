@@ -38,7 +38,9 @@ beforeEach(() => {
 describe("ScriptureSearch", () => {
   it("renders the search input", () => {
     render(<ScriptureSearch />);
-    expect(screen.getByPlaceholderText(/Book, chapter:verse or keyword/i)).toBeDefined();
+    expect(
+      screen.getByPlaceholderText(/Book, chapter:verse or keyword/i),
+    ).toBeDefined();
   });
 
   it("loads translations on mount", async () => {
@@ -57,13 +59,15 @@ describe("ScriptureSearch", () => {
 
   it("shows results after typing a query", async () => {
     render(<ScriptureSearch />);
-    const input = screen.getByPlaceholderText(/Book, chapter:verse or keyword/i);
+    const input = screen.getByPlaceholderText(
+      /Book, chapter:verse or keyword/i,
+    );
     fireEvent.change(input, { target: { value: "John 3:16" } });
     await waitFor(
       () => {
         expect(screen.getByText("John 3:16")).toBeDefined();
       },
-      { timeout: 500 }
+      { timeout: 500 },
     );
   });
 
@@ -74,19 +78,23 @@ describe("ScriptureSearch", () => {
       return Promise.resolve([]);
     });
     render(<ScriptureSearch />);
-    const input = screen.getByPlaceholderText(/Book, chapter:verse or keyword/i);
+    const input = screen.getByPlaceholderText(
+      /Book, chapter:verse or keyword/i,
+    );
     fireEvent.change(input, { target: { value: "xyznotfound" } });
     await waitFor(
       () => {
         expect(screen.getByText(/No results for/)).toBeDefined();
       },
-      { timeout: 500 }
+      { timeout: 500 },
     );
   });
 
   it("pushes verse to display on result click", async () => {
     render(<ScriptureSearch />);
-    const input = screen.getByPlaceholderText(/Book, chapter:verse or keyword/i);
+    const input = screen.getByPlaceholderText(
+      /Book, chapter:verse or keyword/i,
+    );
     fireEvent.change(input, { target: { value: "John 3:16" } });
     await waitFor(() => screen.getByText("John 3:16"), { timeout: 500 });
 
@@ -104,7 +112,9 @@ describe("ScriptureSearch", () => {
 
   it("shows live indicator after pushing a verse", async () => {
     render(<ScriptureSearch />);
-    const input = screen.getByPlaceholderText(/Book, chapter:verse or keyword/i);
+    const input = screen.getByPlaceholderText(
+      /Book, chapter:verse or keyword/i,
+    );
     fireEvent.change(input, { target: { value: "John 3:16" } });
     await waitFor(() => screen.getByText("John 3:16"), { timeout: 500 });
 
@@ -119,26 +129,36 @@ describe("ScriptureSearch", () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === "list_translations") return Promise.resolve(mockTranslations);
       if (cmd === "search_scriptures") return Promise.resolve(mockResults);
-      if (cmd === "push_to_display") return Promise.reject(new Error("no display"));
+      if (cmd === "push_to_display")
+        return Promise.reject(new Error("no display"));
       return Promise.resolve([]);
     });
     render(<ScriptureSearch />);
-    const input = screen.getByPlaceholderText(/Book, chapter:verse or keyword/i);
+    const input = screen.getByPlaceholderText(
+      /Book, chapter:verse or keyword/i,
+    );
     fireEvent.change(input, { target: { value: "John 3:16" } });
     await waitFor(() => screen.getByText("John 3:16"), { timeout: 500 });
 
     // Should not throw
     fireEvent.click(screen.getByRole("button"));
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("push_to_display", expect.anything());
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "push_to_display",
+        expect.anything(),
+      );
     });
   });
 
   it("re-runs search when translation changes", async () => {
     render(<ScriptureSearch />);
-    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith("list_translations"));
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith("list_translations"),
+    );
 
-    const input = screen.getByPlaceholderText(/Book, chapter:verse or keyword/i);
+    const input = screen.getByPlaceholderText(
+      /Book, chapter:verse or keyword/i,
+    );
     fireEvent.change(input, { target: { value: "John 3:16" } });
     await waitFor(() => screen.getByText("John 3:16"), { timeout: 500 });
 
@@ -157,13 +177,17 @@ describe("ScriptureSearch", () => {
 
   it("does not search when query is blank", async () => {
     render(<ScriptureSearch />);
-    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith("list_translations"));
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith("list_translations"),
+    );
 
     const searchCalls = () =>
       mockInvoke.mock.calls.filter((c) => c[0] === "search_scriptures").length;
     const before = searchCalls();
 
-    const input = screen.getByPlaceholderText(/Book, chapter:verse or keyword/i);
+    const input = screen.getByPlaceholderText(
+      /Book, chapter:verse or keyword/i,
+    );
     fireEvent.change(input, { target: { value: "   " } });
 
     // Wait briefly to ensure no debounced call fires
@@ -184,9 +208,13 @@ describe("ScriptureSearch", () => {
     });
 
     render(<ScriptureSearch />);
-    const input = screen.getByPlaceholderText(/Book, chapter:verse or keyword/i);
+    const input = screen.getByPlaceholderText(
+      /Book, chapter:verse or keyword/i,
+    );
     fireEvent.change(input, { target: { value: "John 3:16" } });
-    await waitFor(() => screen.getAllByText("John 3:16").length > 0, { timeout: 500 });
+    await waitFor(() => screen.getAllByText("John 3:16").length > 0, {
+      timeout: 500,
+    });
 
     const buttons = screen.getAllByRole("button");
     fireEvent.click(buttons[0]); // push KJV

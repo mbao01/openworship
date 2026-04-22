@@ -45,42 +45,45 @@ export function FilterDropdown({
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
   const count = activeFilters.size;
-  const label = allSelected ? "All types" : `${count} type${count !== 1 ? "s" : ""}`;
+  const label = allSelected
+    ? "All types"
+    : `${count} type${count !== 1 ? "s" : ""}`;
 
   return (
     <div className="relative" ref={ref}>
       <button
-        className={`flex items-center gap-1.5 font-sans text-[11px] px-2.5 py-[5px] rounded border cursor-pointer transition-colors ${
+        className={`flex cursor-pointer items-center gap-1.5 rounded border px-2.5 py-[5px] font-sans text-[11px] transition-colors ${
           !allSelected
-            ? "text-accent border-accent/40 bg-accent-soft"
-            : "text-ink-3 border-line hover:text-ink hover:border-line-strong"
+            ? "border-accent/40 bg-accent-soft text-accent"
+            : "border-line text-ink-3 hover:border-line-strong hover:text-ink"
         }`}
         onClick={() => setOpen((v) => !v)}
       >
-        <FilterIcon className="w-3 h-3 shrink-0" />
+        <FilterIcon className="h-3 w-3 shrink-0" />
         {label}
         <ChevronDownIcon
-          className={`w-3 h-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-[200] bg-bg-1 border border-line-strong rounded-lg py-1 min-w-[180px] shadow-lg">
+        <div className="absolute top-full right-0 z-[200] mt-1 min-w-[180px] rounded-lg border border-line-strong bg-bg-1 py-1 shadow-lg">
           <button
-            className="flex items-center gap-2.5 w-full text-left px-3 py-1.5 text-[12px] text-ink transition-colors hover:bg-bg-2 cursor-pointer"
+            className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-1.5 text-left text-[12px] text-ink transition-colors hover:bg-bg-2"
             onClick={onToggleAll}
           >
             <span
-              className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+              className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border text-[9px] font-bold ${
                 allSelected
-                  ? "bg-accent border-accent text-accent-foreground"
+                  ? "border-accent bg-accent text-accent-foreground"
                   : "border-line-strong"
               }`}
             >
@@ -88,19 +91,19 @@ export function FilterDropdown({
             </span>
             <span className="font-medium">All types</span>
           </button>
-          <div className="h-px bg-line my-1 mx-2" />
+          <div className="mx-2 my-1 h-px bg-line" />
           {(
             Object.entries(CATEGORY_LABELS) as [ArtifactCategory, string][]
           ).map(([cat, catLabel]) => (
             <button
               key={cat}
-              className="flex items-center gap-2.5 w-full text-left px-3 py-1.5 text-[12px] text-ink transition-colors hover:bg-bg-2 cursor-pointer"
+              className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-1.5 text-left text-[12px] text-ink transition-colors hover:bg-bg-2"
               onClick={() => onToggle(cat)}
             >
               <span
-                className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border text-[9px] font-bold ${
                   activeFilters.has(cat)
-                    ? "bg-accent border-accent text-accent-foreground"
+                    ? "border-accent bg-accent text-accent-foreground"
                     : "border-line-strong"
                 }`}
               >

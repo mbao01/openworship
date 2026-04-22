@@ -13,9 +13,9 @@ function TabsList({
       data-slot="tabs-list"
       className={cn(
         "inline-flex items-center gap-0.5",
-        "bg-bg-2 rounded p-0.5",
+        "rounded bg-bg-2 p-0.5",
         "border border-line",
-        className
+        className,
       )}
       {...props}
     />
@@ -32,13 +32,13 @@ function TabsTrigger({
       className={cn(
         "inline-flex items-center justify-center rounded-[3px]",
         "px-3 py-1 text-xs font-medium",
-        "font-mono uppercase tracking-[0.06em]",
+        "font-mono tracking-[0.06em] uppercase",
         "text-ink-3 transition-colors",
-        "hover:text-ink hover:bg-bg-3",
+        "hover:bg-bg-3 hover:text-ink",
         "data-[state=active]:bg-bg-3 data-[state=active]:text-ink",
         "focus-visible:outline focus-visible:outline-[1px] focus-visible:outline-accent",
         "disabled:pointer-events-none disabled:opacity-50",
-        className
+        className,
       )}
       {...props}
     />

@@ -19,8 +19,8 @@ function Toggle({
         "transition-colors duration-150",
         "bg-bg-4 data-[state=checked]:bg-accent",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        "focus-visible:outline focus-visible:outline-[1px] focus-visible:outline-accent focus-visible:outline-offset-1",
-        className
+        "focus-visible:outline focus-visible:outline-[1px] focus-visible:outline-offset-1 focus-visible:outline-accent",
+        className,
       )}
       {...props}
     >
@@ -29,7 +29,7 @@ function Toggle({
           "pointer-events-none block h-[16px] w-[16px] rounded-full bg-white",
           "shadow-[0_1px_3px_rgba(0,0,0,0.4)]",
           "transition-transform duration-150",
-          "translate-x-[3px] data-[state=checked]:translate-x-[19px]"
+          "translate-x-[3px] data-[state=checked]:translate-x-[19px]",
         )}
       />
     </SwitchPrimitive.Root>

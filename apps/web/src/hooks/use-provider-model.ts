@@ -42,18 +42,15 @@ export function useProviderModel(
       .catch(() => setInstalled(false));
 
     let unlisten: (() => void) | undefined;
-    listen<DownloadProgressEvent>(
-      "stt://model-download-progress",
-      (event) => {
-        // Only react to events for this provider + model
-        if (
-          event.payload.provider === providerId &&
-          event.payload.model === modelId
-        ) {
-          setProgress(event.payload.percent ?? 0);
-        }
-      },
-    ).then((fn) => {
+    listen<DownloadProgressEvent>("stt://model-download-progress", (event) => {
+      // Only react to events for this provider + model
+      if (
+        event.payload.provider === providerId &&
+        event.payload.model === modelId
+      ) {
+        setProgress(event.payload.percent ?? 0);
+      }
+    }).then((fn) => {
       unlisten = fn;
     });
 

@@ -25,7 +25,13 @@ interface ModalProps {
  *   <ModalBody>…</ModalBody>
  * </Modal>
  */
-export function Modal({ open, onClose, children, className, "aria-label": ariaLabel }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  children,
+  className,
+  "aria-label": ariaLabel,
+}: ModalProps) {
   // Close on Escape
   React.useEffect(() => {
     if (!open) return;
@@ -41,7 +47,7 @@ export function Modal({ open, onClose, children, className, "aria-label": ariaLa
   return (
     <div
       data-slot="modal-root"
-      className="fixed inset-0 z-[100] flex items-center justify-center animate-[fade-in_150ms_ease-out]"
+      className="fixed inset-0 z-[100] flex animate-[fade-in_150ms_ease-out] items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
@@ -59,18 +65,29 @@ export function Modal({ open, onClose, children, className, "aria-label": ariaLa
           "border border-line-strong bg-bg-1",
           "shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)]",
           "flex flex-col",
-          "max-w-3xl max-h-[85vh]",
+          "max-h-[85vh] max-w-3xl",
           className,
         )}
       >
         {/* Close button */}
         <button
-          className="absolute top-3 right-3 z-10 flex items-center justify-center w-7 h-7 rounded text-ink-3 hover:text-ink hover:bg-bg-3 transition-colors"
+          className="absolute top-3 right-3 z-10 flex h-7 w-7 items-center justify-center rounded text-ink-3 transition-colors hover:bg-bg-3 hover:text-ink"
           onClick={onClose}
           aria-label="Close"
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-            <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M1 1l8 8M9 1L1 9"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 
@@ -83,11 +100,15 @@ export function Modal({ open, onClose, children, className, "aria-label": ariaLa
 /**
  * Modal header — renders above the scrollable body.
  */
-export function ModalHeader({ className, children, ...props }: React.ComponentProps<"div">) {
+export function ModalHeader({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="modal-header"
-      className={cn("shrink-0 px-6 pt-5 pb-4 border-b border-line", className)}
+      className={cn("shrink-0 border-b border-line px-6 pt-5 pb-4", className)}
       {...props}
     >
       {children}
@@ -98,11 +119,15 @@ export function ModalHeader({ className, children, ...props }: React.ComponentPr
 /**
  * Modal title — serif heading.
  */
-export function ModalTitle({ className, children, ...props }: React.ComponentProps<"h2">) {
+export function ModalTitle({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"h2">) {
   return (
     <h2
       data-slot="modal-title"
-      className={cn("font-serif text-xl text-ink leading-snug m-0", className)}
+      className={cn("m-0 font-serif text-xl leading-snug text-ink", className)}
       {...props}
     >
       {children}
@@ -113,11 +138,15 @@ export function ModalTitle({ className, children, ...props }: React.ComponentPro
 /**
  * Modal description — muted subtext.
  */
-export function ModalDescription({ className, children, ...props }: React.ComponentProps<"p">) {
+export function ModalDescription({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="modal-description"
-      className={cn("text-sm text-ink-3 mt-1 m-0", className)}
+      className={cn("m-0 mt-1 text-sm text-ink-3", className)}
       {...props}
     >
       {children}
@@ -128,13 +157,17 @@ export function ModalDescription({ className, children, ...props }: React.Compon
 /**
  * Modal body — scrollable content area.
  */
-export function ModalBody({ className, children, ...props }: React.ComponentProps<"div">) {
+export function ModalBody({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="modal-body"
       className={cn(
-        "flex-1 overflow-y-auto overflow-x-hidden",
-        "[scrollbar-width:thin] [scrollbar-color:var(--color-bg-3)_transparent]",
+        "flex-1 overflow-x-hidden overflow-y-auto",
+        "[scrollbar-color:var(--color-bg-3)_transparent] [scrollbar-width:thin]",
         className,
       )}
       {...props}
@@ -147,12 +180,16 @@ export function ModalBody({ className, children, ...props }: React.ComponentProp
 /**
  * Modal footer — fixed at bottom with right-aligned actions.
  */
-export function ModalFooter({ className, children, ...props }: React.ComponentProps<"div">) {
+export function ModalFooter({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="modal-footer"
       className={cn(
-        "shrink-0 px-6 py-4 border-t border-line flex items-center justify-end gap-2",
+        "flex shrink-0 items-center justify-end gap-2 border-t border-line px-6 py-4",
         className,
       )}
       {...props}

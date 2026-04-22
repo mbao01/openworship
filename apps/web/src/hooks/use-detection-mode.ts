@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { getDetectionMode, setDetectionMode as saveDetectionMode } from "@/lib/commands/detection";
+import {
+  getDetectionMode,
+  setDetectionMode as saveDetectionMode,
+} from "@/lib/commands/detection";
 import type { DetectionMode } from "@/lib/types";
 
 export interface UseDetectionModeReturn {

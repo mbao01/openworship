@@ -24,18 +24,18 @@ function SegmentedControl<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex border border-line-strong rounded overflow-hidden bg-bg-2">
+    <div className="flex overflow-hidden rounded border border-line-strong bg-bg-2">
       {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
           className={cn(
-            "flex-1 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest",
+            "flex-1 px-3 py-1.5 font-mono text-[10px] tracking-widest uppercase",
             "border-r border-line last:border-r-0",
             "transition-all duration-100",
             value === opt.value
-              ? "bg-accent text-accent-foreground font-semibold"
-              : "text-ink-3 hover:text-ink hover:bg-bg-3",
+              ? "bg-accent font-semibold text-accent-foreground"
+              : "text-ink-3 hover:bg-bg-3 hover:text-ink",
           )}
         >
           {opt.label}
@@ -62,13 +62,13 @@ function ThemePreview({
 }) {
   return (
     <div
-      className="w-full aspect-[16/10] rounded-sm overflow-hidden p-2 flex flex-col justify-between"
+      className="flex aspect-[16/10] w-full flex-col justify-between overflow-hidden rounded-sm p-2"
       style={{ backgroundColor: bg }}
     >
       {/* Top accent bar */}
       <div className="flex items-center gap-1.5">
         <div
-          className="w-1 h-1 rounded-full"
+          className="h-1 w-1 rounded-full"
           style={{ backgroundColor: accent }}
         />
         <div
@@ -130,8 +130,8 @@ export function AppearanceSection() {
       : appTheme;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-0">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 mb-6 pb-3 border-b border-line">
+    <div className="flex-1 space-y-0 overflow-y-auto p-6">
+      <h2 className="mb-6 border-b border-line pb-3 font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">
         Appearance &amp; Preferences
       </h2>
 
@@ -166,10 +166,10 @@ export function AppearanceSection() {
                     key={theme.id}
                     onClick={() => setPreset(theme.id)}
                     className={cn(
-                      "relative flex flex-col rounded-lg border-2 p-1.5 transition-all cursor-pointer",
+                      "relative flex cursor-pointer flex-col rounded-lg border-2 p-1.5 transition-all",
                       isSelected
-                        ? "border-accent ring-1 ring-accent/30 scale-[1.02]"
-                        : "border-line hover:border-line-strong hover:scale-[1.01]",
+                        ? "scale-[1.02] border-accent ring-1 ring-accent/30"
+                        : "border-line hover:scale-[1.01] hover:border-line-strong",
                     )}
                   >
                     <ThemePreview
@@ -180,15 +180,15 @@ export function AppearanceSection() {
                     />
                     <span
                       className={cn(
-                        "mt-1.5 text-[10px] font-mono tracking-[0.08em]",
-                        isSelected ? "text-accent font-semibold" : "text-ink-3",
+                        "mt-1.5 font-mono text-[10px] tracking-[0.08em]",
+                        isSelected ? "font-semibold text-accent" : "text-ink-3",
                       )}
                     >
                       {theme.name}
                     </span>
                     {isSelected && (
-                      <div className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
-                        <CheckIcon className="w-2.5 h-2.5 text-accent-foreground" />
+                      <div className="absolute top-2.5 right-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent">
+                        <CheckIcon className="h-2.5 w-2.5 text-accent-foreground" />
                       </div>
                     )}
                   </button>

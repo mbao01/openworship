@@ -26,10 +26,12 @@ import "./styles/global.css";
     }
     // Apply preset tokens synchronously to avoid flash of wrong colors.
     // Uses dynamic import — if it fails, CSS fallback values in global.css apply.
-    import("./lib/themes").then(({ getPreset, applyThemeTokens }) => {
-      const preset = getPreset(presetId);
-      applyThemeTokens(resolved === "dark" ? preset.dark : preset.light);
-    }).catch(() => {});
+    import("./lib/themes")
+      .then(({ getPreset, applyThemeTokens }) => {
+        const preset = getPreset(presetId);
+        applyThemeTokens(resolved === "dark" ? preset.dark : preset.light);
+      })
+      .catch(() => {});
   } catch {
     document.documentElement.setAttribute("data-app-theme", "dark");
     document.documentElement.classList.add("dark");
@@ -53,7 +55,9 @@ function AppInner() {
     return (
       <SplashScreen
         isReady={identity !== null && !identityLoading}
-        onDone={() => {/* splashDone is computed, not state */}}
+        onDone={() => {
+          /* splashDone is computed, not state */
+        }}
       />
     );
   }

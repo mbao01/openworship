@@ -37,19 +37,19 @@ export function TaskRow({
   const isCancelled = task.status === "cancelled";
 
   return (
-    <div className="group flex items-center gap-3 px-3.5 py-2.5 border-b border-line last:border-b-0 transition-colors hover:bg-bg-2">
+    <div className="group flex items-center gap-3 border-b border-line px-3.5 py-2.5 transition-colors last:border-b-0 hover:bg-bg-2">
       {/* Checkbox */}
       <button
-        className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors cursor-pointer ${
+        className={`flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded border transition-colors ${
           task.status === "done"
-            ? "bg-success border-success text-white"
+            ? "border-success bg-success text-white"
             : "border-line hover:border-accent"
         }`}
         onClick={onToggle}
         disabled={isReadOnly}
       >
         {task.status === "done" && (
-          <CheckIcon className="w-2.5 h-2.5 shrink-0" />
+          <CheckIcon className="h-2.5 w-2.5 shrink-0" />
         )}
       </button>
 
@@ -57,7 +57,7 @@ export function TaskRow({
       {editingTitle && !isReadOnly ? (
         <input
           ref={inputRef}
-          className="flex-1 px-1.5 py-0.5 bg-bg-2 border border-line rounded text-[12.5px] text-ink"
+          className="flex-1 rounded border border-line bg-bg-2 px-1.5 py-0.5 text-[12.5px] text-ink"
           value={titleValue}
           onChange={(e) => setTitleValue(e.target.value)}
           onBlur={commitTitle}
@@ -71,8 +71,8 @@ export function TaskRow({
         />
       ) : (
         <span
-          className={`flex-1 text-[12.5px] truncate ${
-            isCancelled ? "line-through text-muted" : "text-ink"
+          className={`flex-1 truncate text-[12.5px] ${
+            isCancelled ? "text-muted line-through" : "text-ink"
           } ${!isReadOnly ? "cursor-pointer" : ""}`}
           onClick={() => {
             if (!isReadOnly) {
@@ -87,7 +87,7 @@ export function TaskRow({
 
       {/* Status badge */}
       <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${STATUS_STYLES[task.status]}`}
+        className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_STYLES[task.status]}`}
       >
         {STATUS_LABELS[task.status]}
       </span>
@@ -95,7 +95,7 @@ export function TaskRow({
       {/* Status dropdown */}
       {!isReadOnly && (
         <select
-          className="px-1.5 py-0.5 bg-bg-2 border border-line rounded text-[10px] text-ink-3 cursor-pointer"
+          className="cursor-pointer rounded border border-line bg-bg-2 px-1.5 py-0.5 text-[10px] text-ink-3"
           value={task.status}
           onChange={(e) => onUpdate({ status: e.target.value as TaskStatus })}
         >
@@ -110,11 +110,11 @@ export function TaskRow({
       {/* Delete button */}
       {!isReadOnly && (
         <button
-          className="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-danger transition-all cursor-pointer flex items-center"
+          className="flex cursor-pointer items-center text-ink-3 opacity-0 transition-all group-hover:opacity-100 hover:text-danger"
           onClick={onDelete}
           title="Delete task"
         >
-          <XIcon className="w-3.5 h-3.5 shrink-0" />
+          <XIcon className="h-3.5 w-3.5 shrink-0" />
         </button>
       )}
     </div>

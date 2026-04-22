@@ -23,7 +23,9 @@ describe("TranscriptPanel", () => {
 
   it("shows START MIC button when idle", () => {
     render(<TranscriptPanel />);
-    expect(screen.getByRole("button", { name: /start mic/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /start mic/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows idle prompt when not active", () => {

@@ -21,7 +21,12 @@ import {
   AlertTriangleIcon,
 } from "lucide-react";
 
-import { formatDate, formatStorageBytes, mimeCategory, iconCls } from "./assets/helpers";
+import {
+  formatDate,
+  formatStorageBytes,
+  mimeCategory,
+  iconCls,
+} from "./assets/helpers";
 import type { Nav, CtxMenu } from "./assets/types";
 import { AssetsNav } from "./assets/AssetsNav";
 import { AssetTable } from "./assets/AssetTable";
@@ -43,9 +48,19 @@ export function AssetsScreen() {
   const [nav, setNav] = useState<Nav>({ kind: "all" });
   const [entries, setEntries] = useState<ArtifactEntry[]>([]);
   const [parentPath, setParentPath] = useState<string | null>(null);
-  const [crumbs, setCrumbs] = useState<Array<{ label: string; path: string | null }>>([]);
-  const ALL_CATEGORIES: ArtifactCategory[] = ["image", "video", "audio", "document", "slide"];
-  const [activeFilters, setActiveFilters] = useState<Set<ArtifactCategory>>(new Set(ALL_CATEGORIES));
+  const [crumbs, setCrumbs] = useState<
+    Array<{ label: string; path: string | null }>
+  >([]);
+  const ALL_CATEGORIES: ArtifactCategory[] = [
+    "image",
+    "video",
+    "audio",
+    "document",
+    "slide",
+  ];
+  const [activeFilters, setActiveFilters] = useState<Set<ArtifactCategory>>(
+    new Set(ALL_CATEGORIES),
+  );
   const allSelected = ALL_CATEGORIES.every((c) => activeFilters.has(c));
 
   const toggleFilter = (cat: ArtifactCategory) => {
@@ -76,7 +91,9 @@ export function AssetsScreen() {
   const [syncing, setSyncing] = useState(false);
 
   // ── Cloud sync state ────────────────────────────────────────────────────────
-  const [syncInfoMap, setSyncInfoMap] = useState<Map<string, CloudSyncInfo>>(new Map());
+  const [syncInfoMap, setSyncInfoMap] = useState<Map<string, CloudSyncInfo>>(
+    new Map(),
+  );
   const [sharing, setSharing] = useState<ArtifactEntry | null>(null);
   const [movingEntry, setMovingEntry] = useState<ArtifactEntry | null>(null);
   const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
@@ -123,8 +140,12 @@ export function AssetsScreen() {
     invoke<ServiceProject[]>("list_service_projects")
       .then((list) => setProjects(list.filter((p) => p.closed_at_ms === null)))
       .catch(() => {});
-    invoke<ArtifactsSettings>("get_artifacts_settings").then(setSettings).catch(() => {});
-    invoke<StorageUsage>("get_storage_usage").then(setStorageUsage).catch(() => {});
+    invoke<ArtifactsSettings>("get_artifacts_settings")
+      .then(setSettings)
+      .catch(() => {});
+    invoke<StorageUsage>("get_storage_usage")
+      .then(setStorageUsage)
+      .catch(() => {});
   }, []);
 
   const loadEntries = useCallback(async () => {
@@ -132,7 +153,9 @@ export function AssetsScreen() {
     try {
       if (nav.kind === "cloud_branch" || nav.kind === "cloud_shared") {
         const section = nav.kind === "cloud_branch" ? "branch" : "shared";
-        const infos = await invoke<CloudSyncInfo[]>("list_cloud_artifacts", { section });
+        const infos = await invoke<CloudSyncInfo[]>("list_cloud_artifacts", {
+          section,
+        });
         setCloudEntries(infos);
         setEntries([]);
         return;
@@ -151,7 +174,9 @@ export function AssetsScreen() {
 
       let list: ArtifactEntry[] = [];
       if (nav.kind === "recent") {
-        list = await invoke<ArtifactEntry[]>("list_recent_artifacts", { limit: 50 });
+        list = await invoke<ArtifactEntry[]>("list_recent_artifacts", {
+          limit: 50,
+        });
       } else if (nav.kind === "starred") {
         list = await invoke<ArtifactEntry[]>("list_starred_artifacts");
       } else {
@@ -159,8 +184,14 @@ export function AssetsScreen() {
         if (nav.kind === "all" && parentPath === null) {
           // "All Assets" root: show both root-level folders (parent_path=NULL) and _local bucket files
           const [rootItems, localItems] = await Promise.all([
-            invoke<ArtifactEntry[]>("list_artifacts", { serviceId: null, parentPath: null }),
-            invoke<ArtifactEntry[]>("list_artifacts", { serviceId: null, parentPath: "_local" }),
+            invoke<ArtifactEntry[]>("list_artifacts", {
+              serviceId: null,
+              parentPath: null,
+            }),
+            invoke<ArtifactEntry[]>("list_artifacts", {
+              serviceId: null,
+              parentPath: "_local",
+            }),
           ]);
           // Merge and deduplicate by id
           const seen = new Set<string>();
@@ -170,7 +201,10 @@ export function AssetsScreen() {
             return true;
           });
         } else {
-          list = await invoke<ArtifactEntry[]>("list_artifacts", { serviceId: svcId, parentPath });
+          list = await invoke<ArtifactEntry[]>("list_artifacts", {
+            serviceId: svcId,
+            parentPath,
+          });
         }
       }
       setEntries(list);
@@ -185,12 +219,15 @@ export function AssetsScreen() {
     await Promise.all(
       list.map(async (e) => {
         try {
-          const info = await invoke<CloudSyncInfo | null>("get_cloud_sync_info", { artifactId: e.id });
+          const info = await invoke<CloudSyncInfo | null>(
+            "get_cloud_sync_info",
+            { artifactId: e.id },
+          );
           if (info) map.set(e.id, info);
         } catch {
           /* ignore */
         }
-      })
+      }),
     );
     setSyncInfoMap(map);
   };
@@ -207,7 +244,8 @@ export function AssetsScreen() {
     setDebouncedQuery("");
     setActiveFilters(new Set(ALL_CATEGORIES));
     setSelected(null);
-    if (n.kind !== "cloud_branch" && n.kind !== "cloud_shared") setCloudEntries([]);
+    if (n.kind !== "cloud_branch" && n.kind !== "cloud_shared")
+      setCloudEntries([]);
   };
 
   const handleNavigate = (e: ArtifactEntry) => {
@@ -268,7 +306,11 @@ export function AssetsScreen() {
   const handleNewFolder = async (name: string) => {
     const svcId = nav.kind === "service" ? nav.id : null;
     try {
-      await invoke("create_artifact_dir", { serviceId: svcId, parentPath, name });
+      await invoke("create_artifact_dir", {
+        serviceId: svcId,
+        parentPath,
+        name,
+      });
       setNewFolder(false);
       await loadEntries();
     } catch (err) {
@@ -299,9 +341,13 @@ export function AssetsScreen() {
   const handleSyncNow = async (e: ArtifactEntry) => {
     setError(null);
     try {
-      const updated = await invoke<CloudSyncInfo>("sync_artifact_now", { artifactId: e.id });
+      const updated = await invoke<CloudSyncInfo>("sync_artifact_now", {
+        artifactId: e.id,
+      });
       setSyncInfoMap((prev) => new Map(prev).set(e.id, updated));
-      invoke<StorageUsage>("get_storage_usage").then(setStorageUsage).catch(() => {});
+      invoke<StorageUsage>("get_storage_usage")
+        .then(setStorageUsage)
+        .catch(() => {});
     } catch (err) {
       setError(String(err));
     }
@@ -310,11 +356,19 @@ export function AssetsScreen() {
   const handleSyncAll = async () => {
     setSyncing(true);
     try {
-      const result = await invoke<{ total: number; succeeded: number; failed: number }>("sync_all_artifacts");
+      const result = await invoke<{
+        total: number;
+        succeeded: number;
+        failed: number;
+      }>("sync_all_artifacts");
       await loadEntries();
-      invoke<StorageUsage>("get_storage_usage").then(setStorageUsage).catch(() => {});
+      invoke<StorageUsage>("get_storage_usage")
+        .then(setStorageUsage)
+        .catch(() => {});
       if (result.failed > 0) {
-        setError(`Sync completed: ${result.succeeded}/${result.total} succeeded, ${result.failed} failed.`);
+        setError(
+          `Sync completed: ${result.succeeded}/${result.total} succeeded, ${result.failed} failed.`,
+        );
       }
     } catch (err) {
       setError(String(err));
@@ -399,14 +453,14 @@ export function AssetsScreen() {
       />
       <div
         data-qa="artifacts-root"
-        className="flex flex-col flex-1 overflow-hidden bg-bg text-ink font-sans"
+        className="flex flex-1 flex-col overflow-hidden bg-bg font-sans text-ink"
       >
         {/* ── Compact toolbar ────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-2 px-4 h-10 border-b border-line shrink-0 bg-bg-1">
+        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line bg-bg-1 px-4">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-1 text-[12px] flex-1 min-w-0 overflow-hidden">
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[12px]">
             <button
-              className="bg-transparent border-none text-ink font-medium font-sans text-[12px] shrink-0 cursor-pointer transition-colors hover:text-accent"
+              className="shrink-0 cursor-pointer border-none bg-transparent font-sans text-[12px] font-medium text-ink transition-colors hover:text-accent"
               onClick={() => {
                 handleNav({ kind: "all" });
               }}
@@ -415,9 +469,9 @@ export function AssetsScreen() {
             </button>
             {nav.kind === "service" && (
               <>
-                <span className="text-muted mx-[2px]">/</span>
+                <span className="mx-[2px] text-muted">/</span>
                 <button
-                  className="bg-transparent border-none text-ink-3 cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-accent whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px]"
+                  className="max-w-[160px] cursor-pointer overflow-hidden rounded border-none bg-transparent px-[3px] py-[2px] font-sans text-[12px] text-ellipsis whitespace-nowrap text-ink-3 transition-colors hover:text-accent"
                   onClick={() => handleCrumb(-1)}
                 >
                   {nav.name}
@@ -425,10 +479,10 @@ export function AssetsScreen() {
               </>
             )}
             {crumbs.map((c, i) => (
-              <span key={i} className="flex items-center gap-[3px] shrink-0">
+              <span key={i} className="flex shrink-0 items-center gap-[3px]">
                 <span className="text-muted">/</span>
                 <button
-                  className="bg-transparent border-none text-ink cursor-pointer font-sans text-[12px] px-[3px] py-[2px] rounded transition-colors hover:text-accent whitespace-nowrap"
+                  className="cursor-pointer rounded border-none bg-transparent px-[3px] py-[2px] font-sans text-[12px] whitespace-nowrap text-ink transition-colors hover:text-accent"
                   onClick={() => handleCrumb(i)}
                 >
                   {c.label}
@@ -438,11 +492,11 @@ export function AssetsScreen() {
           </div>
 
           {/* Right tools */}
-          <div className="flex items-center gap-[6px] shrink-0">
+          <div className="flex shrink-0 items-center gap-[6px]">
             {showSearch && (
               <input
                 data-qa="artifacts-search"
-                className="bg-bg-2 border border-line rounded text-ink font-sans text-[11px] px-[8px] py-[4px] w-[160px] outline-none transition-colors focus:border-accent focus:outline-none placeholder:text-muted"
+                className="w-[160px] rounded border border-line bg-bg-2 px-[8px] py-[4px] font-sans text-[11px] text-ink transition-colors outline-none placeholder:text-muted focus:border-accent focus:outline-none"
                 type="search"
                 placeholder="Search files..."
                 value={query}
@@ -454,7 +508,7 @@ export function AssetsScreen() {
               />
             )}
             <button
-              className="bg-transparent border-none text-ink-3 cursor-pointer transition-colors hover:text-ink p-1 rounded"
+              className="cursor-pointer rounded border-none bg-transparent p-1 text-ink-3 transition-colors hover:text-ink"
               onClick={() => setShowSearch((v) => !v)}
               title="Search"
             >
@@ -462,10 +516,10 @@ export function AssetsScreen() {
             </button>
             <button
               className={[
-                "flex items-center gap-[5px] font-sans text-[11px] px-[10px] py-[5px] rounded border cursor-pointer transition-colors disabled:cursor-not-allowed",
+                "flex cursor-pointer items-center gap-[5px] rounded border px-[10px] py-[5px] font-sans text-[11px] transition-colors disabled:cursor-not-allowed",
                 syncing
-                  ? "text-accent border-accent/40 bg-accent-soft"
-                  : "text-ink-3 border-line hover:text-ink hover:border-line-strong",
+                  ? "border-accent/40 bg-accent-soft text-accent"
+                  : "border-line text-ink-3 hover:border-line-strong hover:text-ink",
               ].join(" ")}
               onClick={handleSyncAll}
               disabled={syncing}
@@ -499,22 +553,24 @@ export function AssetsScreen() {
 
         {/* ── Body ───────────────────────────────────────────────────────────── */}
         <div className="flex flex-1 overflow-hidden">
-          <main className="flex-1 flex flex-col overflow-hidden bg-bg min-w-0">
+          <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-bg">
             {/* Section header */}
-            <div className="flex items-center justify-between px-5 py-[10px] border-b border-line shrink-0">
-              <div className="flex flex-col min-w-0">
-                <h1 className="font-serif text-xl text-ink m-0 leading-[1.3] overflow-hidden text-ellipsis whitespace-nowrap max-w-[280px]">
+            <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-[10px]">
+              <div className="flex min-w-0 flex-col">
+                <h1 className="m-0 max-w-[280px] overflow-hidden font-serif text-xl leading-[1.3] text-ellipsis whitespace-nowrap text-ink">
                   {sectionTitle}
                 </h1>
                 {entries.length > 0 && (
-                  <span className="text-[11px] text-muted font-mono mt-[1px]">
+                  <span className="mt-[1px] font-mono text-[11px] text-muted">
                     {entries.length} asset{entries.length !== 1 ? "s" : ""}
-                    {totalSize > 0 ? ` \u00B7 ${formatStorageBytes(totalSize)}` : ""}
+                    {totalSize > 0
+                      ? ` \u00B7 ${formatStorageBytes(totalSize)}`
+                      : ""}
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex shrink-0 items-center gap-1.5">
                 {/* Filter dropdown */}
                 <FilterDropdown
                   activeFilters={activeFilters}
@@ -525,19 +581,19 @@ export function AssetsScreen() {
 
                 {/* New + Upload */}
                 <div className="relative">
-                  <div className="flex rounded overflow-hidden border border-accent/30">
+                  <div className="flex overflow-hidden rounded border border-accent/30">
                     <button
-                      className="flex items-center gap-[5px] bg-accent text-accent-foreground font-sans text-[11px] font-semibold px-[10px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1] border-r border-accent/50"
+                      className="flex cursor-pointer items-center gap-[5px] border-r border-accent/50 bg-accent px-[10px] py-[5px] font-sans text-[11px] font-semibold text-accent-foreground transition-[filter] hover:brightness-[1.1]"
                       onClick={() => setNewFolder(true)}
                     >
                       + New
                     </button>
                     <button
-                      className="bg-accent/90 text-accent-foreground px-[6px] py-[5px] cursor-pointer transition-[filter] hover:brightness-[1.1]"
+                      className="cursor-pointer bg-accent/90 px-[6px] py-[5px] text-accent-foreground transition-[filter] hover:brightness-[1.1]"
                       onClick={() => setShowNewMenu((v) => !v)}
                       title="More options"
                     >
-                      <ChevronDownIcon className="w-3 h-3 shrink-0" />
+                      <ChevronDownIcon className="h-3 w-3 shrink-0" />
                     </button>
                   </div>
                   {showNewMenu && (
@@ -548,7 +604,7 @@ export function AssetsScreen() {
                   )}
                 </div>
                 <button
-                  className="flex items-center gap-[5px] bg-transparent border border-line text-ink-3 font-sans text-[11px] px-[10px] py-[5px] rounded cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+                  className="flex cursor-pointer items-center gap-[5px] rounded border border-line bg-transparent px-[10px] py-[5px] font-sans text-[11px] text-ink-3 transition-colors hover:border-line-strong hover:text-ink"
                   onClick={handleUpload}
                   title="Upload files"
                 >
@@ -566,7 +622,7 @@ export function AssetsScreen() {
             </div>
 
             {error && (
-              <p className="text-[11px] text-danger px-5 py-[6px] m-0 border-b border-danger/20 shrink-0">
+              <p className="m-0 shrink-0 border-b border-danger/20 px-5 py-[6px] text-[11px] text-danger">
                 {error}
               </p>
             )}
@@ -574,38 +630,38 @@ export function AssetsScreen() {
             {/* Content + Preview */}
             <div className="flex flex-1 overflow-hidden">
               {/* File list / grid */}
-              <div className="relative flex-1 flex flex-col overflow-hidden min-w-0">
+              <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
                 {/* Cloud panels */}
                 {(nav.kind === "cloud_branch" ||
                   nav.kind === "cloud_shared") && (
                   <div className="flex-1 overflow-y-auto py-2">
                     {cloudEntries.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center text-muted text-xs py-12 gap-2">
-                        <CloudIcon className="w-8 h-8 text-muted/50" />
+                      <div className="flex flex-col items-center justify-center gap-2 py-12 text-xs text-muted">
+                        <CloudIcon className="h-8 w-8 text-muted/50" />
                         <p className="m-0">No synced files in this section.</p>
                       </div>
                     ) : (
                       cloudEntries.map((info) => (
                         <div
                           key={info.artifact_id}
-                          className="flex items-center gap-[10px] px-5 py-[8px] border-b border-line text-[12px] hover:bg-bg-2 transition-colors"
+                          className="flex items-center gap-[10px] border-b border-line px-5 py-[8px] text-[12px] transition-colors hover:bg-bg-2"
                         >
                           <SyncCell info={info} />
                           <span
-                            className="flex-1 text-ink overflow-hidden text-ellipsis whitespace-nowrap"
+                            className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-ink"
                             title={info.cloud_key ?? ""}
                           >
                             {info.cloud_key?.split("/").pop() ??
                               info.artifact_id}
                           </span>
-                          <span className="text-[11px] text-ink-3 font-mono shrink-0">
+                          <span className="shrink-0 font-mono text-[11px] text-ink-3">
                             {info.last_synced_ms
                               ? `Synced ${formatDate(info.last_synced_ms)}`
                               : "Not yet synced"}
                           </span>
                           {info.sync_error && (
                             <span
-                              className="flex items-center gap-1 text-[11px] text-danger shrink-0"
+                              className="flex shrink-0 items-center gap-1 text-[11px] text-danger"
                               title={info.sync_error}
                             >
                               <AlertTriangleIcon className={iconCls} />{" "}
@@ -677,10 +733,10 @@ export function AssetsScreen() {
         )}
 
         {/* ── Full-width footer ───────────────────────────────────────────────── */}
-        <footer className="flex items-center justify-between px-4 h-[26px] border-t border-line bg-bg-1 shrink-0 gap-4">
+        <footer className="flex h-[26px] shrink-0 items-center justify-between gap-4 border-t border-line bg-bg-1 px-4">
           {/* Left: path */}
-          <span className="flex items-center gap-[6px] font-mono text-[10px] text-muted min-w-0 overflow-hidden">
-            <span className="w-[5px] h-[5px] rounded-full bg-muted/60 shrink-0" />
+          <span className="flex min-w-0 items-center gap-[6px] overflow-hidden font-mono text-[10px] text-muted">
+            <span className="h-[5px] w-[5px] shrink-0 rounded-full bg-muted/60" />
             {settings ? (
               <span
                 className="overflow-hidden text-ellipsis whitespace-nowrap"
@@ -700,15 +756,15 @@ export function AssetsScreen() {
           </span>
 
           {/* Right: sync status + branch */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex shrink-0 items-center gap-3">
             {lastSyncLabel && (
-              <span className="flex items-center gap-[4px] text-[10px] text-muted font-mono">
-                <RefreshCwIcon className="w-2.5 h-2.5 shrink-0" />
+              <span className="flex items-center gap-[4px] font-mono text-[10px] text-muted">
+                <RefreshCwIcon className="h-2.5 w-2.5 shrink-0" />
                 {lastSyncLabel}
               </span>
             )}
-            <span className="flex items-center gap-[5px] text-[10px] text-muted font-mono">
-              <span className="w-[5px] h-[5px] rounded-full bg-accent/60 shrink-0" />
+            <span className="flex items-center gap-[5px] font-mono text-[10px] text-muted">
+              <span className="h-[5px] w-[5px] shrink-0 rounded-full bg-accent/60" />
               Downtown Branch
             </span>
           </div>

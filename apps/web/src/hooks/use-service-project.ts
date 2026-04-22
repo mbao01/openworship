@@ -14,7 +14,9 @@ export interface UseServiceProjectReturn {
   loading: boolean;
   open: (id: string) => Promise<void>;
   close: () => Promise<void>;
-  addItem: (item: Omit<ProjectItem, "id" | "position" | "added_at_ms">) => Promise<void>;
+  addItem: (
+    item: Omit<ProjectItem, "id" | "position" | "added_at_ms">,
+  ) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   reorder: (ids: string[]) => Promise<void>;
 }
@@ -42,32 +44,42 @@ export function useServiceProject(): UseServiceProjectReturn {
     refresh().finally(() => setLoading(false));
   }, [refresh]);
 
-  const open = useCallback(async (id: string) => {
-    await openServiceProject(id);
-    await refresh();
-  }, [refresh]);
+  const open = useCallback(
+    async (id: string) => {
+      await openServiceProject(id);
+      await refresh();
+    },
+    [refresh],
+  );
 
   const close = useCallback(async () => {
     await closeActiveProject();
     setProject(null);
   }, []);
 
-  const addItem = useCallback(async (
-    item: Omit<ProjectItem, "id" | "position" | "added_at_ms">
-  ) => {
-    await addItemToActiveProject(item.reference, item.text, item.translation);
-    await refresh();
-  }, [refresh]);
+  const addItem = useCallback(
+    async (item: Omit<ProjectItem, "id" | "position" | "added_at_ms">) => {
+      await addItemToActiveProject(item.reference, item.text, item.translation);
+      await refresh();
+    },
+    [refresh],
+  );
 
-  const removeItem = useCallback(async (id: string) => {
-    await removeItemFromActiveProject(id);
-    await refresh();
-  }, [refresh]);
+  const removeItem = useCallback(
+    async (id: string) => {
+      await removeItemFromActiveProject(id);
+      await refresh();
+    },
+    [refresh],
+  );
 
-  const reorder = useCallback(async (ids: string[]) => {
-    await reorderActiveProjectItems(ids);
-    await refresh();
-  }, [refresh]);
+  const reorder = useCallback(
+    async (ids: string[]) => {
+      await reorderActiveProjectItems(ids);
+      await refresh();
+    },
+    [refresh],
+  );
 
   return { project, loading, open, close, addItem, removeItem, reorder };
 }

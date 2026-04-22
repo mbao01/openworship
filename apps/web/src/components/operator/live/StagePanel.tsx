@@ -41,7 +41,7 @@ function StageBtn({
     <button className={cls} onClick={onClick} disabled={disabled}>
       {label}
       {kbd && (
-        <kbd className="font-mono text-[8.5px] px-1 py-px rounded-sm bg-bg-4 text-ink-3">
+        <kbd className="rounded-sm bg-bg-4 px-1 py-px font-mono text-[8.5px] text-ink-3">
           {kbd}
         </kbd>
       )}
@@ -93,9 +93,9 @@ function ScaledPreview({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full aspect-video overflow-hidden border border-line-strong ${
+      className={`relative aspect-video w-full overflow-hidden border border-line-strong ${
         dimmed
-          ? "opacity-[0.85] hover:opacity-[0.95] border-[rgba(201,167,106,0.35)]"
+          ? "border-[rgba(201,167,106,0.35)] opacity-[0.85] hover:opacity-[0.95]"
           : ""
       }`}
       style={{
@@ -120,14 +120,14 @@ function ScaledPreview({
       </div>
       {/* Label overlay — rendered at preview scale, not inside the 1920×1080 content */}
       <div
-        className="absolute top-0 left-0 right-0 z-20 px-4 py-2 flex justify-between font-mono text-[9.5px] tracking-[0.18em] uppercase"
+        className="absolute top-0 right-0 left-0 z-20 flex justify-between px-4 py-2 font-mono text-[9.5px] tracking-[0.18em] uppercase"
         style={{
           color: dimmed ? "rgba(201,167,106,0.75)" : "rgba(245,239,223,0.5)",
         }}
       >
         <span className="inline-flex items-center gap-1">
           {label === "LIVE" && (
-            <CircleIcon className="w-2 h-2 shrink-0 animate-pulse fill-live" />
+            <CircleIcon className="h-2 w-2 shrink-0 animate-pulse fill-live" />
           )}
           {label} · {sublabel}
         </span>
@@ -198,23 +198,23 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
   }, [pending, approve, skip, rejectLive, toggleBlackout]);
 
   return (
-    <section className="flex-1 flex flex-col bg-bg overflow-hidden">
-      <div className="flex justify-between items-center px-3.5 py-2 h-[29px] font-mono text-[9.5px] tracking-[0.12em] uppercase text-ink-3 bg-bg-1 border-b border-line">
+    <section className="flex flex-1 flex-col overflow-hidden bg-bg">
+      <div className="flex h-[29px] items-center justify-between border-b border-line bg-bg-1 px-3.5 py-2 font-mono text-[9.5px] tracking-[0.12em] text-ink-3 uppercase">
         <span>
-          <span className="inline-block w-[5px] h-[5px] rounded-full bg-accent mr-1.5" />
+          <span className="mr-1.5 inline-block h-[5px] w-[5px] rounded-full bg-accent" />
           {mode.toUpperCase()} MODE · listening · rolling 10s context
         </span>
         <span>DISPLAY OUTPUT</span>
       </div>
 
       <div
-        className="flex-1 gap-2 p-4 flex items-center justify-center overflow-hidden"
+        className="flex flex-1 items-center justify-center gap-2 overflow-hidden p-4"
         style={{
           background:
             "repeating-linear-gradient(45deg, var(--color-bg-1) 0 1px, transparent 1px 10px), var(--color-bg)",
         }}
       >
-        <div className="w-full max-w-[760px] h-full flex flex-col gap-3.5 justify-center">
+        <div className="flex h-full w-full max-w-[760px] flex-col justify-center gap-3.5">
           <ScaledPreview
             item={live}
             backgroundValue={liveBgValue}
@@ -232,13 +232,13 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 px-4 py-2.5 border-t border-line bg-bg-1 h-[52px] shrink-0">
+      <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-t border-line bg-bg-1 px-4 py-2.5">
         <div className="flex gap-1">
           <button
-            className={`relative inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase border rounded cursor-pointer transition-colors ${
+            className={`relative inline-flex cursor-pointer items-center gap-1.5 rounded border px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase transition-colors ${
               blackout
-                ? "text-ink-3 bg-bg-2 border-line hover:bg-bg-3"
-                : "text-white bg-live border-live"
+                ? "border-line bg-bg-2 text-ink-3 hover:bg-bg-3"
+                : "border-live bg-live text-white"
             }`}
             onClick={() =>
               toggleBlackout().catch(toastError("Failed to toggle live"))
@@ -246,14 +246,14 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
             title={blackout ? "Turn live on (B)" : "Turn live off (B)"}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                blackout ? "bg-ink-3" : "bg-white animate-[blink_1.4s_infinite]"
+              className={`h-1.5 w-1.5 rounded-full ${
+                blackout ? "bg-ink-3" : "animate-[blink_1.4s_infinite] bg-white"
               }`}
             />
             {blackout ? "OFF AIR" : "LIVE"}
           </button>
         </div>
-        <div className="flex gap-1 pl-2.5 ml-1.5 border-l border-line">
+        <div className="ml-1.5 flex gap-1 border-l border-line pl-2.5">
           <StageBtn
             primary
             label="Push next"
@@ -278,20 +278,20 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
             onClick={() => rejectLive().catch(toastError("Failed to reject"))}
           />
         </div>
-        <div className="flex gap-1 pl-2.5 ml-1.5 border-l border-line">
+        <div className="ml-1.5 flex gap-1 border-l border-line pl-2.5">
           <StageBtn
             label="Clear"
             onClick={() => clearLive().catch(toastError("Failed to clear"))}
           />
         </div>
-        <div className="pl-2.5 ml-1.5 border-l border-line">
+        <div className="ml-1.5 border-l border-line pl-2.5">
           <BackgroundPicker bg={bg} />
         </div>
         <div className="flex-1" />
-        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-bg-2 border border-line rounded font-mono text-[10px] tracking-[0.1em] uppercase text-ink-2">
+        <div className="flex items-center gap-2 rounded border border-line bg-bg-2 px-2.5 py-1.5 font-mono text-[10px] tracking-[0.1em] text-ink-2 uppercase">
           Translation
           <select
-            className="bg-transparent border-0 text-accent font-mono text-[10px] tracking-[0.1em] uppercase p-0 outline-0 cursor-pointer"
+            className="cursor-pointer border-0 bg-transparent p-0 font-mono text-[10px] tracking-[0.1em] text-accent uppercase outline-0"
             value={activeTranslation}
             onChange={(e) =>
               setActiveTranslation(e.target.value).catch(

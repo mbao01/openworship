@@ -128,8 +128,10 @@ export function useTheme(): UseThemeReturn {
           savePrefs(next);
         }
       })
-      .catch(() => {/* use localStorage default */});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch(() => {
+        /* use localStorage default */
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // OS appearance changes in System mode
@@ -160,7 +162,7 @@ export function useTheme(): UseThemeReturn {
         }
       }
     },
-    [prefs]
+    [prefs],
   );
 
   return {

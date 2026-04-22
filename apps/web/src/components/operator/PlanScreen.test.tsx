@@ -93,9 +93,7 @@ describe("PlanScreen", () => {
   });
 
   it("shows empty state when no projects exist", async () => {
-    const { listServiceProjects } = await import(
-      "@/lib/commands/projects"
-    );
+    const { listServiceProjects } = await import("@/lib/commands/projects");
     (listServiceProjects as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
 
     render(<PlanScreen />);

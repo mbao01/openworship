@@ -4,7 +4,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 const mockGetAudioLevel = vi.fn<() => Promise<number>>();
 
 vi.mock("@/lib/commands/audio", () => ({
-  getAudioLevel: (...args: unknown[]) => mockGetAudioLevel(...args as []),
+  getAudioLevel: (...args: unknown[]) => mockGetAudioLevel(...(args as [])),
 }));
 
 import { useAudioLevel } from "./use-audio-level";

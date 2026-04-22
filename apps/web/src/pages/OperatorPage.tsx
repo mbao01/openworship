@@ -55,7 +55,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
   return (
     <div
       data-qa="operator-root"
-      className="flex flex-col h-screen bg-bg text-ink font-sans overflow-hidden"
+      className="flex h-screen flex-col overflow-hidden bg-bg font-sans text-ink"
     >
       <TopBar
         mode={mode}
@@ -68,7 +68,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
           screen={settingsOpen ? "settings" : screen}
           onScreenChange={handleScreenChange}
         />
-        <main className="flex-1 flex overflow-hidden bg-bg">
+        <main className="flex flex-1 overflow-hidden bg-bg">
           {screen === "live" && <LiveScreen mode={mode} />}
           {screen === "plan" && <PlanScreen />}
           {screen === "preview" && (
