@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { Popover } from "radix-ui";
 import { PaletteIcon, UploadIcon, XIcon } from "lucide-react";
 import type { UseDisplayBackgroundReturn } from "../../../hooks/use-display-background";
 import type { BackgroundInfo } from "../../../lib/commands/display";
@@ -34,7 +35,8 @@ function BackgroundTile({
     >
       {isGradient ? (
         <div className="h-full w-full" style={{ background: bg.value }} />
-      ) : bg.value.startsWith("blob:") || bg.value.startsWith("data:image/") ? (
+      ) : bg.value.startsWith("blob:") ||
+        bg.value.startsWith("data:image/") ? (
         <img
           src={bg.value}
           alt={bg.name}
@@ -62,7 +64,6 @@ function BackgroundTile({
 export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"presets" | "uploaded">("presets");
-  const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -75,18 +76,6 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
     clearBackground,
     upload,
   } = bg;
-
-  // Click outside to close
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -103,22 +92,28 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
   const items = tab === "presets" ? presets : uploaded;
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        className={`inline-flex cursor-pointer items-center gap-1.5 rounded border px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase transition-colors ${
-          open
-            ? "border-accent bg-accent-soft text-accent"
-            : "border-line bg-bg-2 text-ink-2 hover:border-line-strong hover:bg-bg-3 hover:text-ink"
-        }`}
-        onClick={() => setOpen(!open)}
-        title="Display background"
-      >
-        <PaletteIcon className="h-3.5 w-3.5" />
-      </button>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className={`inline-flex cursor-pointer items-center gap-1.5 rounded border px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase transition-colors ${
+            open
+              ? "border-accent bg-accent-soft text-accent"
+              : "border-line bg-bg-2 text-ink-2 hover:border-line-strong hover:bg-bg-3 hover:text-ink"
+          }`}
+          title="Display background"
+        >
+          <PaletteIcon className="h-3.5 w-3.5" />
+        </button>
+      </Popover.Trigger>
 
-      {open && (
-        <div className="absolute right-0 bottom-full z-[200] mb-2 w-[320px] overflow-hidden rounded-lg border border-line bg-bg-1 shadow-xl">
+      <Popover.Portal>
+        <Popover.Content
+          side="top"
+          align="end"
+          sideOffset={8}
+          className="z-[9999] w-[320px] overflow-hidden rounded-lg border border-line bg-bg-1 shadow-xl"
+        >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-line px-3 py-2">
             <span className="font-mono text-[10px] tracking-[0.12em] text-ink-2 uppercase">
@@ -133,13 +128,14 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
               >
                 <UploadIcon className="h-3.5 w-3.5" />
               </button>
-              <button
-                type="button"
-                className="cursor-pointer rounded p-1 text-ink-3 transition-colors hover:bg-bg-2 hover:text-ink"
-                onClick={() => setOpen(false)}
-              >
-                <XIcon className="h-3.5 w-3.5" />
-              </button>
+              <Popover.Close asChild>
+                <button
+                  type="button"
+                  className="cursor-pointer rounded p-1 text-ink-3 transition-colors hover:bg-bg-2 hover:text-ink"
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                </button>
+              </Popover.Close>
             </div>
           </div>
 
@@ -220,8 +216,8 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
             className="hidden"
             onChange={handleFileChange}
           />
-        </div>
-      )}
-    </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

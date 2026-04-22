@@ -12,6 +12,8 @@ const mockClearQueue = vi.fn().mockResolvedValue(undefined);
 const mockNextItem = vi.fn().mockResolvedValue(undefined);
 const mockPrevItem = vi.fn().mockResolvedValue(undefined);
 const mockRejectLiveItem = vi.fn().mockResolvedValue(undefined);
+const mockGetBlackout = vi.fn<() => Promise<boolean>>().mockResolvedValue(false);
+const mockToggleBlackout = vi.fn<() => Promise<boolean>>().mockResolvedValue(false);
 
 vi.mock("@/lib/commands/detection", () => ({
   getQueue: (...args: unknown[]) => mockGetQueue(...(args as [])),
@@ -23,6 +25,8 @@ vi.mock("@/lib/commands/detection", () => ({
   nextItem: (...args: unknown[]) => mockNextItem(...args),
   prevItem: (...args: unknown[]) => mockPrevItem(...args),
   rejectLiveItem: (...args: unknown[]) => mockRejectLiveItem(...args),
+  getBlackout: (...args: unknown[]) => mockGetBlackout(...(args as [])),
+  toggleBlackout: (...args: unknown[]) => mockToggleBlackout(...(args as [])),
 }));
 
 // Mock the Tauri event listener

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { MicOffIcon } from "lucide-react";
+import { getSttStatus } from "../../../lib/commands/audio";
 import type { TranscriptEvent } from "../../../lib/types";
 
 export function TranscriptBody() {
@@ -11,6 +12,19 @@ export function TranscriptBody() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [sentences]);
+
+  // Poll STT status so we show "listening" even before the first transcript arrives
+  useEffect(() => {
+    getSttStatus()
+      .then((s) => setMicActive(s === "running"))
+      .catch(() => {});
+    const id = setInterval(() => {
+      getSttStatus()
+        .then((s) => setMicActive(s === "running"))
+        .catch(() => {});
+    }, 2000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     let unlisten: UnlistenFn | null = null;

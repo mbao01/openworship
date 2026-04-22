@@ -16,6 +16,12 @@ export function QueueTranscriptPanel() {
     getSttStatus()
       .then((s) => setMicActive(s === "running"))
       .catch(() => {});
+    const id = setInterval(() => {
+      getSttStatus()
+        .then((s) => setMicActive(s === "running"))
+        .catch(() => {});
+    }, 2000);
+    return () => clearInterval(id);
   }, []);
 
   const handleMicToggle = async () => {
@@ -23,8 +29,12 @@ export function QueueTranscriptPanel() {
       await stopStt().catch(() => {});
       setMicActive(false);
     } else {
-      await startStt().catch(() => {});
-      setMicActive(true);
+      try {
+        await startStt();
+        setMicActive(true);
+      } catch (e) {
+        toastError("Failed to start microphone")(e);
+      }
     }
   };
 

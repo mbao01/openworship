@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { DetectionMode } from "../../lib/types";
-import { getAudioLevel, startStt, stopStt } from "../../lib/commands/audio";
+import { startStt, stopStt } from "../../lib/commands/audio";
 import { getAudioSettings } from "../../lib/commands/settings";
 import { toastError } from "../../lib/toast";
+import { useAudioLevel } from "@/hooks/use-audio-level";
 
 interface TopBarProps {
   mode: DetectionMode;
@@ -26,8 +27,8 @@ export function TopBar({
   onOpenCmdK,
   onPush,
 }: TopBarProps) {
+  const audioLevel = useAudioLevel();
   const [micActive, setMicActive] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
   const [inputLabel, setInputLabel] = useState("INPUT");
 
   // Subscribe to stt://transcript events for mic_active state
@@ -42,20 +43,6 @@ export function TopBar({
       unlisten.then((fn) => fn());
     };
   }, []);
-
-  // Poll audio level at 100ms when mic is active
-  useEffect(() => {
-    if (!micActive) {
-      setAudioLevel(0);
-      return;
-    }
-    const id = setInterval(() => {
-      getAudioLevel()
-        .then(setAudioLevel)
-        .catch(() => {});
-    }, 100);
-    return () => clearInterval(id);
-  }, [micActive]);
 
   // Load audio settings on mount
   useEffect(() => {
@@ -81,8 +68,12 @@ export function TopBar({
       await stopStt().catch(() => {});
       setMicActive(false);
     } else {
-      await startStt().catch(() => {});
-      setMicActive(true);
+      try {
+        await startStt();
+        setMicActive(true);
+      } catch (e) {
+        toastError("Failed to start microphone")(e);
+      }
     }
   };
 
@@ -104,7 +95,7 @@ export function TopBar({
       </div>
 
       {/* Center: mode switcher + mic */}
-      <div className="flex items-center justify-center gap-2.5">
+      <div className="flex items-center justify-center gap-4">
         <div className="flex overflow-hidden rounded border border-line-strong bg-bg-2">
           {MODES.map((m) => (
             <button
@@ -123,7 +114,7 @@ export function TopBar({
 
         {/* Mic group */}
         <button
-          className="flex h-[52px] cursor-pointer items-center gap-2.5 border-l border-line pl-3 transition-colors hover:bg-bg-2/50"
+          className="flex cursor-pointer items-center gap-2.5 border-l border-line pl-3 transition-colors hover:bg-bg-2/50"
           onClick={handleMicToggle}
           title={micActive ? "Stop microphone" : "Start microphone"}
         >

@@ -17,7 +17,9 @@ import {
   SkipForwardIcon,
   XIcon,
   EraserIcon,
+  MonitorIcon,
 } from "lucide-react";
+import { useDisplayInfo } from "../../../hooks/use-display-info";
 
 function StageBtn({
   label,
@@ -175,6 +177,8 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
   const liveBgValue = resolveValue(activeId);
   const previewBgValue = previewId ? resolveValue(previewId) : liveBgValue;
 
+  const displayInfo = useDisplayInfo();
+
   // Keyboard shortcuts: Space→approve, X→skip, N→reject, B→blackout
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -213,7 +217,16 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
           <span className="mr-1.5 inline-block h-[5px] w-[5px] rounded-full bg-accent" />
           {mode.toUpperCase()} MODE · listening · rolling 10s context
         </span>
-        <span>DISPLAY OUTPUT</span>
+        <span className="inline-flex items-center gap-1.5">
+          <MonitorIcon className="h-3 w-3" />
+          DISPLAY OUTPUT
+          {displayInfo.monitor && (
+            <span className="text-ink-2">
+              · {displayInfo.monitor.width} × {displayInfo.monitor.height} ·{" "}
+              {displayInfo.monitor.name}
+            </span>
+          )}
+        </span>
       </div>
 
       <div
