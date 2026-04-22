@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import {
   getDisplayBackground,
   listPresetBackgrounds,
@@ -13,7 +13,7 @@ export interface UseDisplayBackgroundReturn {
   activeId: string | null;
   /** All preset backgrounds */
   presets: BackgroundInfo[];
-  /** All uploaded backgrounds (with blob URL values) */
+  /** All uploaded backgrounds (resolved values) */
   uploaded: BackgroundInfo[];
   /** Currently previewed background (before applying to live) */
   previewId: string | null;
@@ -25,16 +25,30 @@ export interface UseDisplayBackgroundReturn {
   clearBackground: () => Promise<void>;
   /** Upload a background from a native file path */
   upload: (sourcePath: string) => Promise<void>;
+  /** Lazy-load uploaded backgrounds (call when picker opens) */
+  loadUploaded: () => void;
   /** Whether data is loading */
   loading: boolean;
 }
 
 /**
- * Load artifact bytes via Tauri invoke and return a blob URL.
- * Returns null on failure.
+ * Resolve an artifact reference to a usable URL.
+ * Videos → convertFileSrc (no blob, streams from disk).
+ * Images → blob URL via read_artifact_bytes.
  */
-async function loadArtifactBlobUrl(artifactId: string): Promise<string | null> {
+async function resolveArtifactUrl(
+  artifactId: string,
+  bgType: string,
+): Promise<string | null> {
   try {
+    if (bgType === "video") {
+      // Videos: get the absolute path and use Tauri's asset protocol
+      const absPath = await invoke<string>("get_artifact_path", {
+        id: artifactId,
+      });
+      return convertFileSrc(absPath);
+    }
+    // Images: read bytes and create blob URL
     const bytes = await invoke<number[]>("read_artifact_bytes", {
       id: artifactId,
     });
@@ -46,8 +60,7 @@ async function loadArtifactBlobUrl(artifactId: string): Promise<string | null> {
 }
 
 /**
- * For uploaded backgrounds, resolve "artifact:{id}" values to blob URLs
- * so they can be rendered in <img> tags in the operator preview.
+ * Resolve uploaded background values to renderable URLs.
  */
 async function resolveUploadedValues(
   items: BackgroundInfo[],
@@ -56,10 +69,8 @@ async function resolveUploadedValues(
     items.map(async (bg) => {
       if (bg.value.startsWith("artifact:")) {
         const artId = bg.value.replace("artifact:", "");
-        const blobUrl = await loadArtifactBlobUrl(artId);
-        if (blobUrl) {
-          return { ...bg, value: blobUrl };
-        }
+        const url = await resolveArtifactUrl(artId, bg.bg_type);
+        if (url) return { ...bg, value: url };
       }
       return bg;
     }),
@@ -73,34 +84,37 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
   const [uploaded, setUploaded] = useState<BackgroundInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const blobUrls = useRef<string[]>([]);
+  const uploadedLoaded = useRef(false);
 
+  // Fast mount: load only presets + active background ID (no file I/O)
   useEffect(() => {
-    Promise.all([
-      getDisplayBackground(),
-      listPresetBackgrounds(),
-      listUploadedBackgrounds(),
-    ])
-      .then(async ([bg, p, u]) => {
+    Promise.all([getDisplayBackground(), listPresetBackgrounds()])
+      .then(([bg, p]) => {
         setActiveId(bg);
         setPresets(p);
-        // Resolve artifact references to blob URLs for operator preview
-        const resolved = await resolveUploadedValues(u);
-        // Track blob URLs for cleanup
-        for (const r of resolved) {
-          if (r.value.startsWith("blob:")) blobUrls.current.push(r.value);
-        }
-        setUploaded(resolved);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
 
     const urls = blobUrls.current;
     return () => {
-      // Revoke all blob URLs on unmount
-      for (const url of urls) {
-        URL.revokeObjectURL(url);
-      }
+      for (const url of urls) URL.revokeObjectURL(url);
     };
+  }, []);
+
+  // Lazy: load uploaded backgrounds on demand (called when picker opens)
+  const loadUploaded = useCallback(() => {
+    if (uploadedLoaded.current) return;
+    uploadedLoaded.current = true;
+    listUploadedBackgrounds()
+      .then(async (u) => {
+        const resolved = await resolveUploadedValues(u);
+        for (const r of resolved) {
+          if (r.value.startsWith("blob:")) blobUrls.current.push(r.value);
+        }
+        setUploaded(resolved);
+      })
+      .catch(() => {});
   }, []);
 
   const applyToLive = useCallback(async (id: string | null) => {
@@ -119,13 +133,12 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
     const info = await invoke<BackgroundInfo>("import_background_file", {
       sourcePath,
     });
-    // Resolve the new upload's artifact value to a blob URL
     if (info.value.startsWith("artifact:")) {
       const artId = info.value.replace("artifact:", "");
-      const blobUrl = await loadArtifactBlobUrl(artId);
-      if (blobUrl) {
-        blobUrls.current.push(blobUrl);
-        setUploaded((prev) => [...prev, { ...info, value: blobUrl }]);
+      const url = await resolveArtifactUrl(artId, info.bg_type);
+      if (url) {
+        if (url.startsWith("blob:")) blobUrls.current.push(url);
+        setUploaded((prev) => [...prev, { ...info, value: url }]);
         return;
       }
     }
@@ -141,6 +154,7 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
     applyToLive,
     clearBackground,
     upload,
+    loadUploaded,
     loading,
   };
 }

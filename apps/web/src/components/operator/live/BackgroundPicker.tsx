@@ -74,7 +74,14 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
     applyToLive,
     clearBackground,
     upload,
+    loadUploaded,
   } = bg;
+
+  // Lazy-load uploaded backgrounds when the popover first opens
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) loadUploaded();
+  };
 
   const handleUploadClick = async () => {
     const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
@@ -101,7 +108,7 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
   const items = tab === "presets" ? presets : uploaded;
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <Popover.Trigger asChild>
         <button
           type="button"

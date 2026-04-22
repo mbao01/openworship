@@ -71,7 +71,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
         <main className="relative flex flex-1 overflow-hidden bg-bg">
           {/* Live screen stays mounted (hidden via CSS) so background video keeps playing */}
           <div className={`flex flex-1 overflow-hidden ${screen !== "live" ? "invisible absolute inset-0" : ""}`}>
-            <LiveScreen mode={mode} />
+            <LiveScreen mode={mode} visible={screen === "live"} />
           </div>
           {screen === "plan" && <PlanScreen />}
           {screen === "preview" && (

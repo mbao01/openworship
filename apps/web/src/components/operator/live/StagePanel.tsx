@@ -151,7 +151,7 @@ function ScaledPreview({
   );
 }
 
-export function StagePanel({ mode }: { mode: DetectionMode }) {
+export function StagePanel({ mode, visible = true }: { mode: DetectionMode; visible?: boolean }) {
   const {
     queue,
     live,
@@ -187,7 +187,7 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
   const previewBgValue = previewId ? resolveValue(previewId) : liveBgValue;
   const previewBgType = previewId ? resolveType(previewId) : liveBgType;
 
-  const displayInfo = useDisplayInfo();
+  const displayInfo = useDisplayInfo(visible);
 
   // Keyboard shortcuts: Space→approve, X→skip, N→reject, B→blackout
   useEffect(() => {

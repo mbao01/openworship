@@ -3293,6 +3293,20 @@ pub fn open_artifact(id: String, state: State<'_, AppState>) -> Result<(), Strin
     Ok(())
 }
 
+/// Return the absolute filesystem path for an artifact.
+/// Used by the frontend to create `convertFileSrc()` URLs for video streaming.
+#[tauri::command]
+pub fn get_artifact_path(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = db.get_by_id(&id).map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("artifact not found: {id}"))?;
+    let abs = db.abs_path(&entry.path);
+    Ok(abs.to_string_lossy().into_owned())
+}
+
 /// Read an artifact's raw bytes. Used by the frontend preview panel to render
 /// images, videos, etc. via blob URLs when the asset:// protocol is unavailable.
 #[tauri::command]

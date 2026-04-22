@@ -5,19 +5,20 @@ import { QueueTranscriptPanel } from "./live/QueueTranscriptPanel";
 
 interface LiveScreenProps {
   mode: DetectionMode;
+  visible?: boolean;
 }
 
-export function LiveScreen({ mode }: LiveScreenProps) {
+export function LiveScreen({ mode, visible = true }: LiveScreenProps) {
   return (
     <>
       <div data-qa="operator-col-left" className="flex shrink-0">
         <LibraryPanel />
       </div>
       <div data-qa="operator-col-center" className="flex min-w-0 flex-1">
-        <StagePanel mode={mode} />
+        <StagePanel mode={mode} visible={visible} />
       </div>
       <div data-qa="operator-col-right" className="flex shrink-0">
-        <QueueTranscriptPanel />
+        <QueueTranscriptPanel visible={visible} />
       </div>
     </>
   );

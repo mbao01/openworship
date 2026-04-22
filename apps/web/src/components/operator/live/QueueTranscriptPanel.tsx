@@ -7,12 +7,13 @@ import { QueueItemCard } from "./QueueItemCard";
 import { ContextPanel } from "./ContextPanel";
 import { TranscriptBody } from "./TranscriptBody";
 
-export function QueueTranscriptPanel() {
+export function QueueTranscriptPanel({ visible: isVisible = true }: { visible?: boolean }) {
   const { queue, live, approve, skip } = useQueue();
-  const visible = [...(live ? [live] : []), ...queue].slice(0, 10);
+  const visibleItems = [...(live ? [live] : []), ...queue].slice(0, 10);
   const [micActive, setMicActive] = useState(false);
 
   useEffect(() => {
+    if (!isVisible) return;
     getSttStatus()
       .then((s) => setMicActive(s === "running"))
       .catch(() => {});
@@ -22,7 +23,7 @@ export function QueueTranscriptPanel() {
         .catch(() => {});
     }, 2000);
     return () => clearInterval(id);
-  }, []);
+  }, [isVisible]);
 
   const handleMicToggle = async () => {
     if (micActive) {
@@ -47,14 +48,14 @@ export function QueueTranscriptPanel() {
           <strong className="font-medium text-ink-2">AI-detected</strong>
         </span>
         <span className="font-mono text-[10px] text-ink-3">
-          {visible.length} items
+          {visibleItems.length} items
         </span>
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Queue items - equal third */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {visible.map((item) => (
+          {visibleItems.map((item) => (
             <QueueItemCard
               key={item.id}
               item={item}
@@ -66,7 +67,7 @@ export function QueueTranscriptPanel() {
               }
             />
           ))}
-          {visible.length === 0 && (
+          {visibleItems.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-2 px-3.5 py-6 text-xs text-muted">
               <SearchIcon className="h-5 w-5" />
               No detections yet
@@ -106,7 +107,7 @@ export function QueueTranscriptPanel() {
 
         {/* Transcript body - equal third */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <TranscriptBody />
+          <TranscriptBody micActive={micActive} />
         </div>
       </div>
     </section>

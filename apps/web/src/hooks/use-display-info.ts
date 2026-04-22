@@ -16,17 +16,18 @@ const POLL_MS = 5000;
 
 /**
  * Polls the display window state and active monitor info.
- * Returns the current display output status for use in panel headers.
+ * Skips polling when `visible` is false to save resources.
  */
-export function useDisplayInfo(): DisplayInfo {
+export function useDisplayInfo(visible = true): DisplayInfo {
   const [info, setInfo] = useState<DisplayInfo>({ open: false, monitor: null });
 
   useEffect(() => {
+    if (!visible) return;
+
     let active = true;
 
     const refresh = async () => {
       try {
-        // Check open state first (fast) — only fetch monitors if open
         const open = await getDisplayWindowOpen();
         if (!active) return;
         if (!open) {
@@ -39,11 +40,10 @@ export function useDisplayInfo(): DisplayInfo {
           monitors.find((m) => !m.is_primary) ?? monitors[0] ?? null;
         setInfo({ open: true, monitor });
       } catch {
-        // ignore — display commands may not be available in test/web mode
+        // ignore
       }
     };
 
-    // Delay initial load so it doesn't block screen mount
     const initial = setTimeout(refresh, 100);
     const id = setInterval(refresh, POLL_MS);
     return () => {
@@ -51,7 +51,7 @@ export function useDisplayInfo(): DisplayInfo {
       clearTimeout(initial);
       clearInterval(id);
     };
-  }, []);
+  }, [visible]);
 
   return info;
 }

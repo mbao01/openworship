@@ -384,13 +384,16 @@ fn resolve_bg_for_display(bg_id: &str, artifacts_db: &std::sync::Arc<Mutex<Artif
             return preset.value.clone();
         }
     }
-    // Artifact → base64 data URL
+    // Artifact → localfile: URL for videos, base64 data URL for images
     if let Some(artifact_id) = bg_id.strip_prefix("artifact:") {
         if let Ok(db) = artifacts_db.lock() {
             if let Ok(Some(entry)) = db.get_by_id(artifact_id) {
                 let abs_path = db.abs_path(&entry.path);
+                let mime = entry.mime_type.as_deref().unwrap_or("image/jpeg");
+                if mime.starts_with("video/") {
+                    return format!("localfile:{}", abs_path.display());
+                }
                 if let Ok(bytes) = std::fs::read(&abs_path) {
-                    let mime = entry.mime_type.as_deref().unwrap_or("image/jpeg");
                     use base64::Engine;
                     let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
                     return format!("data:{mime};base64,{b64}");

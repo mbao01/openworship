@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { toastError } from "@/lib/toast";
 import type {
@@ -85,13 +85,17 @@ export function PlanScreen() {
   const isReadOnly = selectedProject?.closed_at_ms !== null;
 
   // Sort: open projects first (desc by created_at_ms), then closed (desc)
-  const sortedProjects = [...projects].sort((a, b) => {
-    const aOpen = a.closed_at_ms === null;
-    const bOpen = b.closed_at_ms === null;
-    if (aOpen && !bOpen) return -1;
-    if (!aOpen && bOpen) return 1;
-    return b.created_at_ms - a.created_at_ms;
-  });
+  const sortedProjects = useMemo(
+    () =>
+      [...projects].sort((a, b) => {
+        const aOpen = a.closed_at_ms === null;
+        const bOpen = b.closed_at_ms === null;
+        if (aOpen && !bOpen) return -1;
+        if (!aOpen && bOpen) return 1;
+        return b.created_at_ms - a.created_at_ms;
+      }),
+    [projects],
+  );
 
   const handleCreate = async (name: string) => {
     try {

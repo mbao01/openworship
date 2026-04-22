@@ -129,6 +129,7 @@ export function DisplayContent({
           backgroundValue.includes("asset.localhost") ||
           (backgroundValue.startsWith("blob:") && backgroundType === "video") ? (
             <video
+              key={backgroundValue}
               src={backgroundValue}
               autoPlay
               loop

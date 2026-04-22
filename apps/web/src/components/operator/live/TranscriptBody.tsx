@@ -1,36 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { MicOffIcon } from "lucide-react";
-import { getSttStatus } from "../../../lib/commands/audio";
 import type { TranscriptEvent } from "../../../lib/types";
 
-export function TranscriptBody() {
+export function TranscriptBody({ micActive }: { micActive: boolean }) {
   const [sentences, setSentences] = useState<string[]>([""]);
-  const [micActive, setMicActive] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [sentences]);
 
-  // Poll STT status so we show "listening" even before the first transcript arrives
-  useEffect(() => {
-    getSttStatus()
-      .then((s) => setMicActive(s === "running"))
-      .catch(() => {});
-    const id = setInterval(() => {
-      getSttStatus()
-        .then((s) => setMicActive(s === "running"))
-        .catch(() => {});
-    }, 2000);
-    return () => clearInterval(id);
-  }, []);
-
   useEffect(() => {
     let unlisten: UnlistenFn | null = null;
     listen<TranscriptEvent>("stt://transcript", (event) => {
       const evt = event.payload;
-      setMicActive(evt.mic_active);
       setSentences((prev) => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;

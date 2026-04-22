@@ -517,6 +517,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::set_artifacts_base_path,
             commands::read_text_file,
             commands::open_artifact,
+            commands::get_artifact_path,
             commands::read_artifact_bytes,
             commands::read_thumbnail,
             // ── Phase 14: Summaries + email ────────────────────────────────
