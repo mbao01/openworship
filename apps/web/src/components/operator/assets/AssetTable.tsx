@@ -83,21 +83,15 @@ export function AssetTable({
                     data-qa="artifacts-row"
                     className={[
                       "cursor-default border-b border-line/40 transition-colors",
-                      isSelected
-                        ? "bg-accent-soft"
-                        : "hover:bg-bg-2",
+                      isSelected ? "bg-accent-soft" : "hover:bg-bg-2",
                     ].join(" ")}
-                    onClick={() =>
-                      onSelect(isSelected ? null : e)
-                    }
+                    onClick={() => onSelect(isSelected ? null : e)}
                     onContextMenu={(ev) => onContextMenu(ev, e)}
                     onDoubleClick={() => onNavigate(e)}
                   >
                     <td className="px-5 py-[7px] align-middle">
                       <div className="flex items-center gap-[8px] min-w-0">
-                        <span className="shrink-0">
-                          {fileIcon(e)}
-                        </span>
+                        <span className="shrink-0">{fileIcon(e)}</span>
                         <span className="text-ink text-[13px] overflow-hidden text-ellipsis whitespace-nowrap">
                           {e.name}
                         </span>
@@ -108,25 +102,17 @@ export function AssetTable({
                         )}
                       </div>
                     </td>
-                    <td
-                      className={`px-4 py-[7px] align-middle ${metaCls}`}
-                    >
+                    <td className={`px-4 py-[7px] align-middle ${metaCls}`}>
                       {e.is_dir
                         ? "Folder"
-                        : (e.mime_type
-                            ?.split("/")[1]
-                            ?.toUpperCase() ?? "File")}
+                        : (e.mime_type?.split("/")[1]?.toUpperCase() ?? "File")}
                     </td>
                     <td
                       className={`px-4 py-[7px] align-middle ${metaCls} text-right`}
                     >
-                      {e.is_dir
-                        ? "\u2014"
-                        : formatBytes(e.size_bytes)}
+                      {e.is_dir ? "—" : formatBytes(e.size_bytes)}
                     </td>
-                    <td
-                      className={`px-4 py-[7px] align-middle ${metaCls}`}
-                    >
+                    <td className={`px-4 py-[7px] align-middle ${metaCls}`}>
                       {formatDate(e.modified_at_ms)}
                     </td>
                     <td className="px-4 py-[7px] align-middle w-[80px]">

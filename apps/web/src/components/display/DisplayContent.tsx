@@ -256,6 +256,7 @@ export function DisplayContent({
 
       {/* Watermark */}
       <span
+        data-qa="display-watermark"
         className="absolute z-10 font-sans tracking-[0.2em] text-muted lowercase select-none"
         style={{ bottom: 32, left: "10%", fontSize: 12 }}
       >

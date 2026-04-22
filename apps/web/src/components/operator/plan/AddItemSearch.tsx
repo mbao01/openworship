@@ -43,7 +43,7 @@ export function AddItemSearch({
       <input
         ref={inputRef}
         className="w-full px-3 py-2 bg-bg-2 border border-line rounded text-ink text-sm mb-2"
-        placeholder="Search scripture\u2026"
+        placeholder="Search scripture ..."
         value={query}
         onChange={(e) => handleSearch(e.target.value)}
       />

@@ -76,6 +76,9 @@ pub struct AppState {
     pub email_settings: Arc<RwLock<EmailSettings>>,
     /// Anthropic API key for Claude summary generation (from keychain).
     pub anthropic_api_key: Arc<RwLock<String>>,
+    /// When `true`, the display output is blacked out (content hidden but queue
+    /// state is preserved).  Toggled by the operator's "Live" button.
+    pub blackout: Arc<RwLock<bool>>,
 }
 
 impl AppState {

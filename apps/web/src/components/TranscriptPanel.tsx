@@ -211,7 +211,8 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
           role="alert"
         >
           <span className="text-[11px] text-danger tracking-wide leading-[1.4]">
-            Very low audio signal — check that the correct microphone is selected in Settings.
+            Very low audio signal — check that the correct microphone is
+            selected in Settings.
           </span>
         </div>
       )}
@@ -223,8 +224,8 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
           role="alert"
         >
           <span className="text-[11px] text-accent/60 tracking-wide leading-[1.4]">
-            Audio detected but no transcription — try re-downloading the model in Settings
-            &rarr; Audio, or restart the mic.
+            Audio detected but no transcription — try re-downloading the model
+            in Settings &rarr; Audio, or restart the mic.
           </span>
         </div>
       )}
@@ -239,7 +240,7 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
         {entries.length === 0 && !error && (
           <p className="text-sm text-muted m-0">
             {micActive
-              ? "Listening\u2026"
+              ? "Listening ..."
               : "Press START MIC to begin transcription."}
           </p>
         )}

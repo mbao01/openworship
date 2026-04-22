@@ -118,7 +118,7 @@ function NewProjectForm({ onCreated }: { onCreated: (p: ServiceProject) => void 
       <input
         ref={inputRef}
         className="flex-1 bg-transparent border-none border-b border-b-line/60 outline-none py-2 text-ink font-sans text-[13px] transition-colors placeholder:text-muted focus:border-b-accent disabled:opacity-50"
-        placeholder="Service name\u2026"
+        placeholder="Service name ..."
         value={name}
         onChange={(e) => setName(e.target.value)}
         disabled={saving}
@@ -236,7 +236,9 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
         aria-expanded={open}
       >
         <span data-qa="content-bank-toggle-label">CONTENT BANK</span>
-        <span className="text-[8px]" aria-hidden="true">{open ? "▲" : "▼"}</span>
+        <span className="text-[8px]" aria-hidden="true">
+          {open ? "▲" : "▼"}
+        </span>
       </button>
 
       {open && (
@@ -247,7 +249,7 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
               <input
                 className="w-full bg-transparent border-none border-b border-b-line/60 outline-none py-2 text-ink font-sans text-xs transition-colors box-border placeholder:text-muted focus:border-b-accent"
                 type="text"
-                placeholder={'Search \u2014 e.g. John 3:16 or \u201cshepherd\u201d'}
+                placeholder={"Search — e.g. John 3:16 or “shepherd”"}
                 value={query}
                 onChange={handleQueryChange}
                 autoComplete="off"
@@ -266,7 +268,9 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
               }}
             >
               {translations.map((t) => (
-                <option key={t.id} value={t.abbreviation}>{t.abbreviation}</option>
+                <option key={t.id} value={t.abbreviation}>
+                  {t.abbreviation}
+                </option>
               ))}
             </select>
           </div>
@@ -277,29 +281,58 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
               <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">
                 {query.trim() ? "Past services" : "Recently used"}
               </p>
-              <ul className="list-none m-0 p-0 flex flex-col gap-px" role="list">
+              <ul
+                className="list-none m-0 p-0 flex flex-col gap-px"
+                role="list"
+              >
                 {bankResults.map((entry) => {
-                  const isLive = pushed === entry.reference || liveReference === entry.reference;
+                  const isLive =
+                    pushed === entry.reference ||
+                    liveReference === entry.reference;
                   return (
                     <li
                       key={entry.id}
                       className={resultCls(isLive)}
                       role="button"
                       tabIndex={0}
-                      onClick={() => handlePush(entry.reference, entry.text, entry.translation)}
-                      onKeyDown={(e) => e.key === "Enter" && handlePush(entry.reference, entry.text, entry.translation)}
+                      onClick={() =>
+                        handlePush(
+                          entry.reference,
+                          entry.text,
+                          entry.translation,
+                        )
+                      }
+                      onKeyDown={(e) =>
+                        e.key === "Enter" &&
+                        handlePush(
+                          entry.reference,
+                          entry.text,
+                          entry.translation,
+                        )
+                      }
                     >
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[11px] font-medium text-ink tracking-[0.04em]">{entry.reference}</span>
-                        <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">{entry.translation}</span>
+                        <span className="text-[11px] font-medium text-ink tracking-[0.04em]">
+                          {entry.reference}
+                        </span>
+                        <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">
+                          {entry.translation}
+                        </span>
                         {entry.use_count > 1 && (
-                          <span className="font-mono text-[9px] text-muted">×{entry.use_count}</span>
+                          <span className="font-mono text-[9px] text-muted">
+                            ×{entry.use_count}
+                          </span>
                         )}
                         {isLive && (
-                          <span className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto" aria-label="Live" />
+                          <span
+                            className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
+                            aria-label="Live"
+                          />
                         )}
                       </div>
-                      <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">{entry.text}</p>
+                      <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">
+                        {entry.text}
+                      </p>
                     </li>
                   );
                 })}
@@ -310,24 +343,42 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
           {/* Scripture search results */}
           {searchResults.length > 0 && (
             <>
-              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">Scripture</p>
-              <ul className="list-none m-0 p-0 flex flex-col gap-px" role="list">
+              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">
+                Scripture
+              </p>
+              <ul
+                className="list-none m-0 p-0 flex flex-col gap-px"
+                role="list"
+              >
                 {searchResults
-                  .filter((v) => !bankResults.some((b) => b.reference === v.reference))
+                  .filter(
+                    (v) =>
+                      !bankResults.some((b) => b.reference === v.reference),
+                  )
                   .map((v, i) => {
-                    const isLive = pushed === v.reference || liveReference === v.reference;
+                    const isLive =
+                      pushed === v.reference || liveReference === v.reference;
                     return (
                       <li
                         key={`${v.translation}-${v.reference}-${i}`}
                         className={resultCls(isLive)}
                         role="button"
                         tabIndex={0}
-                        onClick={() => handlePush(v.reference, v.text, v.translation)}
-                        onKeyDown={(e) => e.key === "Enter" && handlePush(v.reference, v.text, v.translation)}
+                        onClick={() =>
+                          handlePush(v.reference, v.text, v.translation)
+                        }
+                        onKeyDown={(e) =>
+                          e.key === "Enter" &&
+                          handlePush(v.reference, v.text, v.translation)
+                        }
                       >
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[11px] font-medium text-ink tracking-[0.04em]">{v.reference}</span>
-                          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">{v.translation}</span>
+                          <span className="text-[11px] font-medium text-ink tracking-[0.04em]">
+                            {v.reference}
+                          </span>
+                          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">
+                            {v.translation}
+                          </span>
                           {v.score != null && v.score < 1.0 && (
                             <span
                               className="text-[9px] text-muted font-mono ml-auto opacity-70"
@@ -337,10 +388,15 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                             </span>
                           )}
                           {isLive && (
-                            <span className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto" aria-label="Live" />
+                            <span
+                              className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
+                              aria-label="Live"
+                            />
                           )}
                         </div>
-                        <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">{v.text}</p>
+                        <p className="m-0 text-[11px] leading-[1.45] text-ink-3 line-clamp-2">
+                          {v.text}
+                        </p>
                       </li>
                     );
                   })}
@@ -351,8 +407,13 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
           {/* Song results */}
           {songResults.length > 0 && (
             <>
-              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">Songs</p>
-              <ul className="list-none m-0 p-0 flex flex-col gap-px" role="list">
+              <p className="text-[10px] font-medium tracking-[0.1em] text-muted uppercase my-2 mx-0">
+                Songs
+              </p>
+              <ul
+                className="list-none m-0 p-0 flex flex-col gap-px"
+                role="list"
+              >
                 {songResults.map((song) => {
                   const key = `song:${song.id}`;
                   const isLive = pushed === key;
@@ -363,16 +424,30 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
                       role="button"
                       tabIndex={0}
                       onClick={() => handlePushSong(song)}
-                      onKeyDown={(e) => e.key === "Enter" && handlePushSong(song)}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && handlePushSong(song)
+                      }
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-accent leading-none" aria-hidden="true">♪</span>
-                        <span className="text-[11px] font-medium text-ink tracking-[0.04em]">{song.title}</span>
+                        <span
+                          className="text-[10px] text-accent leading-none"
+                          aria-hidden="true"
+                        >
+                          ♪
+                        </span>
+                        <span className="text-[11px] font-medium text-ink tracking-[0.04em]">
+                          {song.title}
+                        </span>
                         {song.artist && (
-                          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">{song.artist}</span>
+                          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">
+                            {song.artist}
+                          </span>
                         )}
                         {isLive && (
-                          <span className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto" aria-label="Live" />
+                          <span
+                            className="w-[6px] h-[6px] rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] ml-auto"
+                            aria-label="Live"
+                          />
                         )}
                       </div>
                     </li>
@@ -382,9 +457,15 @@ function ContentBankSection({ liveReference }: { liveReference: string | null })
             </>
           )}
 
-          {query.trim() && !isSearching && searchResults.length === 0 && bankResults.length === 0 && songResults.length === 0 && (
-            <p className="text-[11px] text-muted py-2 m-0">No results for "{query}"</p>
-          )}
+          {query.trim() &&
+            !isSearching &&
+            searchResults.length === 0 &&
+            bankResults.length === 0 &&
+            songResults.length === 0 && (
+              <p className="text-[11px] text-muted py-2 m-0">
+                No results for "{query}"
+              </p>
+            )}
         </div>
       )}
     </div>
@@ -501,7 +582,9 @@ export function SchedulePanel() {
     <div className="flex flex-col h-full min-h-0 gap-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 shrink-0">
-        <span className="text-[11px] font-medium tracking-[0.12em] text-ink-3 uppercase">SCHEDULE</span>
+        <span className="text-[11px] font-medium tracking-[0.12em] text-ink-3 uppercase">
+          SCHEDULE
+        </span>
         {activeProject ? (
           <>
             <button
@@ -552,7 +635,7 @@ export function SchedulePanel() {
           </p>
           {activeProject.items.length === 0 ? (
             <p className="text-xs text-muted m-0 leading-[1.5]">
-              Push scripture to display \u2014 items appear here automatically.
+              Push scripture to display — items appear here automatically.
             </p>
           ) : (
             <ul className="list-none m-0 p-0 flex flex-col gap-px" role="list">
@@ -567,7 +650,9 @@ export function SchedulePanel() {
                     isReadOnly={false}
                     onPush={handlePushItem}
                     onRemove={handleRemoveItem}
-                    onDragStart={(id) => { dragItemId.current = id; }}
+                    onDragStart={(id) => {
+                      dragItemId.current = id;
+                    }}
                     onDrop={handleDrop}
                   />
                 ))}
@@ -587,11 +672,14 @@ export function SchedulePanel() {
           onClick={() => setShowPastProjects((v) => !v)}
           aria-expanded={showPastProjects}
         >
-          <span>PAST SERVICES {pastProjects.length > 0 ? `(${pastProjects.length})` : ""}</span>
+          <span>
+            PAST SERVICES{" "}
+            {pastProjects.length > 0 ? `(${pastProjects.length})` : ""}
+          </span>
           <span aria-hidden="true">{showPastProjects ? "▲" : "▼"}</span>
         </button>
-        {showPastProjects && (
-          pastProjects.length === 0 ? (
+        {showPastProjects &&
+          (pastProjects.length === 0 ? (
             <p className="text-[11px] text-muted m-0 leading-[1.5]">
               No past services. Close an active service to archive it here.
             </p>
@@ -605,7 +693,9 @@ export function SchedulePanel() {
                   key={p.id}
                   className="flex items-center gap-2 py-2 px-2 rounded-sm transition-colors hover:bg-white/[0.04]"
                 >
-                  <span className="flex-1 text-xs text-ink whitespace-nowrap overflow-hidden text-ellipsis">{p.name}</span>
+                  <span className="flex-1 text-xs text-ink whitespace-nowrap overflow-hidden text-ellipsis">
+                    {p.name}
+                  </span>
                   <span className="font-mono text-[10px] text-muted whitespace-nowrap">
                     {p.items.length} item{p.items.length !== 1 ? "s" : ""}
                   </span>
@@ -619,8 +709,7 @@ export function SchedulePanel() {
                 </li>
               ))}
             </ul>
-          )
-        )}
+          ))}
       </div>
 
       {/* Content Bank */}

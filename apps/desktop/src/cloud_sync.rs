@@ -26,6 +26,8 @@ pub enum SyncStatus {
     Queued,
     /// Upload in progress.
     Syncing,
+    /// Download from cloud in progress.
+    Downloading,
     /// Successfully synced to cloud; ETag matches local.
     Synced,
     /// Cloud and local versions diverged; needs resolution.
@@ -40,6 +42,7 @@ impl SyncStatus {
             SyncStatus::LocalOnly => "local_only",
             SyncStatus::Queued => "queued",
             SyncStatus::Syncing => "syncing",
+            SyncStatus::Downloading => "downloading",
             SyncStatus::Synced => "synced",
             SyncStatus::Conflict => "conflict",
             SyncStatus::Error => "error",
@@ -49,6 +52,7 @@ impl SyncStatus {
         match s {
             "queued" => SyncStatus::Queued,
             "syncing" => SyncStatus::Syncing,
+            "downloading" => SyncStatus::Downloading,
             "synced" => SyncStatus::Synced,
             "conflict" => SyncStatus::Conflict,
             "error" => SyncStatus::Error,
@@ -773,6 +777,28 @@ pub async fn upload_artifact(
         .with_context(|| format!("read artifact for upload: {}", local_path.display()))?;
     let content_type = mime_type.unwrap_or("application/octet-stream");
     let etag = s3_put_object(client, config, cloud_key, data, content_type).await?;
+    Ok(etag)
+}
+
+/// Download a single artifact from S3.  Creates parent directories and writes
+/// atomically via a temp file.  Returns the ETag on success.
+pub async fn download_artifact(
+    client: &Client,
+    config: &S3Config,
+    cloud_key: &str,
+    local_path: &std::path::Path,
+) -> Result<String> {
+    let (bytes, etag) = s3_get_object(client, config, cloud_key).await?;
+    if let Some(parent) = local_path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("create dirs for download: {}", local_path.display()))?;
+    }
+    // Atomic write via temp file to avoid partial reads on crash.
+    let tmp = local_path.with_extension("download.tmp");
+    std::fs::write(&tmp, &bytes)
+        .with_context(|| format!("write download tmp: {}", tmp.display()))?;
+    std::fs::rename(&tmp, local_path)
+        .with_context(|| format!("rename download: {}", local_path.display()))?;
     Ok(etag)
 }
 

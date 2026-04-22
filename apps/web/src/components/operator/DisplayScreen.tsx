@@ -81,8 +81,8 @@ export function DisplayScreen() {
         >
           <div className="absolute top-0 left-0 right-0 px-5 py-2.5 flex justify-between font-mono text-[9.5px] tracking-[0.18em] uppercase text-[rgba(245,239,223,0.5)]">
             <span className="inline-flex items-center gap-1">
-              <CircleIcon className="w-3 h-3 shrink-0" fill="currentColor" />{" "}
-              LIVE · ON SCREEN
+              <CircleIcon className="w-2 h-2 shrink-0 fill-live" /> LIVE · ON
+              SCREEN
             </span>
             <span>openworship</span>
           </div>
@@ -112,7 +112,6 @@ export function DisplayScreen() {
             </div>
           )}
         </div>
-        xxx
       </div>
 
       {/* Status + action buttons */}

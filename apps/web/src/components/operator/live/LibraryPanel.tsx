@@ -82,9 +82,11 @@ export function LibraryPanel() {
   ];
 
   const placeholder =
-    tab === "scripture" ? "Romans 8:38\u2026" :
-    tab === "lyrics" ? "song title, opening line\u2026" :
-    "slide title\u2026";
+    tab === "scripture"
+      ? "Romans 8:38 ..."
+      : tab === "lyrics"
+        ? "song title, opening line ..."
+        : "slide title ...";
 
   return (
     <section className="flex flex-col w-[280px] shrink-0 bg-bg border-r border-line overflow-hidden">
@@ -92,7 +94,10 @@ export function LibraryPanel() {
       <div className="flex flex-col h-1/2 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
-          <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+          <span
+            data-qa="content-bank-toggle-label"
+            className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase"
+          >
             Library
           </span>
         </div>
@@ -102,7 +107,7 @@ export function LibraryPanel() {
           {tabs.map((t) => (
             <button
               key={t.id}
-              className={`px-3 py-2.5 font-mono text-[9.5px] tracking-[0.12em] uppercase mb-[-1px] border-b transition-colors cursor-pointer ${
+              className={`flex flex-col flex-1 gap-0.5 justify-start items-center px-3 py-2.5 font-mono text-[10px] tracking-[0.12em] uppercase -mb-px border-b transition-colors cursor-pointer ${
                 tab === t.id
                   ? "text-ink border-accent"
                   : "text-ink-3 border-transparent hover:text-ink-2"
@@ -114,10 +119,10 @@ export function LibraryPanel() {
                 setSongResults([]);
               }}
             >
-              {t.label}
-              {t.count && (
-                <span className="ml-1.5 text-muted text-[9px]">{t.count}</span>
-              )}
+              <span>{t.label}</span>
+              <span className="m-auto text-muted text-[9px]">
+                {t.count || "—"}
+              </span>
             </button>
           ))}
         </div>
@@ -133,7 +138,7 @@ export function LibraryPanel() {
         </div>
 
         {/* Results */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto max-h-1/2">
           {tab === "scripture" &&
             scriptureResults.map((v, i) => (
               <div
@@ -142,7 +147,7 @@ export function LibraryPanel() {
                 onClick={() => handlePush(v.reference, v.text, v.translation)}
               >
                 <span className="text-accent flex items-center justify-center">
-                  <BookOpenIcon className="w-3.5 h-3.5 shrink-0" />
+                  <BookOpenIcon className="w-2 h-2 shrink-0" />
                 </span>
                 <div>
                   <div className="font-serif italic text-sm">{v.reference}</div>
@@ -151,7 +156,7 @@ export function LibraryPanel() {
                   </div>
                 </div>
                 <span className="text-ink-3 flex items-center">
-                  <CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" />
+                  <CornerDownLeftIcon className="w-2 h-2 shrink-0" />
                 </span>
               </div>
             ))}
@@ -164,7 +169,7 @@ export function LibraryPanel() {
                 onClick={() => handlePushSong(s)}
               >
                 <span className="text-accent flex items-center justify-center">
-                  <MusicIcon className="w-3.5 h-3.5 shrink-0" />
+                  <MusicIcon className="w-2 h-2 shrink-0" />
                 </span>
                 <div>
                   <div className="font-medium text-sm">{s.title}</div>
@@ -175,7 +180,7 @@ export function LibraryPanel() {
                   )}
                 </div>
                 <span className="text-ink-3 flex items-center">
-                  <CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" />
+                  <CornerDownLeftIcon className="w-2 h-2 shrink-0" />
                 </span>
               </div>
             ))}
@@ -193,7 +198,7 @@ export function LibraryPanel() {
                 }
               >
                 <span className="text-accent flex items-center justify-center">
-                  <PresentationIcon className="w-3.5 h-3.5 shrink-0" />
+                  <PresentationIcon className="w-2 h-2 shrink-0" />
                 </span>
                 <div>
                   <div className="font-medium text-sm">{slide.title}</div>
@@ -204,7 +209,7 @@ export function LibraryPanel() {
                   )}
                 </div>
                 <span className="text-ink-3 flex items-center">
-                  <CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" />
+                  <CornerDownLeftIcon className="w-2 h-2 shrink-0" />
                 </span>
               </div>
             ))}

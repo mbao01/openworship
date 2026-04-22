@@ -96,7 +96,7 @@ export function AssetContextMenu({
           <ExternalLinkIcon className={icn} />,
           "Open",
           () => onOpen(menu.entry),
-          "\u2318O",
+          "⌘ + O",
         )}
       {!menu.entry.is_dir &&
         item(
@@ -105,10 +105,10 @@ export function AssetContextMenu({
           () => onPreview(menu.entry),
           "Space",
         )}
-      {item(<Share2Icon className={icn} />, "Share\u2026", () =>
+      {item(<Share2Icon className={icn} />, "Share ...", () =>
         onShare(menu.entry),
       )}
-      {item(<FolderInputIcon className={icn} />, "Move to\u2026", () =>
+      {item(<FolderInputIcon className={icn} />, "Move to ...", () =>
         onMoveTo(menu.entry),
       )}
       {sep}
@@ -136,7 +136,7 @@ export function AssetContextMenu({
         <Trash2Icon className={icn} />,
         "Delete",
         () => onDelete(menu.entry),
-        "\u232B",
+        "⌫",
         true,
       )}
     </div>

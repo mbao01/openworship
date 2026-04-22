@@ -68,7 +68,10 @@ function SongForm({
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase" htmlFor="song-title">
+        <label
+          className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase"
+          htmlFor="song-title"
+        >
           Title
         </label>
         <input
@@ -83,7 +86,10 @@ function SongForm({
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase" htmlFor="song-artist">
+        <label
+          className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase"
+          htmlFor="song-artist"
+        >
           Artist / Author
         </label>
         <input
@@ -96,7 +102,10 @@ function SongForm({
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase" htmlFor="song-lyrics">
+        <label
+          className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase"
+          htmlFor="song-lyrics"
+        >
           Lyrics
         </label>
         <textarea
@@ -104,7 +113,9 @@ function SongForm({
           className={`${textareaCls} text-[11px] leading-[1.5]`}
           value={lyrics}
           onChange={(e) => setLyrics(e.target.value)}
-          placeholder={"[Verse 1]\nAmazing grace how sweet the sound\nThat saved a wretch like me\n\n[Chorus]\nMy chains are gone\u2026"}
+          placeholder={
+            "[Verse 1]\nAmazing grace how sweet the sound\nThat saved a wretch like me\n\n[Chorus]\nMy chains are gone ..."
+          }
           rows={10}
           required
           disabled={saving}
@@ -125,7 +136,7 @@ function SongForm({
           className={btnSaveCls}
           disabled={saving || !title.trim() || !lyrics.trim()}
         >
-          {saving ? "Saving\u2026" : initial ? "Update" : "Add Song"}
+          {saving ? "Saving ..." : initial ? "Update" : "Add Song"}
         </button>
       </div>
     </form>
@@ -234,8 +245,8 @@ function ImportForm({
         onChange={(e) => setText(e.target.value)}
         placeholder={
           format === "ccli"
-            ? "Paste CCLI SongSelect text export here\u2026"
-            : "Paste OpenLP XML song export here\u2026"
+            ? "Paste CCLI SongSelect text export here ..."
+            : "Paste OpenLP XML song export here ..."
         }
         rows={12}
         disabled={importing}
@@ -256,7 +267,7 @@ function ImportForm({
           className={btnSaveCls}
           disabled={importing || !text.trim()}
         >
-          {importing ? "Importing\u2026" : "Import"}
+          {importing ? "Importing ..." : "Import"}
         </button>
       </div>
     </form>
@@ -432,7 +443,9 @@ export function SongLibrary() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium tracking-[0.12em] text-ink-3 uppercase">SONGS</span>
+          <span className="text-[10px] font-medium tracking-[0.12em] text-ink-3 uppercase">
+            SONGS
+          </span>
           {semanticStatus && (
             <span
               className={`text-[9px] font-medium tracking-[0.08em] uppercase ${
@@ -471,12 +484,8 @@ export function SongLibrary() {
         </div>
       </div>
 
-
       {mode === "add" && (
-        <SongForm
-          onSave={handleSaved}
-          onCancel={() => setMode("list")}
-        />
+        <SongForm onSave={handleSaved} onCancel={() => setMode("list")} />
       )}
       {mode === "edit" && editTarget && (
         <SongForm
@@ -502,7 +511,7 @@ export function SongLibrary() {
               data-qa="song-library-search"
               className="w-full box-border bg-bg border border-line rounded-[3px] text-ink font-sans text-xs py-2 px-3 outline-none transition-colors placeholder:text-line focus:border-line-strong"
               type="text"
-              placeholder="Search songs\u2026"
+              placeholder="Search songs ..."
               value={query}
               onChange={handleQueryChange}
               autoComplete="off"
@@ -511,7 +520,9 @@ export function SongLibrary() {
           </div>
           {songs.length === 0 ? (
             <p className="text-[11px] text-muted m-0">
-              {query ? `No songs matching "${query}"` : "No songs yet. Add or import some!"}
+              {query
+                ? `No songs matching "${query}"`
+                : "No songs yet. Add or import some!"}
             </p>
           ) : (
             <ul className="list-none m-0 p-0 flex flex-col gap-0.5" role="list">

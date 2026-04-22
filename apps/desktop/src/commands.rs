@@ -788,10 +788,15 @@ pub fn approve_item(
         item.status = QueueStatus::Live;
         let event = content_event_for_item(item);
         let _ = state.display_tx.send(event);
+        // Auto-clear blackout when pushing new content live.
+        if let Ok(mut bo) = state.blackout.write() {
+            *bo = false;
+        }
     } else {
         return Err(format!("item {id} not found in queue"));
     }
 
+    gc_dismissed(&mut q);
     let snapshot: Vec<QueueItem> = q.iter().cloned().collect();
     drop(q);
     let _ = app.emit("detection://queue-updated", snapshot);
@@ -813,6 +818,7 @@ pub fn dismiss_item(
         return Err(format!("item {id} not found in queue"));
     }
 
+    gc_dismissed(&mut q);
     let snapshot: Vec<QueueItem> = q.iter().cloned().collect();
     drop(q);
     let _ = app.emit("detection://queue-updated", snapshot);
@@ -1002,6 +1008,7 @@ pub fn clear_live(state: State<'_, AppState>, app: AppHandle) -> Result<(), Stri
                 item.status = QueueStatus::Dismissed;
             }
         }
+        gc_dismissed(&mut q);
     }
     let _ = state.display_tx.send(ow_display::ContentEvent::clear());
 
@@ -1014,6 +1021,66 @@ pub fn clear_live(state: State<'_, AppState>, app: AppHandle) -> Result<(), Stri
         .collect();
     let _ = app.emit(crate::detection::QUEUE_UPDATED_EVENT, snapshot);
     Ok(())
+}
+
+// ─── Queue garbage collection ────────────────────────────────────────────────
+
+/// Purge old dismissed items, keeping at most `MAX_DISMISSED` most-recent ones.
+/// Must be called while the MutexGuard is still held.
+fn gc_dismissed(q: &mut VecDeque<QueueItem>) {
+    const MAX_DISMISSED: usize = 50;
+    let dismissed_count = q.iter().filter(|i| i.status == QueueStatus::Dismissed).count();
+    if dismissed_count <= MAX_DISMISSED {
+        return;
+    }
+    let to_remove = dismissed_count - MAX_DISMISSED;
+    let mut removed = 0;
+    q.retain(|item| {
+        if removed >= to_remove {
+            return true;
+        }
+        if item.status == QueueStatus::Dismissed {
+            removed += 1;
+            return false;
+        }
+        true
+    });
+}
+
+// ─── Blackout (non-destructive live toggle) ─────────────────────────────────
+
+/// Toggle display blackout.  When blacking out, sends a clear event to the
+/// display *without* modifying the queue.  When restoring, re-sends the
+/// current live item (if any) so the display resumes.
+#[tauri::command]
+pub fn toggle_blackout(state: State<'_, AppState>) -> Result<bool, String> {
+    let mut bo = state.blackout.write().map_err(|e| e.to_string())?;
+    *bo = !*bo;
+    let is_blackout = *bo;
+    drop(bo);
+
+    if is_blackout {
+        let _ = state.display_tx.send(ow_display::ContentEvent::clear());
+    } else {
+        // Re-send the current live item so the display picks it back up.
+        let q = state.queue.lock().map_err(|e| e.to_string())?;
+        if let Some(live) = q.iter().find(|i| i.status == QueueStatus::Live) {
+            let event = content_event_for_item(live);
+            let _ = state.display_tx.send(event);
+        }
+    }
+
+    Ok(is_blackout)
+}
+
+/// Returns the current blackout state.
+#[tauri::command]
+pub fn get_blackout(state: State<'_, AppState>) -> Result<bool, String> {
+    state
+        .blackout
+        .read()
+        .map(|b| *b)
+        .map_err(|e| e.to_string())
 }
 
 // ─── Shared detection helper ──────────────────────────────────────────────────
@@ -3197,6 +3264,7 @@ pub fn toggle_artifact_cloud_sync(
 pub async fn sync_artifact_now(
     artifact_id: String,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<CloudSyncInfo, String> {
     let config = {
         let guard = state.cloud_config.read().map_err(|e| e.to_string())?;
@@ -3222,6 +3290,12 @@ pub async fn sync_artifact_now(
         (info, abs, entry.mime_type)
     };
 
+    // Emit progress: started
+    let _ = app.emit(
+        "cloud://upload-progress",
+        serde_json::json!({ "artifact_id": artifact_id, "progress": 0.0, "phase": "started" }),
+    );
+
     let cloud_key = info.cloud_key.clone().ok_or("no cloud key")?;
     let last_etag = info.last_etag.clone();
     let client = reqwest::Client::new();
@@ -3236,6 +3310,11 @@ pub async fn sync_artifact_now(
     .await
     {
         Ok(etag) => {
+            // Emit progress: done
+            let _ = app.emit(
+                "cloud://upload-progress",
+                serde_json::json!({ "artifact_id": artifact_id, "progress": 1.0, "phase": "done" }),
+            );
             let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -3272,6 +3351,73 @@ pub async fn sync_artifact_now(
             updated.status = SyncStatus::Error;
             updated.sync_error = Some(e.to_string());
             sync_db.upsert_sync_info(&updated).map_err(|err| err.to_string())?;
+            Err(e.to_string())
+        }
+    }
+}
+
+/// Download a single artifact from cloud storage to the local filesystem.
+/// Returns the updated `CloudSyncInfo` on success.
+#[tauri::command]
+pub async fn download_artifact_from_cloud(
+    artifact_id: String,
+    state: State<'_, AppState>,
+) -> Result<CloudSyncInfo, String> {
+    let config = {
+        let guard = state.cloud_config.read().map_err(|e| e.to_string())?;
+        guard.clone().ok_or_else(|| "cloud not configured".to_string())?
+    };
+    let (mut info, local_path) = {
+        let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+        let af_db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        let mut info = sync_db
+            .get_sync_info(&artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("no sync entry for {artifact_id}"))?;
+        let entry = af_db
+            .get_by_id(&artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("artifact not found: {artifact_id}"))?;
+        let abs = af_db.abs_path(&entry.path);
+        info.status = SyncStatus::Downloading;
+        sync_db.upsert_sync_info(&info).map_err(|e| e.to_string())?;
+        (info, abs)
+    };
+
+    let cloud_key = info
+        .cloud_key
+        .clone()
+        .ok_or_else(|| "artifact has no cloud key — has it been uploaded?".to_string())?;
+    let client = reqwest::Client::new();
+    match crate::cloud_sync::download_artifact(&client, &config, &cloud_key, &local_path).await {
+        Ok(etag) => {
+            let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as i64;
+            info.status = SyncStatus::Synced;
+            info.last_etag = Some(etag);
+            info.last_synced_ms = Some(now);
+            info.sync_error = None;
+            sync_db.upsert_sync_info(&info).map_err(|e| e.to_string())?;
+
+            // Update local artifact size to match the downloaded file.
+            drop(sync_db);
+            if let Ok(meta) = std::fs::metadata(&local_path) {
+                let af_db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+                if let Ok(Some(mut entry)) = af_db.get_by_id(&artifact_id) {
+                    entry.size_bytes = Some(meta.len() as i64);
+                    let _ = af_db.upsert(&entry);
+                }
+            }
+            Ok(info)
+        }
+        Err(e) => {
+            let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+            info.status = SyncStatus::Error;
+            info.sync_error = Some(e.to_string());
+            sync_db.upsert_sync_info(&info).map_err(|e| e.to_string())?;
             Err(e.to_string())
         }
     }

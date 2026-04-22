@@ -10,6 +10,8 @@ import {
   nextItem,
   prevItem,
   rejectLiveItem,
+  toggleBlackout,
+  getBlackout,
 } from "@/lib/commands/detection";
 import type { QueueItem } from "@/lib/types";
 
@@ -18,6 +20,8 @@ export interface UseQueueReturn {
   queue: QueueItem[];
   /** The currently live item, if any. */
   live: QueueItem | null;
+  /** Whether display output is blacked out (content hidden, queue preserved). */
+  blackout: boolean;
   approve: (id: string) => Promise<void>;
   dismiss: (id: string) => Promise<void>;
   skip: (id: string) => Promise<void>;
@@ -26,6 +30,8 @@ export interface UseQueueReturn {
   prev: () => Promise<void>;
   clearLive: () => Promise<void>;
   clearQueue: () => Promise<void>;
+  /** Toggle blackout on/off. Returns the new blackout state. */
+  toggleBlackout: () => Promise<boolean>;
 }
 
 /**
@@ -40,6 +46,7 @@ export interface UseQueueReturn {
 export function useQueue(): UseQueueReturn {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [live, setLive] = useState<QueueItem | null>(null);
+  const [blackout, setBlackout] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadQueue = useCallback(async () => {
@@ -54,6 +61,7 @@ export function useQueue(): UseQueueReturn {
 
   useEffect(() => {
     loadQueue();
+    getBlackout().then((v) => setBlackout(v === true)).catch(() => {});
 
     let unlisten: (() => void) | undefined;
     listen("detection://queue-updated", () => {
@@ -73,6 +81,7 @@ export function useQueue(): UseQueueReturn {
   return {
     queue,
     live,
+    blackout,
     approve:    useCallback(async (id) => { await approveItem(id);    await loadQueue(); }, [loadQueue]),
     dismiss:    useCallback(async (id) => { await dismissItem(id);    await loadQueue(); }, [loadQueue]),
     skip:       useCallback(async (id) => { await skipItem(id);       await loadQueue(); }, [loadQueue]),
@@ -81,5 +90,10 @@ export function useQueue(): UseQueueReturn {
     prev:       useCallback(async ()   => { await prevItem();         await loadQueue(); }, [loadQueue]),
     clearLive:  useCallback(async ()   => { await clearLive();        await loadQueue(); }, [loadQueue]),
     clearQueue: useCallback(async ()   => { await clearQueue();       await loadQueue(); }, [loadQueue]),
+    toggleBlackout: useCallback(async () => {
+      const val = await toggleBlackout();
+      setBlackout(val);
+      return val;
+    }, []),
   };
 }

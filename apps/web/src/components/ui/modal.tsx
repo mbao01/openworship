@@ -7,6 +7,8 @@ interface ModalProps {
   children: React.ReactNode;
   /** Width class — defaults to "max-w-3xl" */
   className?: string;
+  /** Accessible label for the dialog */
+  "aria-label"?: string;
 }
 
 /**
@@ -23,7 +25,7 @@ interface ModalProps {
  *   <ModalBody>…</ModalBody>
  * </Modal>
  */
-export function Modal({ open, onClose, children, className }: ModalProps) {
+export function Modal({ open, onClose, children, className, "aria-label": ariaLabel }: ModalProps) {
   // Close on Escape
   React.useEffect(() => {
     if (!open) return;
@@ -42,6 +44,7 @@ export function Modal({ open, onClose, children, className }: ModalProps) {
       className="fixed inset-0 z-[100] flex items-center justify-center animate-[fade-in_150ms_ease-out]"
       role="dialog"
       aria-modal="true"
+      aria-label={ariaLabel}
     >
       {/* Backdrop */}
       <div

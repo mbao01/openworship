@@ -114,7 +114,6 @@ export function BackgroundPicker({ bg }: { bg: UseDisplayBackgroundReturn }) {
         title="Display background"
       >
         <PaletteIcon className="w-3.5 h-3.5" />
-        BG
       </button>
 
       {open && (

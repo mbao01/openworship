@@ -34,9 +34,13 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
   const [checklistSubs, setChecklistSubs] = useState<Record<string, string>>({});
   const [project, setProject] = useState<ServiceProject | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
-  const [micLevelDb, setMicLevelDb] = useState<string>("checking\u2026");
-  const [projectorStatus, setProjectorStatus] = useState<{ text: string; color: string }>({
-    text: "checking\u2026", color: "text-ink-2",
+  const [micLevelDb, setMicLevelDb] = useState<string>("checking ...");
+  const [projectorStatus, setProjectorStatus] = useState<{
+    text: string;
+    color: string;
+  }>({
+    text: "checking ...",
+    color: "text-ink-2",
   });
   const [simulateText, setSimulateText] = useState("");
   const [detections, setDetections] = useState<QueueItem[]>([]);

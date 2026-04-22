@@ -10,7 +10,7 @@ interface SettingsScreenProps {
 
 export function SettingsScreen({ identity, open, onClose }: SettingsScreenProps) {
   return (
-    <Modal open={open} onClose={onClose} className="max-w-4xl h-[600px]">
+    <Modal open={open} onClose={onClose} className="max-w-4xl h-[600px]" aria-label="Settings">
       <ModalBody>
         <SettingsPanel identity={identity} />
       </ModalBody>

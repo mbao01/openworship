@@ -66,7 +66,9 @@ export function FilterDropdown({
       >
         <FilterIcon className="w-3 h-3 shrink-0" />
         {label}
-        <ChevronDownIcon className={`w-3 h-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDownIcon
+          className={`w-3 h-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open && (
@@ -75,23 +77,33 @@ export function FilterDropdown({
             className="flex items-center gap-2.5 w-full text-left px-3 py-1.5 text-[12px] text-ink transition-colors hover:bg-bg-2 cursor-pointer"
             onClick={onToggleAll}
           >
-            <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] font-bold shrink-0 ${
-              allSelected ? "bg-accent border-accent text-accent-foreground" : "border-line-strong"
-            }`}>
-              {allSelected ? "\u2713" : ""}
+            <span
+              className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                allSelected
+                  ? "bg-accent border-accent text-accent-foreground"
+                  : "border-line-strong"
+              }`}
+            >
+              {allSelected ? "✓" : ""}
             </span>
             <span className="font-medium">All types</span>
           </button>
           <div className="h-px bg-line my-1 mx-2" />
-          {(Object.entries(CATEGORY_LABELS) as [ArtifactCategory, string][]).map(([cat, catLabel]) => (
+          {(
+            Object.entries(CATEGORY_LABELS) as [ArtifactCategory, string][]
+          ).map(([cat, catLabel]) => (
             <button
               key={cat}
               className="flex items-center gap-2.5 w-full text-left px-3 py-1.5 text-[12px] text-ink transition-colors hover:bg-bg-2 cursor-pointer"
               onClick={() => onToggle(cat)}
             >
-              <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                activeFilters.has(cat) ? "bg-accent border-accent text-accent-foreground" : "border-line-strong"
-              }`}>
+              <span
+                className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                  activeFilters.has(cat)
+                    ? "bg-accent border-accent text-accent-foreground"
+                    : "border-line-strong"
+                }`}
+              >
                 {activeFilters.has(cat) ? "\u2713" : ""}
               </span>
               <span className="text-ink-3">{CATEGORY_ICONS[cat]}</span>

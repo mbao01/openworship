@@ -401,3 +401,4 @@ fn resolve_bg_for_display(bg_id: &str, artifacts_db: &std::sync::Arc<Mutex<Artif
     // Fallback: assume it's already a CSS value
     bg_id.to_string()
 }
+

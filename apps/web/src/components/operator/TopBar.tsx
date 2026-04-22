@@ -81,11 +81,11 @@ export function TopBar({ mode, onModeChange, onOpenCmdK, onPush }: TopBarProps) 
   }
 
   return (
-    <header className="h-[52px] shrink-0 grid grid-cols-[auto_1fr_auto] items-center gap-6 px-[18px] bg-bg-1 border-b border-line">
+    <header data-qa="operator-titlebar" className="h-[52px] shrink-0 grid grid-cols-[auto_1fr_auto] items-center gap-6 px-[18px] bg-bg-1 border-b border-line">
       {/* Brand */}
       <div className="flex items-center gap-2.5 font-serif text-[17px] tracking-[-0.01em] text-ink pr-[18px] border-r border-line h-[52px]">
         <BrandMark />
-        openworship
+        <span data-qa="operator-appname">openworship</span>
       </div>
 
       {/* Center: mode switcher + mic */}

@@ -347,12 +347,17 @@ export function AssetsScreen() {
   };
 
   const sectionTitle =
-    nav.kind === "all" ? "All Assets" :
-    nav.kind === "recent" ? "Recent" :
-    nav.kind === "starred" ? "Starred" :
-    nav.kind === "cloud_branch" ? "My Branch \u2014 Cloud" :
-    nav.kind === "cloud_shared" ? "Church Shared" :
-    nav.name;
+    nav.kind === "all"
+      ? "All Assets"
+      : nav.kind === "recent"
+        ? "Recent"
+        : nav.kind === "starred"
+          ? "Starred"
+          : nav.kind === "cloud_branch"
+            ? "My Branch — Cloud"
+            : nav.kind === "cloud_shared"
+              ? "Church Shared"
+              : nav.name;
 
   const totalSize = entries.reduce((sum, e) => sum + (e.size_bytes ?? 0), 0);
 

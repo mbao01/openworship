@@ -11,6 +11,7 @@ import {
 import type { DetectionMode, QueueItem } from "../../../lib/types";
 import { toastError } from "../../../lib/toast";
 import { BackgroundPicker } from "./BackgroundPicker";
+import { CircleIcon } from "lucide-react";
 
 function StageBtn({
   label,
@@ -67,10 +68,14 @@ function ScaledPreview({
   item,
   backgroundValue,
   dimmed,
+  label,
+  sublabel,
 }: {
   item: QueueItem | null;
   backgroundValue?: string | null;
   dimmed?: boolean;
+  label: string;
+  sublabel: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.35);
@@ -113,12 +118,36 @@ function ScaledPreview({
           showEmptyState
         />
       </div>
+      {/* Label overlay — rendered at preview scale, not inside the 1920×1080 content */}
+      <div
+        className="absolute top-0 left-0 right-0 z-20 px-4 py-2 flex justify-between font-mono text-[9.5px] tracking-[0.18em] uppercase"
+        style={{
+          color: dimmed ? "rgba(201,167,106,0.75)" : "rgba(245,239,223,0.5)",
+        }}
+      >
+        <span className="inline-flex items-center gap-1">
+          {label === "LIVE" && (
+            <CircleIcon className="w-2 h-2 shrink-0 animate-pulse fill-live" />
+          )}
+          {label} · {sublabel}
+        </span>
+        <span>openworship</span>
+      </div>
     </div>
   );
 }
 
 export function StagePanel({ mode }: { mode: DetectionMode }) {
-  const { queue, live, approve, skip, clearLive, rejectLive } = useQueue();
+  const {
+    queue,
+    live,
+    approve,
+    skip,
+    clearLive,
+    rejectLive,
+    blackout,
+    toggleBlackout,
+  } = useQueue();
   const {
     translations,
     active: activeTranslation,
@@ -137,6 +166,37 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
   const liveBgValue = resolveValue(activeId);
   const previewBgValue = previewId ? resolveValue(previewId) : liveBgValue;
 
+  // Keyboard shortcuts: Space→approve, X→skip, N→reject, B→blackout
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      switch (e.key) {
+        case " ":
+          e.preventDefault();
+          if (pending)
+            approve(pending.id).catch(toastError("Failed to approve"));
+          break;
+        case "x":
+        case "X":
+          if (pending) skip(pending.id).catch(toastError("Failed to skip"));
+          break;
+        case "n":
+        case "N":
+          rejectLive().catch(toastError("Failed to reject"));
+          break;
+        case "b":
+        case "B":
+          toggleBlackout().catch(toastError("Failed to toggle live"));
+          break;
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [pending, approve, skip, rejectLive, toggleBlackout]);
+
   return (
     <section className="flex-1 flex flex-col bg-bg overflow-hidden">
       <div className="flex justify-between items-center px-3.5 py-2 h-[29px] font-mono text-[9.5px] tracking-[0.12em] uppercase text-ink-3 bg-bg-1 border-b border-line">
@@ -148,28 +208,50 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
       </div>
 
       <div
-        className="flex-1 p-4 flex items-center justify-center overflow-hidden"
+        className="flex-1 gap-2 p-4 flex items-center justify-center overflow-hidden"
         style={{
           background:
             "repeating-linear-gradient(45deg, var(--color-bg-1) 0 1px, transparent 1px 10px), var(--color-bg)",
         }}
       >
         <div className="w-full max-w-[760px] h-full flex flex-col gap-3.5 justify-center">
-          <ScaledPreview item={live} backgroundValue={liveBgValue} />
+          <ScaledPreview
+            item={live}
+            backgroundValue={liveBgValue}
+            dimmed={blackout}
+            label={blackout ? "OFF AIR" : "LIVE"}
+            sublabel={blackout ? "BLACKED OUT" : "ON SCREEN"}
+          />
           <ScaledPreview
             item={pending}
             backgroundValue={previewBgValue}
             dimmed={Boolean(pending)}
+            label="PREVIEW"
+            sublabel="CUED NEXT"
           />
         </div>
       </div>
 
       <div className="flex items-center gap-2.5 px-4 py-2.5 border-t border-line bg-bg-1 h-[52px] shrink-0">
         <div className="flex gap-1">
-          <span className="relative inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase text-white bg-live border border-live rounded">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-[blink_1.4s_infinite]" />
-            LIVE
-          </span>
+          <button
+            className={`relative inline-flex items-center gap-1.5 px-[11px] py-[7px] font-mono text-[9.5px] tracking-[0.1em] uppercase border rounded cursor-pointer transition-colors ${
+              blackout
+                ? "text-ink-3 bg-bg-2 border-line hover:bg-bg-3"
+                : "text-white bg-live border-live"
+            }`}
+            onClick={() =>
+              toggleBlackout().catch(toastError("Failed to toggle live"))
+            }
+            title={blackout ? "Turn live on (B)" : "Turn live off (B)"}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                blackout ? "bg-ink-3" : "bg-white animate-[blink_1.4s_infinite]"
+              }`}
+            />
+            {blackout ? "OFF AIR" : "LIVE"}
+          </button>
         </div>
         <div className="flex gap-1 pl-2.5 ml-1.5 border-l border-line">
           <StageBtn
@@ -197,11 +279,6 @@ export function StagePanel({ mode }: { mode: DetectionMode }) {
           />
         </div>
         <div className="flex gap-1 pl-2.5 ml-1.5 border-l border-line">
-          <StageBtn
-            label="Black"
-            kbd="B"
-            onClick={() => clearLive().catch(toastError("Failed to clear"))}
-          />
           <StageBtn
             label="Clear"
             onClick={() => clearLive().catch(toastError("Failed to clear"))}

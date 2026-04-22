@@ -73,7 +73,7 @@ export function PreviewPanel({
       .finally(() => setTextLoading(false));
   }, [entry.id, isText]);
 
-  const ext = entry.name.split(".").pop()?.toUpperCase() ?? "\u2014";
+  const ext = entry.name.split(".").pop()?.toUpperCase() ?? "—";
   const canPreview = !entry.is_dir && (isImage || isVideo || isAudio || isPdf || isText);
 
   return (

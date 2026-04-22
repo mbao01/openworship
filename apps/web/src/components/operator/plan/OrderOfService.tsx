@@ -83,7 +83,7 @@ function InlineDurationCell({
         setEditing(true);
       }}
     >
-      {durationSecs ? formatDuration(durationSecs) : "\u2014"}
+      {durationSecs ? formatDuration(durationSecs) : "—"}
     </span>
   );
 }
@@ -243,7 +243,7 @@ export function OrderOfService({
                                   project.created_at_ms,
                                   cumulativeSecs,
                                 )
-                              : "\u2014"}
+                              : "—"}
                           </span>
 
                           {/* Type icon */}

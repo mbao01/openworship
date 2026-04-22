@@ -35,7 +35,7 @@ test.describe("App Navigation", () => {
       timeout: 15_000,
     });
     await expect(page.locator('[data-qa="content-bank-toggle-label"]')).toContainText(
-      "CONTENT BANK"
+      "Library"
     );
   });
 

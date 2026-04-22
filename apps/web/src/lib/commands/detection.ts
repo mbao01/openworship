@@ -95,6 +95,23 @@ export async function clearQueue(): Promise<void> {
   return invoke("clear_queue");
 }
 
+// ─── Blackout ────────────────────────────────────────────────────────────────
+
+/**
+ * Toggles display blackout on/off.  Returns `true` when blacked out.
+ * Blackout hides content from the display without modifying the queue.
+ */
+export async function toggleBlackout(): Promise<boolean> {
+  return invoke<boolean>("toggle_blackout");
+}
+
+/**
+ * Returns the current blackout state.
+ */
+export async function getBlackout(): Promise<boolean> {
+  return invoke<boolean>("get_blackout");
+}
+
 /**
  * Runs the detection pipeline on an arbitrary transcript snippet.
  * Useful for manual testing or clipboard-paste detection.

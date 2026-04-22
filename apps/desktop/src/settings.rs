@@ -146,22 +146,20 @@ impl AudioSettings {
 
         // Merge legacy fields if not already in provider_config
         match provider_id {
-            "whisper" => {
-                if config.get("model").is_none() {
-                    let model = match self.whisper_model {
-                        WhisperModel::Tiny => "tiny",
-                        WhisperModel::Base => "base",
-                        WhisperModel::Small => "small",
-                        WhisperModel::Medium => "medium",
-                    };
-                    config["model"] = serde_json::Value::String(model.into());
-                }
+            "whisper" if config.get("model").is_none() => {
+                let model = match self.whisper_model {
+                    WhisperModel::Tiny => "tiny",
+                    WhisperModel::Base => "base",
+                    WhisperModel::Small => "small",
+                    WhisperModel::Medium => "medium",
+                };
+                config["model"] = serde_json::Value::String(model.into());
             }
-            "deepgram" => {
-                if config.get("api_key").is_none() && !self.deepgram_api_key.is_empty() {
-                    config["api_key"] =
-                        serde_json::Value::String(self.deepgram_api_key.clone());
-                }
+            "deepgram"
+                if config.get("api_key").is_none() && !self.deepgram_api_key.is_empty() =>
+            {
+                config["api_key"] =
+                    serde_json::Value::String(self.deepgram_api_key.clone());
             }
             _ => {}
         }

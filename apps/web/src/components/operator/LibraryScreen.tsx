@@ -133,8 +133,8 @@ export function LibraryScreen() {
             className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs focus:border-accent focus:outline-none"
             placeholder={
               tab === "scripture"
-                ? "Search 31,000 verses across 50 translations\u2026"
-                : "Search songs by title, artist, or lyrics\u2026"
+                ? "Search 31,000 verses across 50 translations ..."
+                : "Search songs by title, artist, or lyrics ..."
             }
             value={query}
             onChange={handleQueryChange}
@@ -152,12 +152,18 @@ export function LibraryScreen() {
                 }`}
                 onClick={() => setSelected(i)}
               >
-                <span className="text-accent flex items-center justify-center"><BookOpenIcon className="w-3.5 h-3.5 shrink-0" /></span>
+                <span className="text-accent flex items-center justify-center">
+                  <BookOpenIcon className="w-3.5 h-3.5 shrink-0" />
+                </span>
                 <div>
                   <div className="font-serif italic text-sm">{v.reference}</div>
-                  <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">{v.translation}</div>
+                  <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">
+                    {v.translation}
+                  </div>
                 </div>
-                <span className="font-mono text-[9.5px] text-ink-3">{i + 1}</span>
+                <span className="font-mono text-[9.5px] text-ink-3">
+                  {i + 1}
+                </span>
               </div>
             ))}
           {tab === "songs" &&
@@ -171,14 +177,18 @@ export function LibraryScreen() {
                 }`}
                 onClick={() => setSelected(i)}
               >
-                <span className="text-accent flex items-center justify-center"><MusicIcon className="w-3.5 h-3.5 shrink-0" /></span>
+                <span className="text-accent flex items-center justify-center">
+                  <MusicIcon className="w-3.5 h-3.5 shrink-0" />
+                </span>
                 <div>
                   <div className="font-serif italic text-sm">{s.title}</div>
                   <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">
                     {s.artist || "Unknown artist"}
                   </div>
                 </div>
-                <span className="font-mono text-[9.5px] text-ink-3">{i + 1}</span>
+                <span className="font-mono text-[9.5px] text-ink-3">
+                  {i + 1}
+                </span>
               </div>
             ))}
         </div>
@@ -187,7 +197,8 @@ export function LibraryScreen() {
       {/* Right: detail */}
       <div className="overflow-y-auto px-14 py-10">
         <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase mb-6 inline-flex items-center gap-1">
-          <CircleIcon className="w-3.5 h-3.5 shrink-0" fill="currentColor" /> DETAIL VIEW
+          <CircleIcon className="w-3.5 h-3.5 shrink-0" fill="currentColor" />{" "}
+          DETAIL VIEW
         </div>
         {tab === "scripture" && current ? (
           <div className="p-8 bg-bg-1 border border-line rounded-lg max-w-[700px]">

@@ -44,6 +44,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
             : "text-ink-3 hover:text-ink hover:bg-bg-2"
         }`}
         onClick={() => onScreenChange("settings")}
+        aria-label="Open settings"
       >
         {screen === "settings" && (
           <span className="absolute left-[-8px] top-2.5 bottom-2.5 w-[3px] bg-accent" />

@@ -303,6 +303,7 @@ export type SyncStatus =
   | "local_only"
   | "queued"
   | "syncing"
+  | "downloading"
   | "synced"
   | "conflict"
   | "error";

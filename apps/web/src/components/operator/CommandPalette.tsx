@@ -99,7 +99,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       group: "Scripture",
       items: scriptureResults.map((v) => ({
         glyph: <BookOpenIcon className="w-3.5 h-3.5 shrink-0" />,
-        main: `${v.reference} · \u201C${v.text.slice(0, 50)}…\u201D`,
+        main: `${v.reference} · “${v.text.slice(0, 50)}…”`,
         sub: `${v.translation} · library`,
         onSelect: () => handlePushScripture(v),
       })),
@@ -156,11 +156,13 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       >
         {/* Input */}
         <div className="flex items-center gap-3 px-[22px] py-[18px] border-b border-line">
-          <span className="text-accent flex items-center"><SearchIcon className="w-5 h-5 shrink-0" /></span>
+          <span className="text-accent flex items-center">
+            <SearchIcon className="w-5 h-5 shrink-0" />
+          </span>
           <input
             ref={inputRef}
             className="flex-1 bg-transparent border-0 font-serif text-[22px] text-ink tracking-[-0.01em] placeholder:text-ink-3 placeholder:italic outline-none focus:ring-0"
-            placeholder="Search scripture, lyrics, slides, or commands\u2026"
+            placeholder="Search scripture, lyrics, slides, or commands ..."
             value={query}
             onChange={handleChange}
           />
@@ -182,16 +184,26 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                   <div
                     key={`${g.group}-${idx}`}
                     className={`grid grid-cols-[28px_1fr_auto] gap-3.5 px-[22px] py-2.5 cursor-pointer items-center transition-colors ${
-                      idx === selected ? "bg-accent-soft" : "hover:bg-accent-soft"
+                      idx === selected
+                        ? "bg-accent-soft"
+                        : "hover:bg-accent-soft"
                     }`}
                     onClick={item.onSelect}
                   >
-                    <span className="text-accent flex items-center">{item.glyph}</span>
+                    <span className="text-accent flex items-center">
+                      {item.glyph}
+                    </span>
                     <div>
-                      <div className="text-[13.5px] text-ink truncate">{item.main}</div>
-                      <div className="font-mono text-[10px] text-ink-3 tracking-[0.06em] mt-0.5 uppercase">{item.sub}</div>
+                      <div className="text-[13.5px] text-ink truncate">
+                        {item.main}
+                      </div>
+                      <div className="font-mono text-[10px] text-ink-3 tracking-[0.06em] mt-0.5 uppercase">
+                        {item.sub}
+                      </div>
                     </div>
-                    <span className="text-ink-3 flex items-center"><CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" /></span>
+                    <span className="text-ink-3 flex items-center">
+                      <CornerDownLeftIcon className="w-3.5 h-3.5 shrink-0" />
+                    </span>
                   </div>
                 );
               })}
@@ -206,11 +218,33 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
 
         {/* Footer */}
         <div className="flex gap-4 items-center px-[22px] py-2.5 border-t border-line font-mono text-[10px] text-ink-3 tracking-[0.08em] uppercase">
-          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">↑↓</kbd> navigate</span>
-          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">↵</kbd> push</span>
-          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">⇧↵</kbd> queue</span>
-          <span><kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">esc</kbd> close</span>
-          <span className="ml-auto">searching · scripture · lyrics · slides</span>
+          <span>
+            <kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">
+              ↑↓
+            </kbd>{" "}
+            navigate
+          </span>
+          <span>
+            <kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">
+              ↵
+            </kbd>{" "}
+            push
+          </span>
+          <span>
+            <kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">
+              ⇧↵
+            </kbd>{" "}
+            queue
+          </span>
+          <span>
+            <kbd className="bg-bg-3 px-1.5 py-0.5 rounded-sm mr-1 text-ink-2">
+              esc
+            </kbd>{" "}
+            close
+          </span>
+          <span className="ml-auto">
+            searching · scripture · lyrics · slides
+          </span>
         </div>
       </div>
     </div>

@@ -37,6 +37,14 @@ export async function syncArtifactNow(artifactId: string): Promise<void> {
 }
 
 /**
+ * Downloads an artifact from cloud storage to the local filesystem.
+ * Returns the updated sync info on success.
+ */
+export async function downloadArtifactFromCloud(artifactId: string): Promise<CloudSyncInfo> {
+  return invoke<CloudSyncInfo>("download_artifact_from_cloud", { artifactId });
+}
+
+/**
  * Triggers a sync pass for all cloud-enabled artifacts.
  * Runs asynchronously; listen for sync status events.
  */

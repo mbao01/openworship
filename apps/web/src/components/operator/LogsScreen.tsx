@@ -159,8 +159,8 @@ export function LogsScreen() {
               {current.name}
             </h1>
             <p className="text-ink-3 text-[13px] mb-8 max-w-[56ch]">
-              {current.items.length} content items pushed ·{" "}
-              auto-generated artifacts ready to publish.
+              {current.items.length} content items pushed · auto-generated
+              artifacts ready to publish.
             </p>
 
             {/* Artifact cards */}
@@ -198,9 +198,7 @@ export function LogsScreen() {
                   className="p-[18px] bg-bg-1 border border-line rounded cursor-pointer hover:border-line-strong"
                 >
                   <div className="flex justify-between items-baseline mb-2">
-                    <span className="text-accent">
-                      {a.icon}
-                    </span>
+                    <span className="text-accent">{a.icon}</span>
                     {a.badge !== "none" && (
                       <span
                         className={`font-mono text-[9px] tracking-[0.14em] uppercase px-1.5 py-0.5 border rounded-sm ${
@@ -224,7 +222,8 @@ export function LogsScreen() {
             {/* Service recap section */}
             <div className="max-w-[780px] mb-8">
               <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase mb-3">
-                <CircleIcon className="w-2 h-2 shrink-0 inline fill-current" /> SERVICE RECAP
+                <CircleIcon className="w-2 h-2 shrink-0 inline fill-current" />{" "}
+                SERVICE RECAP
               </div>
               {currentSummary ? (
                 <div className="p-6 bg-bg-1 border border-line rounded">
@@ -235,7 +234,7 @@ export function LogsScreen() {
                     Generated {formatDate(currentSummary.generated_at_ms)}
                     {currentSummary.email_sent &&
                     currentSummary.email_sent_at_ms
-                      ? ` \u00B7 Email sent ${formatDate(currentSummary.email_sent_at_ms)}`
+                      ? ` · Email sent ${formatDate(currentSummary.email_sent_at_ms)}`
                       : ""}
                   </div>
                   <div className="flex gap-2.5 pt-4 border-t border-line">
@@ -245,7 +244,7 @@ export function LogsScreen() {
                         onClick={() => handlePublish(currentSummary.id)}
                         disabled={publishing}
                       >
-                        {publishing ? "Sending\u2026" : "Publish"}
+                        {publishing ? "Sending ..." : "Publish"}
                       </button>
                     )}
                     <button
@@ -253,7 +252,7 @@ export function LogsScreen() {
                       onClick={() => handleGenerate(current.id)}
                       disabled={generating}
                     >
-                      {generating ? "Generating\u2026" : "Regenerate"}
+                      {generating ? "Generating ..." : "Regenerate"}
                     </button>
                   </div>
                 </div>
@@ -267,7 +266,7 @@ export function LogsScreen() {
                     onClick={() => handleGenerate(current.id)}
                     disabled={generating}
                   >
-                    {generating ? "Generating\u2026" : "Generate recap"}
+                    {generating ? "Generating ..." : "Generate recap"}
                   </button>
                 </div>
               )}
@@ -276,7 +275,8 @@ export function LogsScreen() {
             {/* Timeline */}
             <div className="max-w-[780px]">
               <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase mb-3">
-                <CircleIcon className="w-2 h-2 shrink-0 inline fill-current" /> TIMELINE · ACTUAL
+                <CircleIcon className="w-2 h-2 shrink-0 inline fill-current" />{" "}
+                TIMELINE · ACTUAL
               </div>
               <div className="border border-line rounded overflow-hidden">
                 {current.items

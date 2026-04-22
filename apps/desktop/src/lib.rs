@@ -240,6 +240,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         subscribers,
         email_settings,
         anthropic_api_key,
+        blackout: Arc::new(RwLock::new(false)),
     };
 
     tauri::Builder::default()
@@ -250,6 +251,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
 
             // Start the WebSocket display server.
             tauri::async_runtime::spawn(ow_display::start_server(tx_for_server));
+
+
 
             // Start the detection loop (scripture + song).
             tauri::async_runtime::spawn(detection::run_loop(
@@ -402,6 +405,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::next_item,
             commands::prev_item,
             commands::clear_live,
+            commands::toggle_blackout,
+            commands::get_blackout,
             commands::get_audio_settings,
             commands::set_audio_settings,
             commands::check_whisper_model,
@@ -480,6 +485,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::get_cloud_sync_info,
             commands::toggle_artifact_cloud_sync,
             commands::sync_artifact_now,
+            commands::download_artifact_from_cloud,
             commands::sync_all_artifacts,
             commands::list_cloud_artifacts,
             commands::get_artifact_acl,
