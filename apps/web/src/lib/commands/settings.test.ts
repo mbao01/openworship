@@ -21,7 +21,6 @@ import type { AudioSettings, DisplaySettings, EmailSettings, S3Config, Artifacts
 
 const mockAudio: AudioSettings = {
   backend: "whisper",
-  deepgram_api_key: "",
   semantic_enabled: false,
   semantic_threshold_auto: 0.7,
   semantic_threshold_copilot: 0.6,
@@ -31,6 +30,7 @@ const mockAudio: AudioSettings = {
   theme: "system",
   whisper_model: "base",
   provider_config: {},
+  send_crash_reports: false,
 };
 
 const mockDisplay: DisplaySettings = {
