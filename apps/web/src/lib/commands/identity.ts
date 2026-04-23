@@ -15,7 +15,14 @@ import type { ChurchIdentity } from "../types";
  * A null result triggers the onboarding flow.
  */
 export async function getIdentity(): Promise<ChurchIdentity | null> {
-  return invoke<ChurchIdentity | null>("get_identity");
+  try {
+    return await invoke<ChurchIdentity | null>("get_identity");
+  } catch {
+    // Dev browser fallback: allow localStorage mock for UX review
+    const mock = localStorage.getItem("__dev_identity__");
+    if (mock) return JSON.parse(mock) as ChurchIdentity;
+    return null;
+  }
 }
 
 /**
