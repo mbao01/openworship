@@ -965,6 +965,31 @@ mod tests {
     }
 
     #[test]
+    fn get_sync_infos_batch() {
+        let db = CloudSyncDb::open_in_memory().unwrap();
+        for id in &["x1", "x2", "x3"] {
+            db.upsert_sync_info(&CloudSyncInfo {
+                artifact_id: id.to_string(),
+                sync_enabled: true,
+                status: SyncStatus::Synced,
+                cloud_key: Some(format!("c/b/{id}")),
+                last_etag: None, last_synced_ms: None, sync_error: None, progress: None,
+            }).unwrap();
+        }
+        // Fetch 2 of the 3, plus one that doesn't exist.
+        let ids: Vec<String> = vec!["x1".into(), "x3".into(), "missing".into()];
+        let results = db.get_sync_infos_batch(&ids).unwrap();
+        assert_eq!(results.len(), 2);
+        let ids_returned: Vec<&str> = results.iter().map(|r| r.artifact_id.as_str()).collect();
+        assert!(ids_returned.contains(&"x1"));
+        assert!(ids_returned.contains(&"x3"));
+
+        // Empty slice should return empty vec.
+        let empty = db.get_sync_infos_batch(&[]).unwrap();
+        assert!(empty.is_empty());
+    }
+
+    #[test]
     fn acl_set_and_get() {
         let db = CloudSyncDb::open_in_memory().unwrap();
         let entries = vec![
