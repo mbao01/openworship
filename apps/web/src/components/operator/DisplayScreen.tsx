@@ -19,8 +19,15 @@ function AssetPreview({
   const [src, setSrc] = useState<string | null>(null);
   const artifactId = artifactRef.replace("artifact:", "");
   const ext = (filename || "").split(".").pop()?.toLowerCase() || "";
+  const isVideo = VID_EXTS.has(ext);
 
   useEffect(() => {
+    // Videos: use owmedia:// streaming protocol (no blob, no blocking)
+    if (isVideo) {
+      setSrc(`owmedia://localhost/${artifactId}`);
+      return;
+    }
+    // Images: read bytes and create blob URL
     let revoked = false;
     let url: string | null = null;
     invoke<number[]>("read_artifact_bytes", { id: artifactId })
@@ -35,14 +42,14 @@ function AssetPreview({
       revoked = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [artifactId]);
+  }, [artifactId, isVideo]);
 
   if (!src) return <PaperclipIcon className="h-10 w-10 text-ink-3" />;
   if (IMG_EXTS.has(ext))
     return (
       <img src={src} alt="" className="max-h-full max-w-full object-contain" />
     );
-  if (VID_EXTS.has(ext))
+  if (isVideo)
     return <video src={src} controls className="max-h-full max-w-full" />;
   return <PaperclipIcon className="h-10 w-10 text-ink-3" />;
 }
