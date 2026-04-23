@@ -46,5 +46,16 @@
     "macOS": {
       "infoPlist": "Info.plist"
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "PLACEHOLDER — generate with `tauri signer generate` and set TAURI_SIGNING_PUBLIC_KEY in CI",
+      "endpoints": [
+        "https://github.com/mbao01/openworship/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }
