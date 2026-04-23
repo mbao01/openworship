@@ -49,3 +49,4 @@ tar = "0.4"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 sentry = { version = "0.34", default-features = false, features = ["backtrace", "panic", "reqwest", "rustls"] }
+log = "0.4"

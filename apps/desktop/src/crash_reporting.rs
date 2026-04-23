@@ -22,7 +22,7 @@ pub fn enable() {
     let dsn = match option_env!("SENTRY_DSN") {
         Some(d) if !d.is_empty() => d,
         _ => {
-            eprintln!("[sentry] SENTRY_DSN not set at compile time — crash reporting unavailable");
+            log::debug!("[sentry] SENTRY_DSN not set at compile time — crash reporting unavailable");
             return;
         }
     };
@@ -30,7 +30,7 @@ pub fn enable() {
     let mut guard = match SENTRY_GUARD.lock() {
         Ok(g) => g,
         Err(e) => {
-            eprintln!("[sentry] lock poisoned: {e}");
+            log::error!("[sentry] lock poisoned: {e}");
             return;
         }
     };
@@ -56,7 +56,7 @@ pub fn enable() {
     // bundled via the `panic` feature flag on the `sentry` crate.
 
     *guard = Some(client_guard);
-    eprintln!("[sentry] crash reporting enabled");
+    log::info!("[sentry] crash reporting enabled");
 }
 
 /// Disable Sentry crash reporting, flushing any queued events first.
@@ -64,14 +64,14 @@ pub fn disable() {
     let mut guard = match SENTRY_GUARD.lock() {
         Ok(g) => g,
         Err(e) => {
-            eprintln!("[sentry] lock poisoned on disable: {e}");
+            log::error!("[sentry] lock poisoned on disable: {e}");
             return;
         }
     };
     if let Some(g) = guard.take() {
         sentry::end_session();
         drop(g);
-        eprintln!("[sentry] crash reporting disabled");
+        log::info!("[sentry] crash reporting disabled");
     }
 }
 
@@ -85,60 +85,40 @@ pub fn is_enabled() -> bool {
 
 // ─── Breadcrumbs ──────────────────────────────────────────────────────────────
 
-/// Record a breadcrumb when STT transcription starts.
-pub fn breadcrumb_stt_start() {
+/// Add a breadcrumb with the given category and message.
+///
+/// No-ops if Sentry is not initialised.
+fn add_breadcrumb(category: &str, message: String) {
     if !is_enabled() {
         return;
     }
     sentry::add_breadcrumb(sentry::Breadcrumb {
         ty: "default".into(),
-        category: Some("stt".into()),
-        message: Some("STT started".into()),
+        category: Some(category.into()),
+        message: Some(message),
         level: sentry::Level::Info,
         ..Default::default()
     });
 }
 
+/// Record a breadcrumb when STT transcription starts.
+pub fn breadcrumb_stt_start() {
+    add_breadcrumb("stt", "STT started".into());
+}
+
 /// Record a breadcrumb when STT transcription stops.
 pub fn breadcrumb_stt_stop() {
-    if !is_enabled() {
-        return;
-    }
-    sentry::add_breadcrumb(sentry::Breadcrumb {
-        ty: "default".into(),
-        category: Some("stt".into()),
-        message: Some("STT stopped".into()),
-        level: sentry::Level::Info,
-        ..Default::default()
-    });
+    add_breadcrumb("stt", "STT stopped".into());
 }
 
 /// Record a breadcrumb when content is pushed to the display.
 ///
 /// `kind` should be `"scripture"`, `"song"`, `"announcement"`, etc.
 pub fn breadcrumb_display_push(kind: &str) {
-    if !is_enabled() {
-        return;
-    }
-    sentry::add_breadcrumb(sentry::Breadcrumb {
-        ty: "default".into(),
-        category: Some("display".into()),
-        message: Some(format!("Pushed {kind} to display")),
-        level: sentry::Level::Info,
-        ..Default::default()
-    });
+    add_breadcrumb("display", format!("Pushed {kind} to display"));
 }
 
 /// Record a breadcrumb when songs are imported.
 pub fn breadcrumb_song_import(count: usize) {
-    if !is_enabled() {
-        return;
-    }
-    sentry::add_breadcrumb(sentry::Breadcrumb {
-        ty: "default".into(),
-        category: Some("songs".into()),
-        message: Some(format!("Imported {count} songs")),
-        level: sentry::Level::Info,
-        ..Default::default()
-    });
+    add_breadcrumb("songs", format!("Imported {count} songs"));
 }
