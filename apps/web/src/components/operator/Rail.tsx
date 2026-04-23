@@ -19,6 +19,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
       {ITEMS.map((item) => (
         <button
           key={item.id}
+          aria-label={`Open ${item.label}`}
           className={`relative mx-2 flex cursor-pointer flex-col items-center gap-1 rounded py-2.5 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
             screen === item.id
               ? "bg-bg-3 text-ink"
