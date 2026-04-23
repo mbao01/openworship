@@ -28,10 +28,10 @@ function VuMeter({
   return (
     <div
       data-slot="vu-meter"
-      className={cn("flex gap-[2px] items-end h-4", className)}
+      className={cn("flex h-4 items-end gap-[2px]", className)}
     >
       {showPercentage && (
-        <span className="font-mono text-[10px] text-ink-3 tabular-nums w-6 text-center">
+        <span className="w-6 text-center font-mono text-[10px] text-ink-3 tabular-nums">
           {boosted > 0.01 ? `${Math.round(boosted * 100)}%` : "—"}
         </span>
       )}

@@ -32,15 +32,15 @@ export function ManualEventForm({
 
   return (
     <form
-      className="border border-line rounded-lg px-3.5 py-3 bg-bg-1 mt-3"
+      className="mt-3 rounded-lg border border-line bg-bg-1 px-3.5 py-3"
       onSubmit={handleSubmit}
     >
-      <div className="text-[11px] text-ink-3 font-medium mb-2">
+      <div className="mb-2 text-[11px] font-medium text-ink-3">
         Manual event
       </div>
-      <div className="flex gap-2 items-end">
+      <div className="flex items-end gap-2">
         <select
-          className="px-2 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs"
+          className="rounded border border-line bg-bg-2 px-2 py-[7px] text-xs text-ink"
           value={itemType}
           onChange={(e) => setItemType(e.target.value)}
         >
@@ -51,20 +51,20 @@ export function ManualEventForm({
           ))}
         </select>
         <input
-          className="flex-1 px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs"
+          className="flex-1 rounded border border-line bg-bg-2 px-2.5 py-[7px] text-xs text-ink"
           placeholder="Event title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <input
-          className="w-16 px-2 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs"
+          className="w-16 rounded border border-line bg-bg-2 px-2 py-[7px] text-xs text-ink"
           placeholder="min"
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
         />
         <button
           type="submit"
-          className="px-3 py-[7px] bg-accent text-accent-foreground text-xs font-semibold rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="cursor-pointer rounded bg-accent px-3 py-[7px] text-xs font-semibold text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
           disabled={!title.trim() || submitting}
         >
           Add

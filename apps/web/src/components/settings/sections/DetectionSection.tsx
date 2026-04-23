@@ -11,20 +11,23 @@ export function DetectionSection() {
 
   if (loading || !settings) {
     return (
-      <div className="flex-1 p-6 flex items-center justify-center text-ink-3 text-sm">
+      <div className="flex flex-1 items-center justify-center p-6 text-sm text-ink-3">
         Loading…
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-0">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 mb-6 pb-3 border-b border-line">
+    <div className="flex-1 space-y-0 overflow-y-auto p-6">
+      <h2 className="mb-6 border-b border-line pb-3 font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">
         Detection
       </h2>
 
       <Section title="Semantic matching">
-        <SettingRow label="Enable semantic matching" description="Uses AI embeddings to match scripture by meaning, not just keywords.">
+        <SettingRow
+          label="Enable semantic matching"
+          description="Uses AI embeddings to match scripture by meaning, not just keywords."
+        >
           <Toggle
             checked={settings.semantic_enabled}
             onCheckedChange={(v) => update({ semantic_enabled: v })}
@@ -33,21 +36,35 @@ export function DetectionSection() {
 
         {settings.semantic_enabled && (
           <>
-            <SettingRow label={`Auto mode threshold — ${Math.round(settings.semantic_threshold_auto * 100)}%`}>
+            <SettingRow
+              label={`Auto mode threshold — ${Math.round(settings.semantic_threshold_auto * 100)}%`}
+            >
               <div className="w-40">
                 <Slider
-                  min={50} max={100} step={1}
+                  min={50}
+                  max={100}
+                  step={1}
                   value={[Math.round(settings.semantic_threshold_auto * 100)]}
-                  onValueChange={([v]: number[]) => update({ semantic_threshold_auto: v / 100 })}
+                  onValueChange={([v]: number[]) =>
+                    update({ semantic_threshold_auto: v / 100 })
+                  }
                 />
               </div>
             </SettingRow>
-            <SettingRow label={`Copilot mode threshold — ${Math.round(settings.semantic_threshold_copilot * 100)}%`}>
+            <SettingRow
+              label={`Copilot mode threshold — ${Math.round(settings.semantic_threshold_copilot * 100)}%`}
+            >
               <div className="w-40">
                 <Slider
-                  min={50} max={100} step={1}
-                  value={[Math.round(settings.semantic_threshold_copilot * 100)]}
-                  onValueChange={([v]: number[]) => update({ semantic_threshold_copilot: v / 100 })}
+                  min={50}
+                  max={100}
+                  step={1}
+                  value={[
+                    Math.round(settings.semantic_threshold_copilot * 100),
+                  ]}
+                  onValueChange={([v]: number[]) =>
+                    update({ semantic_threshold_copilot: v / 100 })
+                  }
                 />
               </div>
             </SettingRow>
@@ -56,21 +73,33 @@ export function DetectionSection() {
       </Section>
 
       <Section title="Lyrics detection" separator>
-        <SettingRow label={`Auto threshold — ${Math.round(settings.lyrics_threshold_auto * 100)}%`}>
+        <SettingRow
+          label={`Auto threshold — ${Math.round(settings.lyrics_threshold_auto * 100)}%`}
+        >
           <div className="w-40">
             <Slider
-              min={50} max={100} step={1}
+              min={50}
+              max={100}
+              step={1}
               value={[Math.round(settings.lyrics_threshold_auto * 100)]}
-              onValueChange={([v]: number[]) => update({ lyrics_threshold_auto: v / 100 })}
+              onValueChange={([v]: number[]) =>
+                update({ lyrics_threshold_auto: v / 100 })
+              }
             />
           </div>
         </SettingRow>
-        <SettingRow label={`Copilot threshold — ${Math.round(settings.lyrics_threshold_copilot * 100)}%`}>
+        <SettingRow
+          label={`Copilot threshold — ${Math.round(settings.lyrics_threshold_copilot * 100)}%`}
+        >
           <div className="w-40">
             <Slider
-              min={50} max={100} step={1}
+              min={50}
+              max={100}
+              step={1}
               value={[Math.round(settings.lyrics_threshold_copilot * 100)]}
-              onValueChange={([v]: number[]) => update({ lyrics_threshold_copilot: v / 100 })}
+              onValueChange={([v]: number[]) =>
+                update({ lyrics_threshold_copilot: v / 100 })
+              }
             />
           </div>
         </SettingRow>

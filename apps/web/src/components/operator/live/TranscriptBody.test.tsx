@@ -8,13 +8,17 @@ vi.mock("@tauri-apps/api/event", () => ({
 
 describe("TranscriptBody", () => {
   it('renders "mic off" when there is no transcript and mic is inactive', () => {
-    render(<TranscriptBody />);
+    render(<TranscriptBody micActive={false} />);
     expect(screen.getByText(/mic off/)).toBeInTheDocument();
   });
 
+  it('renders "listening" when mic is active but no transcript', () => {
+    render(<TranscriptBody micActive={true} />);
+    expect(screen.getByText(/listening/)).toBeInTheDocument();
+  });
+
   it("renders the status message container when no transcript", () => {
-    const { container } = render(<TranscriptBody />);
-    // The component renders a centered div with mic status text
+    const { container } = render(<TranscriptBody micActive={false} />);
     const statusDiv = container.querySelector(".text-muted.italic");
     expect(statusDiv).toBeTruthy();
     expect(statusDiv?.textContent).toContain("mic off");

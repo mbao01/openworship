@@ -62,7 +62,7 @@ export function SpeakerPage() {
             // Advance updates the index but we wait for the next full
             // sermon_note event which carries the new text.
             setSlide((prev) =>
-              prev ? { ...prev, slideIndex: ev.slide_index } : prev
+              prev ? { ...prev, slideIndex: ev.slide_index } : prev,
             );
           }
         } catch {
@@ -90,7 +90,9 @@ export function SpeakerPage() {
   }, []);
 
   const handlePrev = useCallback(() => {
-    invoke("rewind_sermon_note").catch(toastError("Failed to go to previous slide"));
+    invoke("rewind_sermon_note").catch(
+      toastError("Failed to go to previous slide"),
+    );
   }, []);
 
   // Keyboard shortcuts: ArrowRight / Space → next, ArrowLeft → prev.
@@ -113,8 +115,8 @@ export function SpeakerPage() {
   const isLast = slide ? slide.slideIndex + 1 >= slide.totalSlides : true;
 
   return (
-    <div className="fixed inset-0 bg-bg font-sans flex flex-col text-ink">
-      <header className="flex items-center justify-between px-6 py-3 bg-bg-1 border-b border-line shrink-0">
+    <div className="fixed inset-0 flex flex-col bg-bg font-sans text-ink">
+      <header className="flex shrink-0 items-center justify-between border-b border-line bg-bg-1 px-6 py-3">
         <span className="text-[0.7rem] font-semibold tracking-[0.2em] text-ink-3 uppercase">
           SPEAKER NOTES
         </span>
@@ -128,7 +130,7 @@ export function SpeakerPage() {
       </header>
 
       {slide ? (
-        <main className="flex-1 flex flex-col px-8 pt-8 pb-6 gap-4 overflow-hidden">
+        <main className="flex flex-1 flex-col gap-4 overflow-hidden px-8 pt-8 pb-6">
           <div className="flex items-baseline gap-4">
             <span className="text-[1rem] font-semibold tracking-[0.1em] text-accent [font-variant:small-caps]">
               {slide.title}
@@ -137,16 +139,16 @@ export function SpeakerPage() {
               {slide.slideIndex + 1} / {slide.totalSlides}
             </span>
           </div>
-          <div className="flex-1 text-[clamp(2rem,4vw,4.5rem)] font-normal leading-[1.4] text-ink whitespace-pre-wrap overflow-auto">
+          <div className="flex-1 overflow-auto text-[clamp(2rem,4vw,4.5rem)] leading-[1.4] font-normal whitespace-pre-wrap text-ink">
             {slide.text}
           </div>
-          <div className="flex items-center justify-between shrink-0">
+          <div className="flex shrink-0 items-center justify-between">
             <button
               onClick={handlePrev}
               disabled={isFirst}
               aria-label="Previous slide"
               title="Previous slide (←)"
-              className="font-sans text-[0.75rem] font-medium tracking-[0.1em] text-ink bg-transparent border border-line rounded-sm px-5 py-2 cursor-pointer transition-all uppercase hover:border-line-strong disabled:opacity-30 disabled:cursor-default"
+              className="cursor-pointer rounded-sm border border-line bg-transparent px-5 py-2 font-sans text-[0.75rem] font-medium tracking-[0.1em] text-ink uppercase transition-all hover:border-line-strong disabled:cursor-default disabled:opacity-30"
             >
               ← PREV
             </button>
@@ -158,14 +160,14 @@ export function SpeakerPage() {
               disabled={isLast}
               aria-label="Next slide"
               title="Next slide (→ or Space)"
-              className="font-sans text-[0.75rem] font-medium tracking-[0.1em] text-ink bg-transparent border border-line rounded-sm px-5 py-2 cursor-pointer transition-all uppercase hover:border-line-strong disabled:opacity-30 disabled:cursor-default"
+              className="cursor-pointer rounded-sm border border-line bg-transparent px-5 py-2 font-sans text-[0.75rem] font-medium tracking-[0.1em] text-ink uppercase transition-all hover:border-line-strong disabled:cursor-default disabled:opacity-30"
             >
               NEXT →
             </button>
           </div>
         </main>
       ) : (
-        <main className="flex-1 flex flex-col items-center justify-center gap-3 text-ink-3 text-[1.1rem]">
+        <main className="flex flex-1 flex-col items-center justify-center gap-3 text-[1.1rem] text-ink-3">
           <p>Waiting for sermon notes…</p>
           <p className="text-[0.85rem] text-muted">
             The operator will push notes when the message begins.

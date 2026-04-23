@@ -205,6 +205,24 @@ pub fn get_all_verses(conn: &Connection) -> Result<Vec<Verse>> {
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
+/// Return the distinct chapter numbers for a given book (across all translations).
+pub fn get_chapters(conn: &Connection, book: &str) -> Result<Vec<u32>> {
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT chapter FROM verses WHERE book = ?1 ORDER BY chapter",
+    )?;
+    let rows = stmt.query_map([book], |row| row.get::<_, u32>(0))?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+/// Return the distinct verse numbers for a given book and chapter.
+pub fn get_verses(conn: &Connection, book: &str, chapter: u32) -> Result<Vec<u32>> {
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT verse FROM verses WHERE book = ?1 AND chapter = ?2 ORDER BY verse",
+    )?;
+    let rows = stmt.query_map(params![book, chapter], |row| row.get::<_, u32>(0))?;
+    Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
 // ─────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────

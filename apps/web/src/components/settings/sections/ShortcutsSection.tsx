@@ -1,14 +1,14 @@
 import { Kbd } from "@/components/ui/kbd";
 
 const SHORTCUTS: { key: string; description: string }[] = [
-  { key: "Space",  description: "Push next item to display" },
-  { key: "B",      description: "Black screen" },
-  { key: "X",      description: "Skip queue item" },
-  { key: "N",      description: "Reject — not this one" },
+  { key: "Space", description: "Push next item to display" },
+  { key: "B", description: "Black screen" },
+  { key: "X", description: "Skip queue item" },
+  { key: "N", description: "Reject — not this one" },
   { key: "↑ / ↓", description: "Navigate queue items" },
-  { key: "⌘ ,",   description: "Open settings" },
-  { key: "⌘ M",   description: "Toggle microphone" },
-  { key: "⌘ K",   description: "Command palette" },
+  { key: "⌘ ,", description: "Open settings" },
+  { key: "⌘ M", description: "Toggle microphone" },
+  { key: "⌘ K", description: "Command palette" },
 ];
 
 /**
@@ -16,8 +16,8 @@ const SHORTCUTS: { key: string; description: string }[] = [
  */
 export function ShortcutsSection() {
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-0">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 mb-6 pb-3 border-b border-line">
+    <div className="flex-1 space-y-0 overflow-y-auto p-6">
+      <h2 className="mb-6 border-b border-line pb-3 font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">
         Shortcuts
       </h2>
 
@@ -25,7 +25,7 @@ export function ShortcutsSection() {
         {SHORTCUTS.map(({ key, description }) => (
           <div
             key={key}
-            className="flex items-center justify-between py-2.5 border-b border-line last:border-b-0"
+            className="flex items-center justify-between border-b border-line py-2.5 last:border-b-0"
           >
             <span className="text-sm text-ink-2">{description}</span>
             <Kbd>{key}</Kbd>

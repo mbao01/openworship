@@ -34,7 +34,9 @@ export async function updateServiceProject(
 /**
  * Creates a new service project with the given name.
  */
-export async function createServiceProject(name: string): Promise<ServiceProject> {
+export async function createServiceProject(
+  name: string,
+): Promise<ServiceProject> {
   return invoke<ServiceProject>("create_service_project", { name });
 }
 
@@ -82,7 +84,9 @@ export async function addItemToActiveProject(
 /**
  * Removes an item from the active project by its item ID.
  */
-export async function removeItemFromActiveProject(itemId: string): Promise<void> {
+export async function removeItemFromActiveProject(
+  itemId: string,
+): Promise<void> {
   return invoke("remove_item_from_active_project", { itemId });
 }
 
@@ -90,7 +94,9 @@ export async function removeItemFromActiveProject(itemId: string): Promise<void>
  * Reorders the items in the active project.
  * @param itemIds Ordered array of item IDs representing the new order.
  */
-export async function reorderActiveProjectItems(itemIds: string[]): Promise<void> {
+export async function reorderActiveProjectItems(
+  itemIds: string[],
+): Promise<void> {
   return invoke("reorder_active_project_items", { itemIds });
 }
 
@@ -98,7 +104,11 @@ export async function reorderActiveProjectItems(itemIds: string[]): Promise<void
 
 export async function updateProjectItem(
   itemId: string,
-  updates: { duration_secs?: number | null; notes?: string | null; item_type?: string },
+  updates: {
+    duration_secs?: number | null;
+    notes?: string | null;
+    item_type?: string;
+  },
 ): Promise<ServiceProject> {
   return invoke<ServiceProject>("update_project_item", {
     itemId,
@@ -115,7 +125,11 @@ export async function createServiceTask(
   title: string,
   description?: string,
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("create_service_task", { serviceId, title, description });
+  return invoke<ServiceProject>("create_service_task", {
+    serviceId,
+    title,
+    description,
+  });
 }
 
 export async function updateServiceTask(
@@ -130,7 +144,9 @@ export async function updateServiceTask(
   });
 }
 
-export async function deleteServiceTask(taskId: string): Promise<ServiceProject> {
+export async function deleteServiceTask(
+  taskId: string,
+): Promise<ServiceProject> {
   return invoke<ServiceProject>("delete_service_task", { taskId });
 }
 
@@ -147,7 +163,10 @@ export async function unlinkAssetFromItem(
   itemId: string,
   artifactId: string,
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("unlink_asset_from_item", { itemId, artifactId });
+  return invoke<ServiceProject>("unlink_asset_from_item", {
+    itemId,
+    artifactId,
+  });
 }
 
 export async function uploadAndLinkAsset(
@@ -155,5 +174,9 @@ export async function uploadAndLinkAsset(
   fileName: string,
   data: number[],
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("upload_and_link_asset", { itemId, fileName, data });
+  return invoke<ServiceProject>("upload_and_link_asset", {
+    itemId,
+    fileName,
+    data,
+  });
 }

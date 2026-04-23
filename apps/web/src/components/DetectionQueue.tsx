@@ -41,14 +41,16 @@ export function DetectionQueue() {
   const visible = items.filter((i) => i.status !== "dismissed");
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4 shrink-0">
-        <span className="text-[11px] font-medium tracking-[0.12em] text-ink-3 uppercase">QUEUE</span>
+      <div className="mb-4 flex shrink-0 items-center gap-2">
+        <span className="text-[11px] font-medium tracking-[0.12em] text-ink-3 uppercase">
+          QUEUE
+        </span>
         {visible.length > 0 && (
           <span
             data-qa="detection-queue-count"
-            className="font-mono text-[10px] text-accent bg-accent-soft border border-accent/30 rounded-sm px-[5px] py-px tracking-[0.04em]"
+            className="rounded-sm border border-accent/30 bg-accent-soft px-[5px] py-px font-mono text-[10px] tracking-[0.04em] text-accent"
           >
             {visible.length}
           </span>
@@ -56,9 +58,9 @@ export function DetectionQueue() {
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto flex flex-col gap-2 min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-sm">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto [scrollbar-color:var(--color-line-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb]:bg-line">
         {visible.length === 0 && (
-          <p className="text-xs text-muted m-0">No detections yet.</p>
+          <p className="m-0 text-xs text-muted">No detections yet.</p>
         )}
         {visible.map((item) => (
           <DetectionCard
@@ -81,39 +83,59 @@ interface CardProps {
   onRejectLive: () => void;
 }
 
-function DetectionCard({ item, onApprove, onDismiss, onRejectLive }: CardProps) {
+function DetectionCard({
+  item,
+  onApprove,
+  onDismiss,
+  onRejectLive,
+}: CardProps) {
   const isSong = item.kind === "song";
-  const confidencePct = item.confidence != null ? Math.round(item.confidence * 100) : null;
+  const confidencePct =
+    item.confidence != null ? Math.round(item.confidence * 100) : null;
 
   const borderLeftClass =
     item.status === "live"
       ? "border-l-accent"
       : item.status === "pending"
-      ? "border-l-accent/60"
-      : "border-l-transparent";
+        ? "border-l-accent/60"
+        : "border-l-transparent";
 
   const opacityClass = item.status === "dismissed" ? "opacity-40" : "";
 
   return (
     <div
-      className={`bg-bg-2 border border-line/40 border-l-2 ${borderLeftClass} rounded-sm p-3 transition-colors ${opacityClass}`}
+      className={`border border-l-2 border-line/40 bg-bg-2 ${borderLeftClass} rounded-sm p-3 transition-colors ${opacityClass}`}
       role="article"
     >
       {/* Meta row */}
-      <div className="flex items-center gap-2 mb-1">
+      <div className="mb-1 flex items-center gap-2">
         {isSong && (
-          <span className="text-[11px] text-accent leading-none shrink-0" title="Song">♪</span>
+          <span
+            className="shrink-0 text-[11px] leading-none text-accent"
+            title="Song"
+          >
+            ♪
+          </span>
         )}
-        <span className="text-xs font-medium text-ink tracking-[0.04em] flex-1">{item.reference}</span>
+        <span className="flex-1 text-xs font-medium tracking-[0.04em] text-ink">
+          {item.reference}
+        </span>
         {!isSong && (
-          <span className="font-mono text-[10px] text-ink-3 tracking-[0.08em]">{item.translation}</span>
+          <span className="font-mono text-[10px] tracking-[0.08em] text-ink-3">
+            {item.translation}
+          </span>
         )}
         {item.is_semantic && (
-          <span className="text-[11px] text-accent/75 cursor-default" title="Semantic match">~</span>
+          <span
+            className="cursor-default text-[11px] text-accent/75"
+            title="Semantic match"
+          >
+            ~
+          </span>
         )}
         {item.status === "live" && (
           <span
-            className="w-2 h-2 rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)] shrink-0"
+            className="h-2 w-2 shrink-0 rounded-full bg-accent [box-shadow:0_0_4px_var(--color-accent)]"
             aria-label="Live"
           />
         )}
@@ -121,20 +143,20 @@ function DetectionCard({ item, onApprove, onDismiss, onRejectLive }: CardProps) 
 
       {/* Verse text */}
       {!isSong && (
-        <p className="text-xs leading-[1.5] text-ink-3 m-0 mb-2">{item.text}</p>
+        <p className="m-0 mb-2 text-xs leading-[1.5] text-ink-3">{item.text}</p>
       )}
 
       {/* Confidence bar */}
       {confidencePct != null && (
         <div
-          className="relative h-[3px] bg-line rounded-sm my-1 overflow-visible"
+          className="relative my-1 h-[3px] overflow-visible rounded-sm bg-line"
           title={`${confidencePct}% confidence`}
         >
           <div
-            className="h-full bg-accent rounded-sm transition-[width_0.3s_ease]"
+            className="h-full rounded-sm bg-accent transition-[width_0.3s_ease]"
             style={{ width: `${confidencePct}%` }}
           />
-          <span className="absolute right-0 -top-[14px] text-[9px] text-muted font-mono">
+          <span className="absolute -top-[14px] right-0 font-mono text-[9px] text-muted">
             {confidencePct}%
           </span>
         </div>
@@ -142,10 +164,10 @@ function DetectionCard({ item, onApprove, onDismiss, onRejectLive }: CardProps) 
 
       {/* Actions */}
       {item.status === "pending" && (
-        <div className="flex gap-2 mt-2">
+        <div className="mt-2 flex gap-2">
           <button
             data-qa={`approve-btn-${item.id}`}
-            className="font-sans text-[10px] font-medium tracking-[0.08em] text-accent-foreground bg-accent border-none rounded-sm px-[10px] py-1 cursor-pointer transition-all uppercase hover:brightness-115"
+            className="cursor-pointer rounded-sm border-none bg-accent px-[10px] py-1 font-sans text-[10px] font-medium tracking-[0.08em] text-accent-foreground uppercase transition-all hover:brightness-115"
             onClick={() => onApprove(item.id)}
             aria-label={`Approve ${item.reference}`}
           >
@@ -153,7 +175,7 @@ function DetectionCard({ item, onApprove, onDismiss, onRejectLive }: CardProps) 
           </button>
           <button
             data-qa={`dismiss-btn-${item.id}`}
-            className="font-sans text-[10px] font-medium tracking-[0.08em] text-ink bg-transparent border border-line rounded-sm px-[10px] py-1 cursor-pointer transition-colors uppercase hover:border-line-strong"
+            className="cursor-pointer rounded-sm border border-line bg-transparent px-[10px] py-1 font-sans text-[10px] font-medium tracking-[0.08em] text-ink uppercase transition-colors hover:border-line-strong"
             onClick={() => onDismiss(item.id)}
             aria-label={`Dismiss ${item.reference}`}
           >
@@ -163,10 +185,10 @@ function DetectionCard({ item, onApprove, onDismiss, onRejectLive }: CardProps) 
       )}
 
       {item.status === "live" && (
-        <div className="flex gap-2 mt-2">
+        <div className="mt-2 flex gap-2">
           <button
             data-qa="reject-live-btn"
-            className="font-sans text-[10px] font-medium tracking-[0.08em] text-danger bg-transparent border border-danger rounded-sm px-[10px] py-1 cursor-pointer transition-all uppercase hover:bg-danger hover:text-accent-foreground"
+            className="cursor-pointer rounded-sm border border-danger bg-transparent px-[10px] py-1 font-sans text-[10px] font-medium tracking-[0.08em] text-danger uppercase transition-all hover:bg-danger hover:text-accent-foreground"
             onClick={onRejectLive}
             aria-label="Not this one — skip to next"
             title="Wrong verse? Dismiss and show the next pending item."
@@ -178,4 +200,3 @@ function DetectionCard({ item, onApprove, onDismiss, onRejectLive }: CardProps) 
     </div>
   );
 }
-

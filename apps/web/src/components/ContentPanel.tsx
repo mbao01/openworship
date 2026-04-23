@@ -11,14 +11,29 @@ import { toastError } from "../lib/toast";
 import type { AnnouncementItem, SermonNote } from "../lib/types";
 
 // Shared classes
-const inputCls = "w-full bg-bg border-none border-b border-b-line text-ink font-sans text-xs py-2 px-0 outline-none transition-colors focus:border-b-accent";
-const textareaCls = "w-full box-sizing-border bg-bg border border-line rounded-[3px] text-ink font-sans text-xs p-2 resize-y outline-none transition-colors focus:border-accent";
-const btnBaseCls = "bg-none border border-line text-ink-3 rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:text-ink hover:not-disabled:border-line-strong";
-const btnPrimaryCls = "bg-none border border-accent text-accent rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-accent hover:not-disabled:text-accent-foreground";
-const sectionTitleCls = "text-[10px] font-semibold tracking-[0.14em] uppercase text-ink-3";
+const inputCls =
+  "w-full bg-bg border-none border-b border-b-line text-ink font-sans text-xs py-2 px-0 outline-none transition-colors focus:border-b-accent";
+const textareaCls =
+  "w-full box-sizing-border bg-bg border border-line rounded-[3px] text-ink font-sans text-xs p-2 resize-y outline-none transition-colors focus:border-accent";
+const btnBaseCls =
+  "bg-none border border-line text-ink-3 rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:text-ink hover:not-disabled:border-line-strong";
+const btnPrimaryCls =
+  "bg-none border border-accent text-accent rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-accent hover:not-disabled:text-accent-foreground";
+const sectionTitleCls =
+  "text-[10px] font-semibold tracking-[0.14em] uppercase text-ink-3";
 
-type AnnForm = { title: string; body: string; image_url: string; keyword_cue: string };
-const emptyForm = (): AnnForm => ({ title: "", body: "", image_url: "", keyword_cue: "" });
+type AnnForm = {
+  title: string;
+  body: string;
+  image_url: string;
+  keyword_cue: string;
+};
+const emptyForm = (): AnnForm => ({
+  title: "",
+  body: "",
+  image_url: "",
+  keyword_cue: "",
+});
 const itemToForm = (item: AnnouncementItem): AnnForm => ({
   title: item.title,
   body: item.body ?? "",
@@ -44,7 +59,9 @@ function AnnouncementLibrary() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const handleCreate = async () => {
     if (!form.title.trim()) return;
@@ -106,11 +123,14 @@ function AnnouncementLibrary() {
 
   return (
     <div className="px-4 py-3">
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <span className={sectionTitleCls}>Announcements</span>
         <button
-          className="bg-none border border-line text-ink-3 rounded-[3px] w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 hover:text-ink hover:border-line-strong"
-          onClick={() => { setCreating((v) => !v); setEditingId(null); }}
+          className="flex h-5 w-5 cursor-pointer items-center justify-center rounded-[3px] border border-line bg-none p-0 text-sm leading-none text-ink-3 hover:border-line-strong hover:text-ink"
+          onClick={() => {
+            setCreating((v) => !v);
+            setEditingId(null);
+          }}
           title={creating ? "Cancel" : "New announcement"}
         >
           {creating ? "✕" : "+"}
@@ -118,71 +138,141 @@ function AnnouncementLibrary() {
       </div>
 
       {creating && (
-        <div className="flex flex-col gap-2 mb-3">
-          <input className={inputCls} placeholder="Title *" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-          <textarea className={textareaCls} placeholder="Body text" rows={3} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
-          <input className={inputCls} placeholder="Image URL (optional)" value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} />
+        <div className="mb-3 flex flex-col gap-2">
+          <input
+            className={inputCls}
+            placeholder="Title *"
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+          />
+          <textarea
+            className={textareaCls}
+            placeholder="Body text"
+            rows={3}
+            value={form.body}
+            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+          />
+          <input
+            className={inputCls}
+            placeholder="Image URL (optional)"
+            value={form.image_url}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, image_url: e.target.value }))
+            }
+          />
           <input
             className={inputCls}
             placeholder="Keyword cue — auto-triggers when spoken (optional)"
             value={form.keyword_cue}
-            onChange={(e) => setForm((f) => ({ ...f, keyword_cue: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, keyword_cue: e.target.value }))
+            }
           />
           <div className="flex gap-2">
-            <button className={btnPrimaryCls} onClick={handleCreate} disabled={!form.title.trim()}>Save</button>
-            <button className={btnBaseCls} onClick={() => setCreating(false)}>Cancel</button>
+            <button
+              className={btnPrimaryCls}
+              onClick={handleCreate}
+              disabled={!form.title.trim()}
+            >
+              Save
+            </button>
+            <button className={btnBaseCls} onClick={() => setCreating(false)}>
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
       {items.length === 0 && !creating && (
-        <p className="text-[11px] text-muted my-2 mx-0">No announcements yet</p>
+        <p className="mx-0 my-2 text-[11px] text-muted">No announcements yet</p>
       )}
 
-      <ul className="list-none m-0 p-0 flex flex-col gap-1">
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
         {items.map((item) => (
           <li key={item.id} className="flex flex-col rounded-[3px] bg-bg">
             {editingId === item.id ? (
               <div className="flex flex-col gap-2 p-2">
-                <input className={inputCls} placeholder="Title *" value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} />
-                <textarea className={textareaCls} placeholder="Body text" rows={2} value={editForm.body} onChange={(e) => setEditForm((f) => ({ ...f, body: e.target.value }))} />
-                <input className={inputCls} placeholder="Image URL (optional)" value={editForm.image_url} onChange={(e) => setEditForm((f) => ({ ...f, image_url: e.target.value }))} />
+                <input
+                  className={inputCls}
+                  placeholder="Title *"
+                  value={editForm.title}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, title: e.target.value }))
+                  }
+                />
+                <textarea
+                  className={textareaCls}
+                  placeholder="Body text"
+                  rows={2}
+                  value={editForm.body}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, body: e.target.value }))
+                  }
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Image URL (optional)"
+                  value={editForm.image_url}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, image_url: e.target.value }))
+                  }
+                />
                 <input
                   className={inputCls}
                   placeholder="Keyword cue (optional)"
                   value={editForm.keyword_cue}
-                  onChange={(e) => setEditForm((f) => ({ ...f, keyword_cue: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, keyword_cue: e.target.value }))
+                  }
                 />
                 <div className="flex gap-2">
-                  <button className={btnPrimaryCls} onClick={handleUpdate} disabled={!editForm.title.trim()}>Save</button>
-                  <button className={btnBaseCls} onClick={() => setEditingId(null)}>Cancel</button>
+                  <button
+                    className={btnPrimaryCls}
+                    onClick={handleUpdate}
+                    disabled={!editForm.title.trim()}
+                  >
+                    Save
+                  </button>
+                  <button
+                    className={btnBaseCls}
+                    onClick={() => setEditingId(null)}
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 py-2 px-2">
-                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className="text-xs text-ink whitespace-nowrap overflow-hidden text-ellipsis">{item.title}</span>
+              <div className="flex items-center gap-2 px-2 py-2">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-ink">
+                    {item.title}
+                  </span>
                   {item.keyword_cue ? (
-                    <span className="text-[10px] text-accent/70" title="Auto-triggers when this phrase is spoken">⌨ {item.keyword_cue}</span>
+                    <span
+                      className="text-[10px] text-accent/70"
+                      title="Auto-triggers when this phrase is spoken"
+                    >
+                      ⌨ {item.keyword_cue}
+                    </span>
                   ) : null}
                 </div>
-                <div className="flex gap-1 shrink-0">
+                <div className="flex shrink-0 gap-1">
                   <button
-                    className="bg-none border-none border-transparent text-ink-3 px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-accent"
+                    className="cursor-pointer rounded-[3px] border-none border-transparent bg-none px-2 py-0 font-sans text-[11px] text-ink-3 transition-colors hover:text-accent"
                     onClick={() => void handlePush(item.id)}
                     title="Push to display"
                   >
                     ▶
                   </button>
                   <button
-                    className="bg-none border-none border-transparent text-ink-3 px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-ink"
+                    className="cursor-pointer rounded-[3px] border-none border-transparent bg-none px-2 py-0 font-sans text-[10px] text-ink-3 transition-colors hover:text-ink"
                     onClick={() => startEdit(item)}
                     title="Edit"
                   >
                     ✎
                   </button>
                   <button
-                    className="bg-none border-none border-transparent text-muted px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-danger"
+                    className="cursor-pointer rounded-[3px] border-none border-transparent bg-none px-2 py-0 font-sans text-[10px] text-muted transition-colors hover:text-danger"
                     onClick={() => void handleDelete(item.id)}
                     title="Delete"
                   >
@@ -223,13 +313,31 @@ function CustomSlidePanel() {
 
   return (
     <div className="px-4 py-3">
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <span className={sectionTitleCls}>Custom Slide</span>
       </div>
-      <div className="flex flex-col gap-2 mb-3">
-        <input className={inputCls} placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-        <textarea className={textareaCls} placeholder="Body text" rows={2} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
-        <input className={inputCls} placeholder="Image URL (optional)" value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} />
+      <div className="mb-3 flex flex-col gap-2">
+        <input
+          className={inputCls}
+          placeholder="Title"
+          value={form.title}
+          onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+        />
+        <textarea
+          className={textareaCls}
+          placeholder="Body text"
+          rows={2}
+          value={form.body}
+          onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+        />
+        <input
+          className={inputCls}
+          placeholder="Image URL (optional)"
+          value={form.image_url}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, image_url: e.target.value }))
+          }
+        />
         <button
           className={btnPrimaryCls}
           onClick={handlePush}
@@ -265,10 +373,10 @@ function CountdownPanel() {
 
   return (
     <div className="px-4 py-3">
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <span className={sectionTitleCls}>Countdown Timer</span>
       </div>
-      <div className="flex flex-row items-center gap-2 mb-3">
+      <div className="mb-3 flex flex-row items-center gap-2">
         <input
           className={`${inputCls} flex-1`}
           placeholder="Label"
@@ -276,7 +384,7 @@ function CountdownPanel() {
           onChange={(e) => setTitle(e.target.value)}
         />
         <input
-          className="w-[44px] bg-bg border-none border-b border-b-line text-ink font-sans text-xs py-2 px-0 outline-none text-center transition-colors focus:border-b-accent"
+          className="w-[44px] border-b border-none border-b-line bg-bg px-0 py-2 text-center font-sans text-xs text-ink transition-colors outline-none focus:border-b-accent"
           type="number"
           min={1}
           max={60}
@@ -288,7 +396,9 @@ function CountdownPanel() {
           title="Minutes"
         />
         <span className="text-[11px] text-ink-3">min</span>
-        <button className={btnPrimaryCls} onClick={handleStart} disabled={busy}>▶</button>
+        <button className={btnPrimaryCls} onClick={handleStart} disabled={busy}>
+          ▶
+        </button>
       </div>
     </div>
   );
@@ -316,7 +426,9 @@ function SermonNotesPanel() {
 
   const loadActiveNote = useCallback(async () => {
     try {
-      const result = await invoke<[SermonNote, number] | null>("get_active_sermon_note");
+      const result = await invoke<[SermonNote, number] | null>(
+        "get_active_sermon_note",
+      );
       if (result) {
         setActiveNoteId(result[0].id);
         setActiveSlide(result[1]);
@@ -336,7 +448,10 @@ function SermonNotesPanel() {
 
   const handleCreate = async () => {
     if (!noteTitle.trim() || !slidesText.trim()) return;
-    const slides = slidesText.split("\n---\n").map((s) => s.trim()).filter(Boolean);
+    const slides = slidesText
+      .split("\n---\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
     try {
       await invoke("create_sermon_note", { title: noteTitle.trim(), slides });
       setNoteTitle("");
@@ -378,10 +493,10 @@ function SermonNotesPanel() {
 
   return (
     <div className="px-4 py-3">
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <span className={sectionTitleCls}>Sermon Notes</span>
         <button
-          className="bg-none border border-line text-ink-3 rounded-[3px] w-5 h-5 text-sm leading-none cursor-pointer flex items-center justify-center p-0 hover:text-ink hover:border-line-strong"
+          className="flex h-5 w-5 cursor-pointer items-center justify-center rounded-[3px] border border-line bg-none p-0 text-sm leading-none text-ink-3 hover:border-line-strong hover:text-ink"
           onClick={() => setCreating((v) => !v)}
           title={creating ? "Cancel" : "New sermon note deck"}
         >
@@ -390,12 +505,12 @@ function SermonNotesPanel() {
       </div>
 
       {activeNoteId && (
-        <div className="flex items-center justify-between py-2 px-3 bg-accent-soft border border-accent/25 rounded-[3px] mb-3">
+        <div className="mb-3 flex items-center justify-between rounded-[3px] border border-accent/25 bg-accent-soft px-3 py-2">
           <span className="font-mono text-[11px] text-accent">
             Slide {activeSlide + 1} / {totalSlides}
           </span>
           <button
-            className="bg-none border border-accent text-accent rounded-[3px] text-[11px] font-sans py-1 px-3 cursor-pointer transition-all disabled:opacity-35 disabled:cursor-not-allowed hover:not-disabled:bg-accent hover:not-disabled:text-accent-foreground"
+            className="cursor-pointer rounded-[3px] border border-accent bg-none px-3 py-1 font-sans text-[11px] text-accent transition-all hover:not-disabled:bg-accent hover:not-disabled:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-35"
             onClick={handleAdvance}
             disabled={activeSlide + 1 >= totalSlides}
             title="Advance to next slide"
@@ -406,8 +521,13 @@ function SermonNotesPanel() {
       )}
 
       {creating && (
-        <div className="flex flex-col gap-2 mb-3">
-          <input className={inputCls} placeholder="Sermon title *" value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} />
+        <div className="mb-3 flex flex-col gap-2">
+          <input
+            className={inputCls}
+            placeholder="Sermon title *"
+            value={noteTitle}
+            onChange={(e) => setNoteTitle(e.target.value)}
+          />
           <textarea
             className={`${textareaCls} min-h-[100px]`}
             placeholder={"Slide 1 text\n---\nSlide 2 text\n---\nSlide 3 text"}
@@ -415,40 +535,52 @@ function SermonNotesPanel() {
             value={slidesText}
             onChange={(e) => setSlidesText(e.target.value)}
           />
-          <p className="text-[10px] text-muted m-0">Separate slides with a line containing only ---</p>
+          <p className="m-0 text-[10px] text-muted">
+            Separate slides with a line containing only ---
+          </p>
           <div className="flex gap-2">
-            <button className={btnPrimaryCls} onClick={handleCreate} disabled={!noteTitle.trim() || !slidesText.trim()}>Save</button>
-            <button className={btnBaseCls} onClick={() => setCreating(false)}>Cancel</button>
+            <button
+              className={btnPrimaryCls}
+              onClick={handleCreate}
+              disabled={!noteTitle.trim() || !slidesText.trim()}
+            >
+              Save
+            </button>
+            <button className={btnBaseCls} onClick={() => setCreating(false)}>
+              Cancel
+            </button>
           </div>
         </div>
       )}
 
       {notes.length === 0 && !creating && (
-        <p className="text-[11px] text-muted my-2 mx-0">No sermon notes yet</p>
+        <p className="mx-0 my-2 text-[11px] text-muted">No sermon notes yet</p>
       )}
 
-      <ul className="list-none m-0 p-0 flex flex-col gap-1">
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
         {notes.map((note) => (
           <li
             key={note.id}
-            className={`flex items-center gap-2 py-2 px-2 rounded-[3px] bg-bg${activeNoteId === note.id ? " border-l-2 border-l-accent pl-[calc(0.5rem-2px)]" : ""}`}
+            className={`flex items-center gap-2 rounded-[3px] px-2 py-2 bg-bg${activeNoteId === note.id ? "border-l-2 border-l-accent pl-[calc(0.5rem-2px)]" : ""}`}
           >
-            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-xs text-ink whitespace-nowrap overflow-hidden text-ellipsis">{note.title}</span>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-ink">
+                {note.title}
+              </span>
               <span className="text-[10px] text-muted">
                 {note.slides.length} slide{note.slides.length !== 1 ? "s" : ""}
               </span>
             </div>
-            <div className="flex gap-1 shrink-0">
+            <div className="flex shrink-0 gap-1">
               <button
-                className="bg-none border-none border-transparent text-ink-3 px-2 py-0 rounded-[3px] text-[11px] font-sans cursor-pointer transition-colors hover:text-accent"
+                className="cursor-pointer rounded-[3px] border-none border-transparent bg-none px-2 py-0 font-sans text-[11px] text-ink-3 transition-colors hover:text-accent"
                 onClick={() => void handlePush(note.id)}
                 title="Push to speaker display"
               >
                 ▶
               </button>
               <button
-                className="bg-none border-none border-transparent text-muted px-2 py-0 rounded-[3px] text-[10px] font-sans cursor-pointer transition-colors hover:text-danger"
+                className="cursor-pointer rounded-[3px] border-none border-transparent bg-none px-2 py-0 font-sans text-[10px] text-muted transition-colors hover:text-danger"
                 onClick={() => void handleDelete(note.id)}
                 title="Delete"
               >
@@ -468,27 +600,29 @@ export function ContentPanel() {
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <div className="bg-bg-1 border border-line/40 rounded overflow-hidden shrink-0">
+    <div className="shrink-0 overflow-hidden rounded border border-line/40 bg-bg-1">
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-3 cursor-pointer select-none border-b border-line/40 hover:bg-bg-2"
+        className="flex cursor-pointer items-center justify-between border-b border-line/40 px-4 py-3 select-none hover:bg-bg-2"
         onClick={() => setExpanded((v) => !v)}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && setExpanded((v) => !v)}
       >
-        <span className="text-[11px] font-semibold tracking-[0.16em] uppercase text-ink-3">Content</span>
+        <span className="text-[11px] font-semibold tracking-[0.16em] text-ink-3 uppercase">
+          Content
+        </span>
         <span className="text-[9px] text-muted">{expanded ? "▲" : "▼"}</span>
       </div>
 
       {expanded && (
-        <div className="flex flex-col max-h-[480px] overflow-y-auto">
+        <div className="flex max-h-[480px] flex-col overflow-y-auto">
           <AnnouncementLibrary />
-          <div className="h-px bg-line mx-4" />
+          <div className="mx-4 h-px bg-line" />
           <CustomSlidePanel />
-          <div className="h-px bg-line mx-4" />
+          <div className="mx-4 h-px bg-line" />
           <CountdownPanel />
-          <div className="h-px bg-line mx-4" />
+          <div className="mx-4 h-px bg-line" />
           <SermonNotesPanel />
         </div>
       )}

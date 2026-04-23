@@ -14,9 +14,9 @@ function Slider({
     <SliderPrimitive.Root
       data-slot="slider"
       className={cn(
-        "relative flex w-full touch-none select-none items-center",
-        "data-[disabled]:opacity-50 data-[disabled]:pointer-events-none",
-        className
+        "relative flex w-full touch-none items-center select-none",
+        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        className,
       )}
       {...props}
     >
@@ -30,7 +30,7 @@ function Slider({
           "transition-shadow",
           "focus-visible:outline focus-visible:outline-[1px] focus-visible:outline-accent",
           "hover:bg-accent-hover",
-          "disabled:pointer-events-none disabled:opacity-50"
+          "disabled:pointer-events-none disabled:opacity-50",
         )}
       />
     </SliderPrimitive.Root>

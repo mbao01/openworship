@@ -29,17 +29,16 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
   useEffect(() => {
     getVersion()
       .then((v) => setVersion(v))
-      .catch(() => {/* keep default */});
+      .catch(() => {
+        /* keep default */
+      });
   }, []);
 
   // Advance through stages automatically
   useEffect(() => {
     if (stageIndex >= INIT_STAGES.length - 1) return;
     const delay = STAGE_DELAYS[stageIndex] ?? 400;
-    const timer = setTimeout(
-      () => setStageIndex((prev) => prev + 1),
-      delay,
-    );
+    const timer = setTimeout(() => setStageIndex((prev) => prev + 1), delay);
     return () => clearTimeout(timer);
   }, [stageIndex]);
 
@@ -86,7 +85,7 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
         />
 
         <h1
-          className="text-ink text-lg tracking-[0.3em] font-light"
+          className="text-lg font-light tracking-[0.3em] text-ink"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           openworship
@@ -94,15 +93,15 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
 
         {/* Progress bar */}
         <div className="w-56">
-          <div className="flex items-center justify-between mb-[6px]">
+          <div className="mb-[6px] flex items-center justify-between">
             <span
-              className="text-ink-3 text-[11px] tracking-widest uppercase truncate max-w-[9rem]"
+              className="max-w-[9rem] truncate text-[11px] tracking-widest text-ink-3 uppercase"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               {label}
             </span>
             <span
-              className="text-accent text-[11px] ml-2 tabular-nums"
+              className="ml-2 text-[11px] text-accent tabular-nums"
               style={{ fontFamily: "var(--font-mono)" }}
             >
               {progress}%
@@ -110,7 +109,10 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
           </div>
 
           {/* Track */}
-          <div className="h-px w-full overflow-hidden" style={{ background: "var(--color-line-strong)" }}>
+          <div
+            className="h-px w-full overflow-hidden"
+            style={{ background: "var(--color-line-strong)" }}
+          >
             <div
               className="h-px"
               style={{
@@ -125,11 +127,14 @@ export function SplashScreen({ isReady, onDone }: SplashScreenProps) {
 
       {/* ── Bottom corners ── */}
       <div
-        className="absolute bottom-7 left-8 right-8 flex items-end justify-between"
+        className="absolute right-8 bottom-7 left-8 flex items-end justify-between"
         style={{ fontFamily: "var(--font-mono)" }}
       >
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] tracking-wider uppercase" style={{ color: "var(--color-muted)" }}>
+          <p
+            className="text-[10px] tracking-wider uppercase"
+            style={{ color: "var(--color-muted)" }}
+          >
             {isDone ? "Initialization complete" : "Initializing…"}
           </p>
           <p className="text-[10px]" style={{ color: "var(--color-muted)" }}>

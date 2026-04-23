@@ -1,4 +1,5 @@
 mod artifacts;
+mod backgrounds;
 mod branch_sync;
 mod claude_api;
 mod cloud_sync;
@@ -35,11 +36,15 @@ pub fn run() {
 }
 
 fn try_run() -> Result<(), Box<dyn std::error::Error>> {
+    // Prefetch display names in background (system_profiler is slow ~3s)
+    display_window::prefetch_display_names();
+
     // ── Scripture DB + search index ────────────────────────────────────────────
     let db = ow_db::open_and_seed().map_err(|e| { eprintln!("[startup] Bible DB: {e}"); e })?;
     let verses = ow_db::get_all_verses(&db)?;
     let search =
         Arc::new(ow_search::SearchEngine::build(&verses)?);
+    let scripture_db = Arc::new(Mutex::new(db));
 
     // ── Display server channel ─────────────────────────────────────────────────
     let (display_tx, _) = broadcast::channel::<ow_display::ContentEvent>(32);
@@ -196,6 +201,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
     let detect_song_refs = Arc::clone(&song_refs);
     let detect_translation = Arc::clone(&active_translation);
     let detect_announcements = Arc::clone(&announcements);
+    let blackout = Arc::new(RwLock::new(false));
+    let detect_blackout = Arc::clone(&blackout);
 
     // ── Clone Arcs for background embedding tasks ─────────────────────────────
     let embed_index = Arc::clone(&semantic_index);
@@ -206,10 +213,13 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
     let song_embed_index = Arc::clone(&song_semantic_index);
     let song_embed_embedder = Arc::clone(&embedder);
 
+    let media_db = Arc::clone(&artifacts_db);
+
     let app_state = AppState {
         search,
         display_tx,
         stt: Mutex::new(stt_engine),
+        provider_registry: ow_audio::ProviderRegistry::new(),
         audio_monitor: ow_audio::AudioMonitor::new(),
         detection_mode,
         queue,
@@ -235,16 +245,61 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         subscribers,
         email_settings,
         anthropic_api_key,
+        blackout,
+        scripture_db,
     };
 
     tauri::Builder::default()
         .manage(app_state)
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .register_uri_scheme_protocol("owmedia", move |_ctx, request| {
+            // Custom protocol: owmedia://artifact/{id}
+            // Streams artifact files from disk — supports video, images, etc.
+            let uri = request.uri();
+            let path = uri.path().trim_start_matches('/');
+
+            let db = match media_db.lock() {
+                Ok(db) => db,
+                Err(_) => return tauri::http::Response::builder()
+                    .status(500)
+                    .body(Vec::new())
+                    .unwrap(),
+            };
+
+            let entry = match db.get_by_id(path) {
+                Ok(Some(e)) => e,
+                _ => return tauri::http::Response::builder()
+                    .status(404)
+                    .body(Vec::new())
+                    .unwrap(),
+            };
+
+            let abs = db.abs_path(&entry.path);
+            let bytes = match std::fs::read(&abs) {
+                Ok(b) => b,
+                Err(_) => return tauri::http::Response::builder()
+                    .status(404)
+                    .body(Vec::new())
+                    .unwrap(),
+            };
+
+            let mime = entry.mime_type.as_deref().unwrap_or("application/octet-stream");
+
+            tauri::http::Response::builder()
+                .status(200)
+                .header("Content-Type", mime)
+                .header("Access-Control-Allow-Origin", "*")
+                .body(bytes)
+                .unwrap()
+        })
         .setup(move |app| {
             let app_handle = app.handle().clone();
 
             // Start the WebSocket display server.
             tauri::async_runtime::spawn(ow_display::start_server(tx_for_server));
+
+
 
             // Start the detection loop (scripture + song).
             tauri::async_runtime::spawn(detection::run_loop(
@@ -258,6 +313,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                 detect_song_semantic,
                 detect_song_refs,
                 tx_for_detect,
+                detect_blackout,
                 app_handle,
                 detect_translation,
                 detect_announcements,
@@ -381,6 +437,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         .invoke_handler(tauri::generate_handler![
             commands::greet,
             commands::search_scriptures,
+            commands::get_book_chapters,
+            commands::get_chapter_verses,
             commands::push_to_display,
             commands::list_translations,
             commands::start_stt,
@@ -397,10 +455,18 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::next_item,
             commands::prev_item,
             commands::clear_live,
+            commands::toggle_blackout,
+            commands::get_blackout,
             commands::get_audio_settings,
             commands::set_audio_settings,
             commands::check_whisper_model,
             commands::download_whisper_model,
+            commands::list_stt_providers,
+            commands::get_provider_status,
+            commands::check_provider_model,
+            commands::get_provider_models,
+            commands::download_provider_model,
+            commands::set_provider_secret,
             commands::list_audio_input_devices,
             commands::get_audio_level,
             commands::start_audio_monitor,
@@ -447,6 +513,12 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::push_announcement_to_display,
             commands::push_custom_slide,
             commands::push_artifact_to_display,
+            commands::set_display_background,
+            commands::get_display_background,
+            commands::list_preset_backgrounds,
+            commands::list_uploaded_backgrounds,
+            commands::upload_background,
+            commands::import_background_file,
             // ── Countdown timers ───────────────────────────────────────────
             commands::start_countdown,
             // ── Sermon notes ───────────────────────────────────────────────
@@ -464,6 +536,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::get_cloud_sync_info,
             commands::toggle_artifact_cloud_sync,
             commands::sync_artifact_now,
+            commands::download_artifact_from_cloud,
             commands::sync_all_artifacts,
             commands::list_cloud_artifacts,
             commands::get_artifact_acl,
@@ -486,6 +559,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::set_artifacts_base_path,
             commands::read_text_file,
             commands::open_artifact,
+            commands::get_artifact_path,
             commands::read_artifact_bytes,
             commands::read_thumbnail,
             // ── Phase 14: Summaries + email ────────────────────────────────

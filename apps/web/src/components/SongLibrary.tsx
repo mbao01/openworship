@@ -3,11 +3,13 @@ import { invoke } from "../lib/tauri";
 import type { Song, SongSemanticStatus } from "../lib/types";
 
 // Shared input/textarea classes
-const inputCls = "w-full box-border bg-bg border border-line rounded-[3px] text-ink font-sans text-xs py-2 px-3 outline-none transition-colors placeholder:text-line focus:border-line-strong disabled:opacity-50";
+const inputCls =
+  "w-full box-border bg-bg border border-line rounded-[3px] text-ink font-sans text-xs py-2 px-3 outline-none transition-colors placeholder:text-line focus:border-line-strong disabled:opacity-50";
 const textareaCls = `${inputCls} resize-y`;
 
 // Shared button classes
-const btnBaseCls = "font-sans text-[11px] tracking-[0.06em] py-1 px-3 rounded-[3px] border border-line bg-transparent text-ink-3 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
+const btnBaseCls =
+  "font-sans text-[11px] tracking-[0.06em] py-1 px-3 rounded-[3px] border border-line bg-transparent text-ink-3 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
 const btnCancelCls = `${btnBaseCls} hover:border-line-strong hover:text-ink`;
 const btnSaveCls = `${btnBaseCls} border-accent/60 text-accent hover:border-accent`;
 
@@ -49,7 +51,12 @@ function SongForm({
           artist: artist.trim() || null,
           lyrics: l,
         });
-        song = { ...initial, title: t, artist: artist.trim() || null, lyrics: l };
+        song = {
+          ...initial,
+          title: t,
+          artist: artist.trim() || null,
+          lyrics: l,
+        };
       } else {
         song = await invoke<Song>("add_song", {
           title: t,
@@ -68,7 +75,10 @@ function SongForm({
   return (
     <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase" htmlFor="song-title">
+        <label
+          className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase"
+          htmlFor="song-title"
+        >
           Title
         </label>
         <input
@@ -83,7 +93,10 @@ function SongForm({
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase" htmlFor="song-artist">
+        <label
+          className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase"
+          htmlFor="song-artist"
+        >
           Artist / Author
         </label>
         <input
@@ -96,7 +109,10 @@ function SongForm({
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase" htmlFor="song-lyrics">
+        <label
+          className="text-[10px] font-medium tracking-[0.08em] text-ink-3 uppercase"
+          htmlFor="song-lyrics"
+        >
           Lyrics
         </label>
         <textarea
@@ -104,13 +120,15 @@ function SongForm({
           className={`${textareaCls} text-[11px] leading-[1.5]`}
           value={lyrics}
           onChange={(e) => setLyrics(e.target.value)}
-          placeholder={"[Verse 1]\nAmazing grace how sweet the sound\nThat saved a wretch like me\n\n[Chorus]\nMy chains are gone\u2026"}
+          placeholder={
+            "[Verse 1]\nAmazing grace how sweet the sound\nThat saved a wretch like me\n\n[Chorus]\nMy chains are gone ..."
+          }
           rows={10}
           required
           disabled={saving}
         />
       </div>
-      {error && <p className="text-[11px] text-danger m-0">{error}</p>}
+      {error && <p className="m-0 text-[11px] text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
         <button
           type="button"
@@ -125,7 +143,7 @@ function SongForm({
           className={btnSaveCls}
           disabled={saving || !title.trim() || !lyrics.trim()}
         >
-          {saving ? "Saving\u2026" : initial ? "Update" : "Add Song"}
+          {saving ? "Saving ..." : initial ? "Update" : "Add Song"}
         </button>
       </div>
     </form>
@@ -187,7 +205,7 @@ function ImportForm({
   return (
     <form className="flex flex-col gap-3" onSubmit={handleImport}>
       <div className="flex gap-4 text-[11px] text-ink-3">
-        <label className="flex items-center gap-1 cursor-pointer">
+        <label className="flex cursor-pointer items-center gap-1">
           <input
             type="radio"
             name="import-format"
@@ -197,7 +215,7 @@ function ImportForm({
           />{" "}
           CCLI SongSelect (text)
         </label>
-        <label className="flex items-center gap-1 cursor-pointer">
+        <label className="flex cursor-pointer items-center gap-1">
           <input
             type="radio"
             name="import-format"
@@ -211,7 +229,7 @@ function ImportForm({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="font-sans text-[10px] tracking-[0.06em] py-0.5 px-2 border border-line rounded-[3px] bg-transparent text-ink-3 cursor-pointer transition-colors hover:border-line-strong hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+          className="cursor-pointer rounded-[3px] border border-line bg-transparent px-2 py-0.5 font-sans text-[10px] tracking-[0.06em] text-ink-3 transition-colors hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
           onClick={() => fileInputRef.current?.click()}
           disabled={importing}
           title="Load from file"
@@ -229,19 +247,19 @@ function ImportForm({
         />
       </div>
       <textarea
-        className="w-full box-border bg-bg border border-line rounded-[3px] text-ink font-mono text-[10px] py-2 px-3 outline-none resize-y transition-colors placeholder:text-line focus:border-line-strong disabled:opacity-50"
+        className="box-border w-full resize-y rounded-[3px] border border-line bg-bg px-3 py-2 font-mono text-[10px] text-ink transition-colors outline-none placeholder:text-line focus:border-line-strong disabled:opacity-50"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={
           format === "ccli"
-            ? "Paste CCLI SongSelect text export here\u2026"
-            : "Paste OpenLP XML song export here\u2026"
+            ? "Paste CCLI SongSelect text export here ..."
+            : "Paste OpenLP XML song export here ..."
         }
         rows={12}
         disabled={importing}
         autoFocus
       />
-      {error && <p className="text-[11px] text-danger m-0">{error}</p>}
+      {error && <p className="m-0 text-[11px] text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
         <button
           type="button"
@@ -256,7 +274,7 @@ function ImportForm({
           className={btnSaveCls}
           disabled={importing || !text.trim()}
         >
-          {importing ? "Importing\u2026" : "Import"}
+          {importing ? "Importing ..." : "Import"}
         </button>
       </div>
     </form>
@@ -280,31 +298,35 @@ function SongRow({
 }) {
   return (
     <li
-      className={`flex items-center justify-between py-2 px-3 rounded-[3px] border cursor-pointer transition-all gap-2${
+      className={`flex cursor-pointer items-center justify-between rounded-[3px] border px-3 py-2 transition-all gap-2${
         pushed
-          ? " border-l-2 border-l-accent border-line bg-bg-2"
-          : " border-transparent hover:bg-bg-2 hover:border-line focus-visible:bg-bg-2 focus-visible:border-line focus-visible:outline-none"
+          ? "border-l-2 border-line border-l-accent bg-bg-2"
+          : "border-transparent hover:border-line hover:bg-bg-2 focus-visible:border-line focus-visible:bg-bg-2 focus-visible:outline-none"
       }`}
       role="button"
       tabIndex={0}
       onClick={() => onPush(song)}
       onKeyDown={(e) => e.key === "Enter" && onPush(song)}
     >
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <span className="text-xs text-ink whitespace-nowrap overflow-hidden text-ellipsis">{song.title}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-ink">
+          {song.title}
+        </span>
         {song.artist && (
-          <span className="text-[10px] text-ink-3 whitespace-nowrap overflow-hidden text-ellipsis">{song.artist}</span>
+          <span className="overflow-hidden text-[10px] text-ellipsis whitespace-nowrap text-ink-3">
+            {song.artist}
+          </span>
         )}
         {pushed && (
           <span
-            className="w-[5px] h-[5px] rounded-full bg-accent [box-shadow:0_0_3px_var(--color-accent)] shrink-0"
+            className="h-[5px] w-[5px] shrink-0 rounded-full bg-accent [box-shadow:0_0_3px_var(--color-accent)]"
             aria-label="Live"
           />
         )}
       </div>
-      <div className="flex gap-1 shrink-0">
+      <div className="flex shrink-0 gap-1">
         <button
-          className="font-sans text-xs leading-none w-[22px] h-[22px] border border-line rounded-[2px] bg-transparent text-ink-3 cursor-pointer flex items-center justify-center transition-colors hover:border-line-strong hover:text-ink"
+          className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[2px] border border-line bg-transparent font-sans text-xs leading-none text-ink-3 transition-colors hover:border-line-strong hover:text-ink"
           title="Edit"
           aria-label={`Edit ${song.title}`}
           onClick={(e) => {
@@ -315,7 +337,7 @@ function SongRow({
           ✎
         </button>
         <button
-          className="font-sans text-xs leading-none w-[22px] h-[22px] border border-line rounded-[2px] bg-transparent text-ink-3 cursor-pointer flex items-center justify-center transition-colors hover:border-danger hover:text-danger"
+          className="flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[2px] border border-line bg-transparent font-sans text-xs leading-none text-ink-3 transition-colors hover:border-danger hover:text-danger"
           title="Delete"
           aria-label={`Delete ${song.title}`}
           onClick={(e) => {
@@ -338,7 +360,8 @@ export function SongLibrary() {
   const [mode, setMode] = useState<"list" | "add" | "edit" | "import">("list");
   const [editTarget, setEditTarget] = useState<Song | null>(null);
   const [pushed, setPushed] = useState<number | null>(null);
-  const [semanticStatus, setSemanticStatus] = useState<SongSemanticStatus | null>(null);
+  const [semanticStatus, setSemanticStatus] =
+    useState<SongSemanticStatus | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -347,7 +370,9 @@ export function SongLibrary() {
     let cancelled = false;
     const check = async () => {
       try {
-        const status = await invoke<SongSemanticStatus>("get_song_semantic_status");
+        const status = await invoke<SongSemanticStatus>(
+          "get_song_semantic_status",
+        );
         if (cancelled) return;
         setSemanticStatus(status);
         if (status.ready && pollRef.current) {
@@ -368,7 +393,10 @@ export function SongLibrary() {
 
   const loadSongs = useCallback(async (q = "") => {
     try {
-      const results = await invoke<Song[]>("search_songs", { query: q, limit: 100 });
+      const results = await invoke<Song[]>("search_songs", {
+        query: q,
+        limit: 100,
+      });
       setSongs(results);
     } catch {
       setSongs([]);
@@ -432,7 +460,9 @@ export function SongLibrary() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium tracking-[0.12em] text-ink-3 uppercase">SONGS</span>
+          <span className="text-[10px] font-medium tracking-[0.12em] text-ink-3 uppercase">
+            SONGS
+          </span>
           {semanticStatus && (
             <span
               className={`text-[9px] font-medium tracking-[0.08em] uppercase ${
@@ -451,7 +481,7 @@ export function SongLibrary() {
         <div className="flex gap-2">
           <button
             data-qa="song-library-import-btn"
-            className="font-sans text-[10px] tracking-[0.06em] py-0.5 px-2 border border-line rounded-[3px] bg-transparent text-ink-3 cursor-pointer transition-colors hover:border-line-strong hover:text-ink"
+            className="cursor-pointer rounded-[3px] border border-line bg-transparent px-2 py-0.5 font-sans text-[10px] tracking-[0.06em] text-ink-3 transition-colors hover:border-line-strong hover:text-ink"
             onClick={() => setMode("import")}
             title="Import CCLI / OpenLP"
           >
@@ -459,7 +489,7 @@ export function SongLibrary() {
           </button>
           <button
             data-qa="song-library-add-btn"
-            className="font-sans text-[10px] tracking-[0.06em] py-0.5 px-2 border border-accent/60 rounded-[3px] bg-transparent text-accent cursor-pointer transition-colors hover:border-accent"
+            className="cursor-pointer rounded-[3px] border border-accent/60 bg-transparent px-2 py-0.5 font-sans text-[10px] tracking-[0.06em] text-accent transition-colors hover:border-accent"
             onClick={() => {
               setEditTarget(null);
               setMode("add");
@@ -471,12 +501,8 @@ export function SongLibrary() {
         </div>
       </div>
 
-
       {mode === "add" && (
-        <SongForm
-          onSave={handleSaved}
-          onCancel={() => setMode("list")}
-        />
+        <SongForm onSave={handleSaved} onCancel={() => setMode("list")} />
       )}
       {mode === "edit" && editTarget && (
         <SongForm
@@ -500,9 +526,9 @@ export function SongLibrary() {
           <div className="relative">
             <input
               data-qa="song-library-search"
-              className="w-full box-border bg-bg border border-line rounded-[3px] text-ink font-sans text-xs py-2 px-3 outline-none transition-colors placeholder:text-line focus:border-line-strong"
+              className="box-border w-full rounded-[3px] border border-line bg-bg px-3 py-2 font-sans text-xs text-ink transition-colors outline-none placeholder:text-line focus:border-line-strong"
               type="text"
-              placeholder="Search songs\u2026"
+              placeholder="Search songs ..."
               value={query}
               onChange={handleQueryChange}
               autoComplete="off"
@@ -510,11 +536,13 @@ export function SongLibrary() {
             />
           </div>
           {songs.length === 0 ? (
-            <p className="text-[11px] text-muted m-0">
-              {query ? `No songs matching "${query}"` : "No songs yet. Add or import some!"}
+            <p className="m-0 text-[11px] text-muted">
+              {query
+                ? `No songs matching "${query}"`
+                : "No songs yet. Add or import some!"}
             </p>
           ) : (
-            <ul className="list-none m-0 p-0 flex flex-col gap-0.5" role="list">
+            <ul className="m-0 flex list-none flex-col gap-0.5 p-0" role="list">
               {songs.map((s) => (
                 <SongRow
                   key={s.id}

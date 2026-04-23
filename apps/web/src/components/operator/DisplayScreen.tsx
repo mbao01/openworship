@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { CircleIcon, PaperclipIcon } from "lucide-react";
+import { CircleIcon, MonitorIcon, PaperclipIcon } from "lucide-react";
 import { useQueue } from "../../hooks/use-queue";
-import { getObsDisplayUrl, openDisplayWindow } from "../../lib/commands/display-window";
+import { useDisplayWindow } from "../../hooks/use-display-window";
+import { getObsDisplayUrl } from "../../lib/commands/display-window";
 import { Toggle } from "../ui/toggle";
 
 const IMG_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"]);
 const VID_EXTS = new Set(["mp4", "webm", "mov"]);
 
-function AssetPreview({ artifactRef, filename }: { artifactRef: string; filename?: string }) {
+function AssetPreview({
+  artifactRef,
+  filename,
+}: {
+  artifactRef: string;
+  filename?: string;
+}) {
   const [src, setSrc] = useState<string | null>(null);
   const artifactId = artifactRef.replace("artifact:", "");
   const ext = (filename || "").split(".").pop()?.toLowerCase() || "";
@@ -24,140 +31,183 @@ function AssetPreview({ artifactRef, filename }: { artifactRef: string; filename
         setSrc(url);
       })
       .catch(() => setSrc(null));
-    return () => { revoked = true; if (url) URL.revokeObjectURL(url); };
+    return () => {
+      revoked = true;
+      if (url) URL.revokeObjectURL(url);
+    };
   }, [artifactId]);
 
-  if (!src) return <PaperclipIcon className="w-10 h-10 text-ink-3" />;
-  if (IMG_EXTS.has(ext)) return <img src={src} alt="" className="max-w-full max-h-full object-contain" />;
-  if (VID_EXTS.has(ext)) return <video src={src} controls className="max-w-full max-h-full" />;
-  return <PaperclipIcon className="w-10 h-10 text-ink-3" />;
+  if (!src) return <PaperclipIcon className="h-10 w-10 text-ink-3" />;
+  if (IMG_EXTS.has(ext))
+    return (
+      <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+    );
+  if (VID_EXTS.has(ext))
+    return <video src={src} controls className="max-h-full max-w-full" />;
+  return <PaperclipIcon className="h-10 w-10 text-ink-3" />;
 }
 
 export function DisplayScreen() {
   const { live } = useQueue();
-  const [displayUrl, setDisplayUrl] = useState("http://localhost:7411/display");
-  const [resolution, setResolution] = useState("1920 × 1080");
-  const [background, setBackground] = useState("Solid black");
+  const {
+    isOpen,
+    monitors,
+    obsUrl: hookObsUrl,
+    openOn,
+    close,
+  } = useDisplayWindow();
+  const [displayUrl, setDisplayUrl] = useState("http://localhost:1420/display");
+  const [selectedMonitor, setSelectedMonitor] = useState<number | null>(null);
   const [safeArea, setSafeArea] = useState(true);
 
   useEffect(() => {
-    getObsDisplayUrl().then(setDisplayUrl).catch(() => {});
+    getObsDisplayUrl()
+      .then(setDisplayUrl)
+      .catch(() => {});
   }, []);
 
-  const handleOpenOnProjector = () => {
-    openDisplayWindow(null).catch(() => {});
+  // Use hook's OBS URL if available
+  const obsDisplayUrl = hookObsUrl ?? displayUrl;
+
+  const handleOpenOnProjector = async () => {
+    await openOn(selectedMonitor ?? undefined);
   };
 
+  const selectedMonitorInfo =
+    selectedMonitor !== null
+      ? monitors.find((m) => m.id === selectedMonitor)
+      : (monitors.find((m) => m.is_primary) ?? monitors[0]);
+  const selectedMonitorLabel = selectedMonitorInfo?.name ?? null;
+
   return (
-    <div className="flex-1 overflow-y-auto px-14 py-10 bg-bg">
-      <h1 className="font-serif text-[44px] font-normal tracking-[-0.025em] mb-2">
+    <div className="flex-1 overflow-y-auto bg-bg px-14 py-10">
+      <h1 className="mb-2 font-serif text-[44px] font-normal tracking-[-0.025em]">
         Output <em className="text-accent italic">· display</em>
       </h1>
-      <p className="text-ink-3 text-sm mb-8 max-w-[56ch]">
+      <p className="mb-8 max-w-[56ch] text-sm text-ink-3">
         One source of truth. The display runs on{" "}
-        <code className="font-mono bg-bg-2 px-1.5 py-px rounded-sm text-xs">
-          {displayUrl}
+        <code className="rounded-sm bg-bg-2 px-1.5 py-px font-mono text-xs">
+          {obsDisplayUrl}
         </code>{" "}
-        — open it on any screen, or drop it into OBS as a Browser
-        Source.
+        — open it on any screen, or drop it into OBS as a Browser Source.
       </p>
 
       {/* Live display preview */}
-      <div className="max-w-[900px] mb-4">
+      <div className="mb-4 max-w-[900px]">
         <div
-          className="w-full aspect-video bg-[#050403] text-[#F5EFDF] px-[72px] py-14 flex flex-col justify-center relative border border-line-strong"
+          className="relative flex aspect-video w-full flex-col justify-center border border-line-strong bg-[#050403] px-[72px] py-14 text-[#F5EFDF]"
           style={{
             boxShadow:
               "0 20px 60px -20px rgba(0,0,0,0.6), inset 0 0 120px rgba(0,0,0,0.6)",
           }}
         >
-          <div className="absolute top-0 left-0 right-0 px-5 py-2.5 flex justify-between font-mono text-[9.5px] tracking-[0.18em] uppercase text-[rgba(245,239,223,0.5)]">
+          <div className="absolute top-0 right-0 left-0 flex justify-between px-5 py-2.5 font-mono text-[9.5px] tracking-[0.18em] text-[rgba(245,239,223,0.5)] uppercase">
             <span className="inline-flex items-center gap-1">
-              <CircleIcon className="w-3 h-3 shrink-0" fill="currentColor" /> LIVE · ON SCREEN
+              <CircleIcon className="h-2 w-2 shrink-0 fill-live" /> LIVE · ON
+              SCREEN
             </span>
             <span>openworship</span>
           </div>
           {live ? (
             <>
               {live.image_url?.startsWith("artifact:") ? (
-                <div className="w-full h-full flex items-center justify-center p-4">
-                  <AssetPreview artifactRef={live.image_url} filename={live.reference} />
+                <div className="flex h-full w-full items-center justify-center p-4">
+                  <AssetPreview
+                    artifactRef={live.image_url}
+                    filename={live.reference}
+                  />
                 </div>
               ) : (
                 <>
-                  <div className="font-mono text-[10.5px] tracking-[0.22em] uppercase text-accent mb-5">
+                  <div className="mb-5 font-mono text-[10.5px] tracking-[0.22em] text-accent uppercase">
                     {live.reference} · {live.translation}
                   </div>
-                  <div className="font-serif italic text-[clamp(22px,2.8vw,38px)] leading-[1.35] tracking-[-0.01em] max-w-[36ch]">
+                  <div className="max-w-[36ch] font-serif text-[clamp(22px,2.8vw,38px)] leading-[1.35] tracking-[-0.01em] italic">
                     &ldquo;{live.text}&rdquo;
                   </div>
                 </>
               )}
             </>
           ) : (
-            <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-center w-full text-[#3A332C]">
+            <div className="w-full text-center font-mono text-[10px] tracking-[0.2em] text-primary uppercase">
               — no content on screen —
             </div>
           )}
         </div>
       </div>
 
-      {/* Open on projector button */}
-      <div className="max-w-[900px] mb-6">
-        <button
-          className="inline-flex items-center gap-1.5 px-4 py-[9px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer transition-[filter] hover:brightness-[1.1]"
-          onClick={handleOpenOnProjector}
-        >
-          Open on projector
-        </button>
+      {/* Status + action buttons */}
+      <div className="mb-6 flex max-w-[900px] items-center gap-3">
+        {isOpen ? (
+          <>
+            <div className="inline-flex items-center gap-2 rounded border border-success/30 bg-success/10 px-3 py-2 text-xs font-medium text-success">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-success" />
+              Projecting
+              {selectedMonitorLabel ? ` to ${selectedMonitorLabel}` : ""}
+            </div>
+            <button
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-line bg-bg-2 px-4 py-[9px] text-xs font-semibold text-ink-2 transition-colors hover:bg-bg-3 hover:text-ink"
+              onClick={close}
+            >
+              Close display
+            </button>
+          </>
+        ) : (
+          <button
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-accent bg-accent px-4 py-[9px] text-xs font-semibold text-accent-foreground transition-[filter] hover:brightness-[1.1]"
+            onClick={handleOpenOnProjector}
+          >
+            <MonitorIcon className="h-4 w-4" />
+            Open on projector
+          </button>
+        )}
       </div>
 
       {/* Output settings */}
       <div className="max-w-[900px]">
-        <h2 className="font-serif text-2xl font-normal tracking-[-0.015em] mb-4 pb-3 border-b border-line">
+        <h2 className="mb-4 border-b border-line pb-3 font-serif text-2xl font-normal tracking-[-0.015em]">
           Output settings
         </h2>
+
+        {/* Monitor selector */}
+        <SettingRow
+          label="Display output"
+          description={
+            monitors.length === 0
+              ? "No external displays detected."
+              : `${monitors.length} display${monitors.length > 1 ? "s" : ""} detected.`
+          }
+          control={
+            <select
+              className="min-w-[220px] cursor-pointer rounded border border-line bg-bg-2 px-2.5 py-[7px] text-xs text-ink transition-colors focus:border-accent focus:outline-none"
+              value={selectedMonitor ?? "__primary__"}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "__primary__") {
+                  setSelectedMonitor(null);
+                } else {
+                  setSelectedMonitor(Number(val));
+                }
+              }}
+            >
+              <option value="__primary__">Primary monitor</option>
+              {monitors.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.is_primary ? "Built-in" : "External"}) —{" "}
+                  {m.width}×{m.height}
+                </option>
+              ))}
+            </select>
+          }
+        />
+
         <SettingRow
           label="Display URL"
           description="Copy this to OBS or open on the projector machine."
           control={
             <span className="font-mono text-[11px] text-accent">
-              {displayUrl}
+              {obsDisplayUrl}
             </span>
-          }
-        />
-        <SettingRow
-          label="Resolution"
-          description="Match your projector's native resolution for sharpest text."
-          control={
-            <select
-              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs min-w-[180px] cursor-pointer focus:border-accent focus:outline-none transition-colors"
-              value={resolution}
-              onChange={(e) => {
-                setResolution(e.target.value);
-              }}
-            >
-              <option>1920 × 1080</option>
-              <option>2560 × 1440</option>
-              <option>3840 × 2160</option>
-            </select>
-          }
-        />
-        <SettingRow
-          label="Background"
-          description="Black keeps focus on text. Transparent lets you overlay video."
-          control={
-            <select
-              className="px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs min-w-[180px] cursor-pointer focus:border-accent focus:outline-none transition-colors"
-              value={background}
-              onChange={(e) => {
-                setBackground(e.target.value);
-              }}
-            >
-              <option>Solid black</option>
-              <option>Transparent</option>
-              <option>Custom image</option>
-            </select>
           }
         />
         <SettingRow
@@ -177,12 +227,20 @@ export function DisplayScreen() {
   );
 }
 
-function SettingRow({ label, description, control }: { label: string; description: string; control: React.ReactNode }) {
+function SettingRow({
+  label,
+  description,
+  control,
+}: {
+  label: string;
+  description: string;
+  control: React.ReactNode;
+}) {
   return (
-    <div className="grid grid-cols-[1fr_240px] gap-6 py-4 border-b border-line items-center last:border-b-0">
+    <div className="grid grid-cols-[1fr_240px] items-center gap-6 border-b border-line py-4 last:border-b-0">
       <div>
         <div className="text-[13.5px] text-ink">{label}</div>
-        <div className="text-xs text-ink-3 mt-1">{description}</div>
+        <div className="mt-1 text-xs text-ink-3">{description}</div>
       </div>
       <div className="flex justify-end">{control}</div>
     </div>

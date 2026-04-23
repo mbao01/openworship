@@ -55,7 +55,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
   return (
     <div
       data-qa="operator-root"
-      className="flex flex-col h-screen bg-bg text-ink font-sans overflow-hidden"
+      className="flex h-screen flex-col overflow-hidden bg-bg font-sans text-ink"
     >
       <TopBar
         mode={mode}
@@ -68,8 +68,11 @@ export function OperatorPage({ identity }: OperatorPageProps) {
           screen={settingsOpen ? "settings" : screen}
           onScreenChange={handleScreenChange}
         />
-        <main className="flex-1 flex overflow-hidden bg-bg">
-          {screen === "live" && <LiveScreen mode={mode} />}
+        <main className="relative flex flex-1 overflow-hidden bg-bg">
+          {/* Live screen stays mounted (hidden via CSS) so background video keeps playing */}
+          <div className={`flex flex-1 overflow-hidden ${screen !== "live" ? "invisible absolute inset-0" : ""}`}>
+            <LiveScreen mode={mode} visible={screen === "live"} />
+          </div>
           {screen === "plan" && <PlanScreen />}
           {screen === "preview" && (
             <PreviewScreen onGoLive={() => setScreen("live")} />

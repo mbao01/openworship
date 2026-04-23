@@ -24,7 +24,20 @@ export function PreviewPanel({
   const isVideo = mime.startsWith("video/") || VIDEO_EXTS.includes(fileExt);
   const isAudio = mime.startsWith("audio/") || AUDIO_EXTS.includes(fileExt);
   const isPdf = mime.includes("pdf") || fileExt === "pdf";
-  const isText = (mime.startsWith("text/") || ["txt", "md", "json", "xml", "csv", "log", "yml", "yaml", "toml"].includes(fileExt)) && !isPdf;
+  const isText =
+    (mime.startsWith("text/") ||
+      [
+        "txt",
+        "md",
+        "json",
+        "xml",
+        "csv",
+        "log",
+        "yml",
+        "yaml",
+        "toml",
+      ].includes(fileExt)) &&
+    !isPdf;
 
   const [fileSrc, setFileSrc] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
@@ -58,13 +71,16 @@ export function PreviewPanel({
       revoked = true;
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- mime_type is derived from entry, recalculated on id change
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mime_type is derived from entry, recalculated on id change
   }, [entry.id, fileExt, isImage, isVideo, isAudio, isPdf]);
 
   useEffect(() => {
     if (!isText || !entry.id) return;
     setTextLoading(true);
-    invoke<[string, boolean]>("read_text_file", { id: entry.id, maxBytes: 65536 })
+    invoke<[string, boolean]>("read_text_file", {
+      id: entry.id,
+      maxBytes: 65536,
+    })
       .then(([text, truncated]) => {
         setTextContent(text);
         setTextTruncated(truncated);
@@ -73,61 +89,70 @@ export function PreviewPanel({
       .finally(() => setTextLoading(false));
   }, [entry.id, isText]);
 
-  const ext = entry.name.split(".").pop()?.toUpperCase() ?? "\u2014";
-  const canPreview = !entry.is_dir && (isImage || isVideo || isAudio || isPdf || isText);
+  const ext = entry.name.split(".").pop()?.toUpperCase() ?? "—";
+  const canPreview =
+    !entry.is_dir && (isImage || isVideo || isAudio || isPdf || isText);
 
   return (
-    <div className={`fixed bottom-6 right-6 w-[320px] bg-bg-1 border border-line-strong rounded-lg flex flex-col overflow-hidden shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] z-[50] animate-[fade-in_150ms_ease-out] ${canPreview ? "h-[400px]" : ""}`}>
+    <div
+      className={`fixed right-6 bottom-6 z-[50] flex w-[320px] animate-[fade-in_150ms_ease-out] flex-col overflow-hidden rounded-lg border border-line-strong bg-bg-1 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] ${canPreview ? "h-[400px]" : ""}`}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
-        <span className="text-[9px] font-semibold tracking-[0.12em] uppercase text-muted">Preview</span>
+      <div className="flex shrink-0 items-center justify-between px-3 pt-3 pb-2">
+        <span className="text-[9px] font-semibold tracking-[0.12em] text-muted uppercase">
+          Preview
+        </span>
         <button
-          className="bg-transparent border-none text-muted cursor-pointer text-[12px] px-1 py-[2px] rounded hover:text-ink-3 transition-colors"
+          className="cursor-pointer rounded border-none bg-transparent px-1 py-[2px] text-[12px] text-muted transition-colors hover:text-ink-3"
           onClick={onClose}
           aria-label="Close preview"
         >
-          <XIcon className="w-3 h-3 shrink-0" />
+          <XIcon className="h-3 w-3 shrink-0" />
         </button>
       </div>
 
       {/* Render area */}
       {canPreview && (
-        <div className="mx-3 mb-2 rounded-[4px] overflow-hidden bg-bg border border-line flex-1 flex items-center justify-center min-h-0">
+        <div className="mx-3 mb-2 flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[4px] border border-line bg-bg">
           {isImage && fileSrc ? (
             <img
               src={fileSrc}
               alt={entry.name}
-              className="w-full h-full object-contain"
-              onError={() => { setFileSrc(null); }}
+              className="h-full w-full object-contain"
+              onError={() => {
+                setFileSrc(null);
+              }}
             />
           ) : isVideo && fileSrc ? (
             <video
               src={fileSrc}
               controls
-              className="w-full h-full object-contain"
+              className="h-full w-full object-contain"
             />
           ) : isAudio && fileSrc ? (
-            <div className="flex flex-col items-center gap-3 p-3 w-full">
-              <Music2Icon className="w-8 h-8 text-muted" />
+            <div className="flex w-full flex-col items-center gap-3 p-3">
+              <Music2Icon className="h-8 w-8 text-muted" />
               <audio src={fileSrc} controls className="w-full" />
             </div>
           ) : isPdf && fileSrc ? (
             <iframe
               src={fileSrc}
               title={entry.name}
-              className="w-full h-full border-none"
+              className="h-full w-full border-none"
             />
           ) : isText ? (
-            <div className="w-full h-full overflow-auto p-2">
+            <div className="h-full w-full overflow-auto p-2">
               {textLoading ? (
                 <span className="text-[10px] text-muted">Loading&hellip;</span>
               ) : textContent !== null ? (
                 <>
-                  <pre className="text-[10px] font-mono text-ink-3 m-0 whitespace-pre-wrap break-words leading-[1.5]">
+                  <pre className="m-0 font-mono text-[10px] leading-[1.5] break-words whitespace-pre-wrap text-ink-3">
                     {textContent}
                   </pre>
                   {textTruncated && (
-                    <p className="text-[9px] text-muted mt-2 m-0 italic">&mdash; truncated at 64 KB &mdash;</p>
+                    <p className="m-0 mt-2 text-[9px] text-muted italic">
+                      &mdash; truncated at 64 KB &mdash;
+                    </p>
                   )}
                 </>
               ) : (
@@ -141,24 +166,33 @@ export function PreviewPanel({
       )}
 
       {/* Compact metadata footer */}
-      <div className="px-3 pb-3 shrink-0 flex flex-col gap-[6px]">
-        <p className="text-[11px] font-medium text-ink m-0 break-words leading-[1.3] truncate" title={entry.name}>
+      <div className="flex shrink-0 flex-col gap-[6px] px-3 pb-3">
+        <p
+          className="m-0 truncate text-[11px] leading-[1.3] font-medium break-words text-ink"
+          title={entry.name}
+        >
           {entry.name}
         </p>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           {entry.mime_type && (
-            <span className="text-[10px] font-mono text-muted">{ext}</span>
+            <span className="font-mono text-[10px] text-muted">{ext}</span>
           )}
           {!entry.is_dir && entry.size_bytes > 0 && (
-            <span className="text-[10px] font-mono text-muted">{formatBytes(entry.size_bytes)}</span>
+            <span className="font-mono text-[10px] text-muted">
+              {formatBytes(entry.size_bytes)}
+            </span>
           )}
-          <span className="text-[10px] font-mono text-muted">{formatDate(entry.modified_at_ms)}</span>
+          <span className="font-mono text-[10px] text-muted">
+            {formatDate(entry.modified_at_ms)}
+          </span>
           {syncInfo?.sync_enabled && (
-            <span className="text-[10px] font-mono text-muted capitalize">{syncInfo.status.replace("_", " ")}</span>
+            <span className="font-mono text-[10px] text-muted capitalize">
+              {syncInfo.status.replace("_", " ")}
+            </span>
           )}
         </div>
         <button
-          className="w-full bg-transparent border border-line rounded text-ink-3 font-sans text-[11px] py-[6px] cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          className="w-full cursor-pointer rounded border border-line bg-transparent py-[6px] font-sans text-[11px] text-ink-3 transition-colors hover:border-line-strong hover:text-ink"
           onClick={() => onShare(entry)}
         >
           Share...

@@ -1,36 +1,55 @@
 import { useEffect, useState } from "react";
 import { useAudioSettings } from "@/hooks/use-audio-settings";
-import { useWhisperModel } from "@/hooks/use-whisper-model";
 import { useAudioLevel } from "@/hooks/use-audio-level";
 import { Section, SettingRow } from "@/components/ui/section";
 import { Toggle } from "@/components/ui/toggle";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { VuMeter } from "@/components/ui/vu-meter";
 import { Button } from "@/components/ui/button";
-import { listAudioInputDevices, startAudioMonitor, stopAudioMonitor } from "@/lib/commands/audio";
+import {
+  listAudioInputDevices,
+  listSttProviders,
+  startAudioMonitor,
+  stopAudioMonitor,
+} from "@/lib/commands/audio";
 import { setAnthropicApiKey } from "@/lib/commands/settings";
-import type { AudioInputDevice } from "@/lib/types";
+import { ProviderConfigPanel } from "@/components/settings/ProviderConfigPanel";
+import type { AudioInputDevice, ProviderInfo } from "@/lib/types";
 
 /**
- * Audio settings section: STT backend, Anthropic API key, Whisper model,
+ * Audio settings section: STT provider (data-driven), Anthropic API key,
  * audio input device, and live VU meter.
  */
 export function AudioSection() {
   const { settings, update, loading } = useAudioSettings();
-  const { installed, downloading, progress, download } = useWhisperModel();
   const audioLevel = useAudioLevel();
   const [devices, setDevices] = useState<AudioInputDevice[]>([]);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [apiKey, setApiKey] = useState("");
-  const [keyVisible, setKeyVisible] = useState(false);
   const [savingKey, setSavingKey] = useState(false);
   const [micTesting, setMicTesting] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
 
+  // Poll for audio device changes every 3s to detect hot-plug
   useEffect(() => {
-    listAudioInputDevices()
-      .then(setDevices)
+    const refresh = () => {
+      listAudioInputDevices()
+        .then(setDevices)
+        .catch(() => {});
+    };
+    refresh();
+    listSttProviders()
+      .then(setProviders)
       .catch(() => {});
+    const interval = setInterval(refresh, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   // Auto-start audio monitor on mount, stop on unmount
@@ -48,7 +67,9 @@ export function AudioSection() {
     if (micTesting) {
       try {
         await stopAudioMonitor();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       setMicTesting(false);
     } else {
       try {
@@ -73,15 +94,29 @@ export function AudioSection() {
 
   if (loading || !settings) {
     return (
-      <div className="flex-1 p-6 flex items-center justify-center text-ink-3 text-sm">
+      <div className="flex flex-1 items-center justify-center p-6 text-sm text-ink-3">
         Loading…
       </div>
     );
   }
 
+  const activeProvider = providers.find((p) => p.id === settings.backend);
+  const providerConfig = (settings.provider_config?.[settings.backend] ??
+    {}) as Record<string, unknown>;
+
+  const handleProviderConfigChange = (key: string, value: unknown) => {
+    const updated = { ...providerConfig, [key]: value };
+    update({
+      provider_config: {
+        ...settings.provider_config,
+        [settings.backend]: updated,
+      },
+    });
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-0">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 mb-6 pb-3 border-b border-line">
+    <div className="flex-1 space-y-0 overflow-y-auto p-6">
+      <h2 className="mb-6 border-b border-line pb-3 font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">
         Audio
       </h2>
 
@@ -93,60 +128,27 @@ export function AudioSection() {
               update({ backend: v as typeof settings.backend })
             }
           >
-            <SelectTrigger className="w-42">
+            <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="whisper">Whisper (local)</SelectItem>
-              <SelectItem value="deepgram">Deepgram (cloud)</SelectItem>
+              {providers.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
               <SelectItem value="off">Off</SelectItem>
             </SelectContent>
           </Select>
         </SettingRow>
 
-        {settings.backend === "whisper" && (
-          <SettingRow
-            label="Whisper model"
-            description={
-              installed ? "Model installed" : "~75 MB download required"
-            }
-          >
-            {installed ? (
-              <span className="font-mono text-[10.5px] text-success uppercase tracking-[0.05em]">
-                Installed
-              </span>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={download}
-                disabled={downloading}
-              >
-                {downloading ? `${Math.round(progress)}%…` : "Download"}
-              </Button>
-            )}
-          </SettingRow>
-        )}
-
-        {settings.backend === "deepgram" && (
-          <SettingRow label="Deepgram API key">
-            <div className="flex gap-2">
-              <input
-                type={keyVisible ? "text" : "password"}
-                value={settings.deepgram_api_key}
-                onChange={(e) => update({ deepgram_api_key: e.target.value })}
-                placeholder="dg_…"
-                className="h-7 w-44 rounded bg-bg-2 border border-line px-2 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
-              />
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setKeyVisible((prev) => !prev)}
-              >
-                {keyVisible ? "🙈" : "👁"}
-              </Button>
-            </div>
-          </SettingRow>
+        {/* Data-driven provider config panel */}
+        {activeProvider && (
+          <ProviderConfigPanel
+            provider={activeProvider}
+            config={providerConfig}
+            onConfigChange={handleProviderConfigChange}
+          />
         )}
       </Section>
 
@@ -158,11 +160,11 @@ export function AudioSection() {
         <SettingRow label="API key">
           <div className="flex gap-2">
             <input
-              type={keyVisible ? "text" : "password"}
+              type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-ant-…"
-              className="h-7 w-44 rounded bg-bg-2 border border-line px-2 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+              className="h-7 w-44 rounded border border-line bg-bg-2 px-2 text-xs text-ink placeholder:text-muted focus:border-accent focus:outline-none"
             />
             <Button
               variant="outline"

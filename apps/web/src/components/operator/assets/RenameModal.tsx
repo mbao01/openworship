@@ -25,7 +25,7 @@ export function RenameModal({
       </ModalHeader>
       <ModalBody className="px-6 py-4">
         <input
-          className="bg-bg-2 border border-line rounded text-ink text-sm px-[10px] py-[6px] w-full outline-none transition-colors focus:border-accent focus:outline-none"
+          className="w-full rounded border border-line bg-bg-2 px-[10px] py-[6px] text-sm text-ink transition-colors outline-none focus:border-accent focus:outline-none"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -37,13 +37,13 @@ export function RenameModal({
       </ModalBody>
       <ModalFooter>
         <button
-          className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          className="cursor-pointer rounded border border-line bg-transparent px-3.5 py-1.5 font-sans text-xs text-ink-3 transition-colors hover:border-line-strong hover:text-ink"
           onClick={onCancel}
         >
           Cancel
         </button>
         <button
-          className="bg-accent text-accent-foreground border-none rounded font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="cursor-pointer rounded border-none bg-accent px-3.5 py-1.5 font-sans text-xs font-semibold text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40"
           onClick={() => onConfirm(name.trim())}
           disabled={!name.trim() || name.trim() === entry.name}
         >

@@ -25,7 +25,9 @@ export async function listArtifacts(
  * Returns the most recently accessed artifacts across all services.
  * @param limit Max results (default 20).
  */
-export async function listRecentArtifacts(limit?: number): Promise<ArtifactEntry[]> {
+export async function listRecentArtifacts(
+  limit?: number,
+): Promise<ArtifactEntry[]> {
   return invoke<ArtifactEntry[]>("list_recent_artifacts", { limit });
 }
 
@@ -44,7 +46,11 @@ export async function searchArtifacts(
   serviceId?: string,
   category?: string,
 ): Promise<ArtifactEntry[]> {
-  return invoke<ArtifactEntry[]>("search_artifacts", { query, serviceId, category });
+  return invoke<ArtifactEntry[]>("search_artifacts", {
+    query,
+    serviceId,
+    category,
+  });
 }
 
 // ─── Creation & Import ────────────────────────────────────────────────────────
@@ -57,25 +63,36 @@ export async function createArtifactDir(
   parentPath: string,
   name: string,
 ): Promise<ArtifactEntry> {
-  return invoke<ArtifactEntry>("create_artifact_dir", { serviceId, parentPath, name });
+  return invoke<ArtifactEntry>("create_artifact_dir", {
+    serviceId,
+    parentPath,
+    name,
+  });
 }
 
 /**
  * Imports an existing file from the filesystem into the artifacts store.
  */
 export async function importArtifactFile(
-  serviceId: string,
-  parentPath: string,
-  filePath: string,
+  sourcePath: string,
+  serviceId?: string | null,
+  parentPath?: string | null,
 ): Promise<ArtifactEntry> {
-  return invoke<ArtifactEntry>("import_artifact_file", { serviceId, parentPath, filePath });
+  return invoke<ArtifactEntry>("import_artifact_file", {
+    serviceId,
+    parentPath,
+    sourcePath,
+  });
 }
 
 /**
  * Writes raw bytes to an artifact, creating or overwriting the file.
  * Used for drag-and-drop uploads.
  */
-export async function writeArtifactBytes(id: string, bytes: number[]): Promise<void> {
+export async function writeArtifactBytes(
+  id: string,
+  bytes: number[],
+): Promise<void> {
   return invoke("write_artifact_bytes", { id, bytes });
 }
 
@@ -92,7 +109,10 @@ export async function readTextFile(filePath: string): Promise<string> {
 /**
  * Renames an artifact file or directory.
  */
-export async function renameArtifact(id: string, newName: string): Promise<void> {
+export async function renameArtifact(
+  id: string,
+  newName: string,
+): Promise<void> {
   return invoke("rename_artifact", { id, newName });
 }
 
@@ -106,14 +126,20 @@ export async function deleteArtifact(id: string): Promise<void> {
 /**
  * Moves an artifact to a new parent directory path.
  */
-export async function moveArtifact(id: string, newParentPath: string): Promise<void> {
+export async function moveArtifact(
+  id: string,
+  newParentPath: string,
+): Promise<void> {
   return invoke("move_artifact", { id, newParentPath });
 }
 
 /**
  * Toggles the starred (bookmarked) state of an artifact.
  */
-export async function starArtifact(id: string, starred: boolean): Promise<void> {
+export async function starArtifact(
+  id: string,
+  starred: boolean,
+): Promise<void> {
   return invoke("star_artifact", { id, starred });
 }
 

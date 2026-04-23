@@ -4,7 +4,16 @@ import userEvent from "@testing-library/user-event";
 import { Rail } from "./Rail";
 
 describe("Rail", () => {
-  const NAV_LABELS = ["Plan", "Prep", "Live", "Bank", "Assets", "Logs", "Screen", "Set"];
+  const NAV_LABELS = [
+    "Plan",
+    "Prep",
+    "Live",
+    "Bank",
+    "Assets",
+    "Logs",
+    "Screen",
+    "Set",
+  ];
 
   it("renders all nav items", () => {
     render(<Rail screen="plan" onScreenChange={() => {}} />);

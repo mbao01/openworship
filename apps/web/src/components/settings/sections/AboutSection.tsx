@@ -3,18 +3,22 @@
  */
 export function AboutSection() {
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-0">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 mb-6 pb-3 border-b border-line">
+    <div className="flex-1 space-y-0 overflow-y-auto p-6">
+      <h2 className="mb-6 border-b border-line pb-3 font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">
         About
       </h2>
 
       <div className="space-y-3">
         <div>
-          <p className="font-serif text-lg text-ink leading-snug">openworship</p>
-          <p className="text-xs text-ink-3 mt-1">AI-powered worship presentation</p>
+          <p className="font-serif text-lg leading-snug text-ink">
+            openworship
+          </p>
+          <p className="mt-1 text-xs text-ink-3">
+            AI-powered worship presentation
+          </p>
         </div>
 
-        <div className="pt-3 border-t border-line space-y-1.5 font-mono text-[10.5px] text-ink-3">
+        <div className="space-y-1.5 border-t border-line pt-3 font-mono text-[10.5px] text-ink-3">
           <div className="flex justify-between">
             <span>Version</span>
             <span className="text-ink-2">0.1.0</span>

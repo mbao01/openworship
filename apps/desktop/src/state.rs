@@ -6,7 +6,7 @@ use crate::settings::{AudioSettings, DisplaySettings};
 use crate::slides::{AnnouncementItem, SermonNote};
 use crate::songs::{SongSemanticIndex, SongsDb};
 use crate::summaries::{EmailSettings, EmailSubscriber, ServiceSummary};
-use ow_audio::{AudioMonitor, SttEngine, SttStatus};
+use ow_audio::{AudioMonitor, ProviderRegistry, SttEngine, SttStatus};
 use ow_core::{DetectionMode, QueueItem, SongRef};
 use ow_display::ContentEvent;
 use ow_embed::{Embedder, SemanticIndex};
@@ -20,6 +20,8 @@ pub struct AppState {
     pub search: Arc<SearchEngine>,
     pub display_tx: broadcast::Sender<ContentEvent>,
     pub stt: Mutex<SttEngine>,
+    /// Registry of available STT providers (Whisper, Deepgram, etc.).
+    pub provider_registry: ProviderRegistry,
     /// Lightweight audio-only capture for VU meter / mic check.
     /// Independent of the STT engine — works without a transcriber.
     pub audio_monitor: AudioMonitor,
@@ -74,10 +76,26 @@ pub struct AppState {
     pub email_settings: Arc<RwLock<EmailSettings>>,
     /// Anthropic API key for Claude summary generation (from keychain).
     pub anthropic_api_key: Arc<RwLock<String>>,
+    /// When `true`, the display output is blacked out (content hidden but queue
+    /// state is preserved).  Toggled by the operator's "Live" button.
+    pub blackout: Arc<RwLock<bool>>,
+    /// In-memory scripture database for chapter/verse metadata queries.
+    pub scripture_db: Arc<Mutex<rusqlite::Connection>>,
 }
 
 impl AppState {
     pub fn stt_status(&self) -> SttStatus {
         self.stt.lock().unwrap().status()
+    }
+
+    /// Send a content event to the display, but only if blackout is off.
+    /// Returns `true` if the event was sent.
+    pub fn send_to_display(&self, event: ContentEvent) -> bool {
+        let is_blackout = self.blackout.read().map(|b| *b).unwrap_or(false);
+        if is_blackout {
+            return false;
+        }
+        let _ = self.display_tx.send(event);
+        true
     }
 }

@@ -7,42 +7,55 @@ import { QueueItemCard } from "./QueueItemCard";
 import { ContextPanel } from "./ContextPanel";
 import { TranscriptBody } from "./TranscriptBody";
 
-export function QueueTranscriptPanel() {
+export function QueueTranscriptPanel({ visible: isVisible = true }: { visible?: boolean }) {
   const { queue, live, approve, skip } = useQueue();
-  const visible = [...(live ? [live] : []), ...queue].slice(0, 10);
+  const visibleItems = [...(live ? [live] : []), ...queue].slice(0, 10);
   const [micActive, setMicActive] = useState(false);
 
   useEffect(() => {
-    getSttStatus().then(s => setMicActive(s === "running")).catch(() => {});
-  }, []);
+    if (!isVisible) return;
+    getSttStatus()
+      .then((s) => setMicActive(s === "running"))
+      .catch(() => {});
+    const id = setInterval(() => {
+      getSttStatus()
+        .then((s) => setMicActive(s === "running"))
+        .catch(() => {});
+    }, 2000);
+    return () => clearInterval(id);
+  }, [isVisible]);
 
   const handleMicToggle = async () => {
     if (micActive) {
       await stopStt().catch(() => {});
       setMicActive(false);
     } else {
-      await startStt().catch(() => {});
-      setMicActive(true);
+      try {
+        await startStt();
+        setMicActive(true);
+      } catch (e) {
+        toastError("Failed to start microphone")(e);
+      }
     }
   };
 
   return (
-    <section className="flex flex-col w-[340px] shrink-0 border-l border-line overflow-hidden">
+    <section className="flex w-[340px] shrink-0 flex-col overflow-hidden border-l border-line">
       {/* Queue */}
-      <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
-        <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-line bg-bg-1 px-3.5">
+        <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
           Queue ·{" "}
-          <strong className="text-ink-2 font-medium">AI-detected</strong>
+          <strong className="font-medium text-ink-2">AI-detected</strong>
         </span>
         <span className="font-mono text-[10px] text-ink-3">
-          {visible.length} items
+          {visibleItems.length} items
         </span>
       </div>
 
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Queue items - equal third */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {visible.map((item) => (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {visibleItems.map((item) => (
             <QueueItemCard
               key={item.id}
               item={item}
@@ -54,48 +67,47 @@ export function QueueTranscriptPanel() {
               }
             />
           ))}
-          {visible.length === 0 && (
-            <div className="px-3.5 py-6 flex flex-col items-center justify-center gap-2 text-xs text-muted">
-              <SearchIcon className="w-5 h-5" />
+          {visibleItems.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-2 px-3.5 py-6 text-xs text-muted">
+              <SearchIcon className="h-5 w-5" />
               No detections yet
             </div>
           )}
         </div>
 
         {/* Context panel - equal third */}
-        <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex min-h-0 flex-1 flex-col">
           <ContextPanel live={live} />
         </div>
 
         {/* Transcript header */}
-        <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-t border-line border-b border-line bg-bg-1">
-          <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+        <div className="flex h-9 shrink-0 items-center justify-between border-t border-b border-line bg-bg-1 px-3.5">
+          <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
             Transcript ·{" "}
-            <strong className="text-ink-2 font-medium">live</strong>
+            <strong className="font-medium text-ink-2">live</strong>
           </span>
           <div className="flex items-center gap-2">
             <button
-              className={`px-2 py-0.5 font-mono text-[9px] tracking-[0.1em] uppercase border rounded transition-colors cursor-pointer ${
+              className={`cursor-pointer rounded border px-2 py-1 font-mono text-[9px] font-bold tracking-[0.1em] uppercase transition-colors ${
                 micActive
-                  ? "text-live border-live/40 hover:bg-live/10"
-                  : "text-ink-3 border-line hover:text-ink hover:border-line-strong"
+                  ? "border-live/40 text-live hover:bg-live/10"
+                  : "border-primary bg-primary text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground"
               }`}
               onClick={handleMicToggle}
             >
               {micActive ? (
-                <MicIcon className="w-3 h-3 shrink-0 inline mr-1" />
+                <MicIcon className="mr-1 inline h-3 w-3 shrink-0" />
               ) : (
-                <MicOffIcon className="w-3 h-3 shrink-0 inline mr-1" />
+                <MicOffIcon className="mr-1 inline h-3 w-3 shrink-0" />
               )}
               {micActive ? "Stop" : "Start"}
             </button>
-            <span className="font-mono text-[10px] text-ink-3">10s</span>
           </div>
         </div>
 
         {/* Transcript body - equal third */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <TranscriptBody />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <TranscriptBody micActive={micActive} />
         </div>
       </div>
     </section>

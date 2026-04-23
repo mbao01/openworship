@@ -23,7 +23,7 @@ export function NewServiceForm({
     >
       <input
         ref={inputRef}
-        className="w-full px-3 py-2 bg-bg-2 border border-line rounded text-ink text-sm"
+        className="w-full rounded border border-line bg-bg-2 px-3 py-2 text-sm text-ink"
         placeholder="Untitled service"
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -31,13 +31,13 @@ export function NewServiceForm({
       <div className="flex gap-2">
         <button
           type="submit"
-          className="flex-1 px-3 py-2 bg-accent text-accent-foreground text-xs font-semibold rounded cursor-pointer"
+          className="flex-1 cursor-pointer rounded bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground"
         >
           Create
         </button>
         <button
           type="button"
-          className="px-3 py-2 text-ink-3 text-xs rounded border border-line hover:text-ink cursor-pointer"
+          className="cursor-pointer rounded border border-line px-3 py-2 text-xs text-ink-3 hover:text-ink"
           onClick={onCancel}
         >
           Cancel

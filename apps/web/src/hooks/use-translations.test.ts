@@ -7,9 +7,12 @@ const mockGetActiveTranslation = vi.fn<() => Promise<string>>();
 const mockSwitchLiveTranslation = vi.fn<(abbr: string) => Promise<void>>();
 
 vi.mock("@/lib/commands/content", () => ({
-  listTranslations: (...args: unknown[]) => mockListTranslations(...args as []),
-  getActiveTranslation: (...args: unknown[]) => mockGetActiveTranslation(...args as []),
-  switchLiveTranslation: (...args: unknown[]) => mockSwitchLiveTranslation(...args as [string]),
+  listTranslations: (...args: unknown[]) =>
+    mockListTranslations(...(args as [])),
+  getActiveTranslation: (...args: unknown[]) =>
+    mockGetActiveTranslation(...(args as [])),
+  switchLiveTranslation: (...args: unknown[]) =>
+    mockSwitchLiveTranslation(...(args as [string])),
 }));
 
 import { useTranslations } from "./use-translations";

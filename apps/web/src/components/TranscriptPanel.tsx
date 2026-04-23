@@ -12,7 +12,7 @@ function AudioLevelBars({ level }: { level: number }) {
   const boosted = Math.min(1, level * 3);
   const clipping = level > 0.8;
   return (
-    <span className="flex items-end gap-[2px] h-3" aria-hidden="true">
+    <span className="flex h-3 items-end gap-[2px]" aria-hidden="true">
       {BAR_MULTIPLIERS.map((m, i) => {
         const pct = Math.max(0.12, boosted * m);
         return (
@@ -155,13 +155,13 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
+      <div className="flex shrink-0 items-center justify-between border-b border-line px-6 py-4">
         <div className="flex items-center gap-2">
           {micActive && (
             <span
-              className="inline-block w-2 h-2 rounded-full bg-accent [box-shadow:0_0_0_4px_color-mix(in_srgb,var(--color-accent)_25%,transparent)] animate-[transcript-pulse_1.5s_ease-in-out_infinite] shrink-0"
+              className="inline-block h-2 w-2 shrink-0 animate-[transcript-pulse_1.5s_ease-in-out_infinite] rounded-full bg-accent [box-shadow:0_0_0_4px_color-mix(in_srgb,var(--color-accent)_25%,transparent)]"
               aria-hidden="true"
             />
           )}
@@ -172,10 +172,10 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
         </div>
         <button
           data-qa="transcript-toggle-btn"
-          className={`font-sans text-[11px] font-medium tracking-[0.08em] bg-transparent rounded px-[10px] py-1 cursor-pointer transition-colors uppercase${
+          className={`cursor-pointer rounded bg-transparent px-[10px] py-1 font-sans text-[11px] font-medium tracking-[0.08em] transition-colors uppercase${
             micActive
-              ? " border border-accent text-accent"
-              : " border border-line text-ink hover:border-line-strong"
+              ? "border border-accent text-accent"
+              : "border border-line text-ink hover:border-line-strong"
           }`}
           onClick={handleToggle}
           aria-label={micActive ? "Stop microphone" : "Start microphone"}
@@ -187,15 +187,15 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
       {/* STT warning banner */}
       {sttWarning && (
         <div
-          className="flex items-center justify-between gap-2 px-6 py-2 bg-[rgba(201,168,76,0.07)] border-b border-[rgba(201,168,76,0.2)] shrink-0"
+          className="flex shrink-0 items-center justify-between gap-2 border-b border-[rgba(201,168,76,0.2)] bg-[rgba(201,168,76,0.07)] px-6 py-2"
           role="alert"
         >
-          <span className="text-[11px] text-accent/60 tracking-wide leading-[1.4]">
+          <span className="text-[11px] leading-[1.4] tracking-wide text-accent/60">
             {sttWarning}
           </span>
           <button
             data-qa="transcript-stt-warning-dismiss"
-            className="bg-transparent border-none text-muted cursor-pointer text-[10px] px-1 py-0.5 shrink-0 transition-colors leading-none hover:text-ink-3"
+            className="shrink-0 cursor-pointer border-none bg-transparent px-1 py-0.5 text-[10px] leading-none text-muted transition-colors hover:text-ink-3"
             onClick={() => setSttWarning(null)}
             aria-label="Dismiss warning"
           >
@@ -207,11 +207,12 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
       {/* Low-signal hint */}
       {lowSignal && (
         <div
-          className="flex items-center gap-2 px-6 py-2 bg-[rgba(196,76,76,0.07)] border-b border-[rgba(196,76,76,0.2)] shrink-0"
+          className="flex shrink-0 items-center gap-2 border-b border-[rgba(196,76,76,0.2)] bg-[rgba(196,76,76,0.07)] px-6 py-2"
           role="alert"
         >
-          <span className="text-[11px] text-danger tracking-wide leading-[1.4]">
-            Very low audio signal — check that the correct microphone is selected in Settings.
+          <span className="text-[11px] leading-[1.4] tracking-wide text-danger">
+            Very low audio signal — check that the correct microphone is
+            selected in Settings.
           </span>
         </div>
       )}
@@ -219,35 +220,35 @@ export function TranscriptPanel({ contextWindowSeconds = 10 }: Props) {
       {/* Audio present but no transcription hint */}
       {noTranscript && !lowSignal && (
         <div
-          className="flex items-center gap-2 px-6 py-2 bg-[rgba(201,168,76,0.07)] border-b border-[rgba(201,168,76,0.2)] shrink-0"
+          className="flex shrink-0 items-center gap-2 border-b border-[rgba(201,168,76,0.2)] bg-[rgba(201,168,76,0.07)] px-6 py-2"
           role="alert"
         >
-          <span className="text-[11px] text-accent/60 tracking-wide leading-[1.4]">
-            Audio detected but no transcription — try re-downloading the model in Settings
-            &rarr; Audio, or restart the mic.
+          <span className="text-[11px] leading-[1.4] tracking-wide text-accent/60">
+            Audio detected but no transcription — try re-downloading the model
+            in Settings &rarr; Audio, or restart the mic.
           </span>
         </div>
       )}
 
       {/* Body */}
       <div
-        className="flex-1 overflow-y-auto px-6 py-6 min-h-0 [scrollbar-width:thin] [scrollbar-color:var(--color-line-strong)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-line [&::-webkit-scrollbar-thumb]:rounded-sm"
+        className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-color:var(--color-line-strong)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb]:bg-line"
         role="log"
         aria-live="polite"
         aria-label="Live transcript"
       >
         {entries.length === 0 && !error && (
-          <p className="text-sm text-muted m-0">
+          <p className="m-0 text-sm text-muted">
             {micActive
-              ? "Listening\u2026"
+              ? "Listening ..."
               : "Press START MIC to begin transcription."}
           </p>
         )}
-        {error && <p className="text-[13px] text-danger m-0 mb-2">{error}</p>}
+        {error && <p className="m-0 mb-2 text-[13px] text-danger">{error}</p>}
         {entries.map((entry) => (
           <p
             key={entry.id}
-            className="text-base font-normal leading-relaxed text-ink m-0 mb-2 animate-[transcript-line-in_150ms_ease-out]"
+            className="m-0 mb-2 animate-[transcript-line-in_150ms_ease-out] text-base leading-relaxed font-normal text-ink"
           >
             {entry.text}
           </p>

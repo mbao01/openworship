@@ -11,16 +11,27 @@
 
 mod capture;
 mod deepgram;
+mod deepgram_provider;
 mod engine;
 pub mod event;
+pub mod provider;
+mod registry;
 pub(crate) mod transcribe;
+mod whisper_provider;
 
 pub use capture::{AudioConfig, AudioInputDevice, list_input_devices};
 pub use engine::{AudioMonitor, SttEngine, SttStatus};
 pub use event::TranscriptEvent;
+pub use provider::{
+    ConfigField, ConfigOption, ModelInfo, ProviderInfo, ProviderStatus, SttProvider,
+};
+pub use registry::ProviderRegistry;
 pub use transcribe::Transcriber;
 #[cfg(feature = "whisper")]
-pub use transcribe::{WhisperTranscriber, default_model_path, resolve_model_path};
+pub use transcribe::{
+    WhisperTranscriber, check_model, default_model_path, model_path_for, models_dir,
+    resolve_model_path, resolve_model_path_for,
+};
 #[cfg(feature = "deepgram")]
 pub use deepgram::DeepgramTranscriber;
 
@@ -76,7 +87,7 @@ mod tests {
     fn test_audio_config_defaults() {
         let cfg = AudioConfig::default();
         assert_eq!(cfg.sample_rate, 16_000, "Whisper requires 16 kHz");
-        assert_eq!(cfg.chunk_ms, 200);
+        assert_eq!(cfg.chunk_ms, 500);
         assert_eq!(cfg.context_window_secs, 10);
     }
 

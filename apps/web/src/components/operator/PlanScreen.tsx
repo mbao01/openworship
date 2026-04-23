@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { toastError } from "@/lib/toast";
 import type {
@@ -7,19 +7,13 @@ import type {
   ServiceProject,
   TranslationInfo,
 } from "@/lib/types";
-import {
-  listTranslations,
-  getActiveTranslation,
-} from "@/lib/commands/content";
+import { listTranslations, getActiveTranslation } from "@/lib/commands/content";
 import {
   createServiceProject,
   deleteServiceProject,
   listServiceProjects,
 } from "@/lib/commands/projects";
-import {
-  getAudioSettings,
-  getEmailSettings,
-} from "@/lib/commands/settings";
+import { getAudioSettings, getEmailSettings } from "@/lib/commands/settings";
 import { ListIcon } from "lucide-react";
 import { ConfirmDialog } from "../ui/confirm-dialog";
 import { ServiceList } from "./plan/ServiceList";
@@ -91,13 +85,17 @@ export function PlanScreen() {
   const isReadOnly = selectedProject?.closed_at_ms !== null;
 
   // Sort: open projects first (desc by created_at_ms), then closed (desc)
-  const sortedProjects = [...projects].sort((a, b) => {
-    const aOpen = a.closed_at_ms === null;
-    const bOpen = b.closed_at_ms === null;
-    if (aOpen && !bOpen) return -1;
-    if (!aOpen && bOpen) return 1;
-    return b.created_at_ms - a.created_at_ms;
-  });
+  const sortedProjects = useMemo(
+    () =>
+      [...projects].sort((a, b) => {
+        const aOpen = a.closed_at_ms === null;
+        const bOpen = b.closed_at_ms === null;
+        if (aOpen && !bOpen) return -1;
+        if (!aOpen && bOpen) return 1;
+        return b.created_at_ms - a.created_at_ms;
+      }),
+    [projects],
+  );
 
   const handleCreate = async (name: string) => {
     try {
@@ -153,8 +151,8 @@ export function PlanScreen() {
             setEmailSettingsState={setEmailSettingsState}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted text-sm gap-2">
-            <ListIcon className="w-6 h-6 text-muted/60" />
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted">
+            <ListIcon className="h-6 w-6 text-muted/60" />
             {projects.length === 0
               ? "No services yet. Create one to get started."
               : "Select a service from the list."}
@@ -190,10 +188,10 @@ export function SettingRow({
   control: React.ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[1fr_240px] gap-6 py-4 border-b border-line items-center last:border-b-0">
+    <div className="grid grid-cols-[1fr_240px] items-center gap-6 border-b border-line py-4 last:border-b-0">
       <div>
         <div className="text-[13.5px] text-ink">{label}</div>
-        <div className="text-xs text-ink-3 mt-1">{description}</div>
+        <div className="mt-1 text-xs text-ink-3">{description}</div>
       </div>
       <div className="flex justify-end">{control}</div>
     </div>

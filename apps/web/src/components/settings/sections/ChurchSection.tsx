@@ -32,8 +32,8 @@ export function ChurchSection({ identity }: ChurchSectionProps) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-0">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 mb-6 pb-3 border-b border-line">
+    <div className="flex-1 space-y-0 overflow-y-auto p-6">
+      <h2 className="mb-6 border-b border-line pb-3 font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">
         General
       </h2>
 
@@ -45,7 +45,7 @@ export function ChurchSection({ identity }: ChurchSectionProps) {
           <span className="text-sm text-ink">{identity.branch_name}</span>
         </SettingRow>
         <SettingRow label="Role">
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.05em] text-accent">
+          <span className="font-mono text-[10.5px] tracking-[0.05em] text-accent uppercase">
             {identity.role}
           </span>
         </SettingRow>
@@ -58,7 +58,7 @@ export function ChurchSection({ identity }: ChurchSectionProps) {
           description="Share this code with member branches to connect to your HQ."
         >
           <div className="flex items-center gap-2 pb-3">
-            <span className="flex-1 font-mono text-sm font-bold text-accent bg-bg-2 border border-line rounded px-3 py-1.5">
+            <span className="flex-1 rounded border border-line bg-bg-2 px-3 py-1.5 font-mono text-sm font-bold text-accent">
               {identity.invite_code}
             </span>
             <Button variant="outline" size="default" onClick={handleCopy}>

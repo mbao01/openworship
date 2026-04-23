@@ -9,7 +9,7 @@ use ow_core::{DetectionMode, QueueItem, QueueStatus, ScriptureDetector};
 use ow_display::ContentEvent;
 use ow_search::{VerseResult, parse_range_reference};
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 
@@ -35,6 +35,27 @@ pub fn search_scriptures(
         .map_err(|e| e.to_string())
 }
 
+/// Return the distinct chapter numbers for a Bible book.
+#[tauri::command]
+pub fn get_book_chapters(
+    book: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<u32>, String> {
+    let conn = state.scripture_db.lock().map_err(|e| e.to_string())?;
+    ow_db::get_chapters(&conn, &book).map_err(|e| e.to_string())
+}
+
+/// Return the distinct verse numbers for a Bible book + chapter.
+#[tauri::command]
+pub fn get_chapter_verses(
+    book: String,
+    chapter: u32,
+    state: State<'_, AppState>,
+) -> Result<Vec<u32>, String> {
+    let conn = state.scripture_db.lock().map_err(|e| e.to_string())?;
+    ow_db::get_verses(&conn, &book, chapter).map_err(|e| e.to_string())
+}
+
 /// Push a verse to the fullscreen display via WebSocket.
 ///
 /// Side-effects:
@@ -52,7 +73,7 @@ pub fn push_to_display(
 ) -> Result<(), String> {
     let event = ContentEvent::scripture(reference.clone(), text.clone(), translation.clone());
     // Send to display WebSocket clients.
-    let _ = state.display_tx.send(event);
+    state.send_to_display(event);
 
     // ── Update queue: retire current live, add this item as live ──────────────
     {
@@ -244,7 +265,7 @@ fn start_stt_with_settings(
             match DeepgramTranscriber::new(&settings.deepgram_api_key) {
                 Ok(t) => {
                     eprintln!("[stt] starting Deepgram online transcriber");
-                    return engine.start(t, config);
+                    return engine.start(Box::new(t), config);
                 }
                 Err(e) => {
                     eprintln!("[stt] Deepgram init failed ({e}), falling back to Whisper");
@@ -261,10 +282,13 @@ fn start_stt_with_settings(
     #[cfg(feature = "whisper")]
     {
         use ow_audio::WhisperTranscriber;
-        match WhisperTranscriber::from_env() {
+        // Resolve model path using the configured model preference
+        let preferred = settings.whisper_model.filename();
+        let model_path = ow_audio::resolve_model_path_for(Some(preferred));
+        match model_path.and_then(|p| WhisperTranscriber::new(&p)) {
             Ok(t) => {
                 eprintln!("[stt] starting Whisper.cpp offline transcriber");
-                return engine.start(t, config);
+                return engine.start(Box::new(t), config);
             }
             Err(e) => {
                 eprintln!("[stt] Whisper model unavailable: {e}");
@@ -280,37 +304,45 @@ fn start_stt_with_settings(
     anyhow::bail!("No STT backend available. Download the Whisper model from Settings → Audio.")
 }
 
-/// Download the Whisper base.en model to `~/.openworship/models/ggml-base.en.bin`.
-/// Returns `true` if a usable Whisper model file already exists on disk.
+/// Returns `true` if the specified Whisper model file exists on disk.
+/// If no model name given, checks for any usable model via the fallback chain.
 #[tauri::command]
-pub fn check_whisper_model() -> bool {
+pub fn check_whisper_model(model: Option<String>) -> bool {
     #[cfg(feature = "whisper")]
     {
-        ow_audio::resolve_model_path().is_ok()
+        if let Some(ref name) = model {
+            ow_audio::check_model(name)
+        } else {
+            ow_audio::resolve_model_path().is_ok()
+        }
     }
     #[cfg(not(feature = "whisper"))]
     {
+        let _ = model;
         false
     }
 }
 
 ///
 /// Emits `stt://model-download-progress` events during download with payload
-/// `{ downloaded_bytes: u64, total_bytes: u64 | null, percent: number | null }`.
+/// `{ downloaded_bytes: u64, total_bytes: u64 | null, percent: number | null, model: string }`.
 /// Emits `stt://model-download-complete` on success.
-/// Returns an error string on failure.
+/// Accepts an optional `model` filename (e.g. "ggml-small.en.bin"); defaults to base.en.
 #[tauri::command]
-pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
+pub async fn download_whisper_model(app: AppHandle, model: Option<String>) -> Result<(), String> {
     use reqwest::header::CONTENT_LENGTH;
     use tokio::io::AsyncWriteExt;
 
-    const MODEL_URL: &str =
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin";
+    let model_filename = model.unwrap_or_else(|| "ggml-base.en.bin".to_string());
+    let model_url = format!(
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{}",
+        model_filename
+    );
 
     let dest = {
         #[cfg(feature = "whisper")]
         {
-            ow_audio::default_model_path()
+            ow_audio::model_path_for(&model_filename)
         }
         #[cfg(not(feature = "whisper"))]
         {
@@ -318,7 +350,7 @@ pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
             std::path::PathBuf::from(home)
                 .join(".openworship")
                 .join("models")
-                .join("ggml-base.en.bin")
+                .join(&model_filename)
         }
     };
 
@@ -330,7 +362,7 @@ pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
 
     let client = reqwest::Client::new();
     let response = client
-        .get(MODEL_URL)
+        .get(&model_url)
         .send()
         .await
         .map_err(|e| format!("Download request failed: {e}"))?;
@@ -367,6 +399,7 @@ pub async fn download_whisper_model(app: AppHandle) -> Result<(), String> {
                 "downloaded_bytes": downloaded,
                 "total_bytes": total_bytes,
                 "percent": percent,
+                "model": &model_filename,
             }),
         );
     }
@@ -397,6 +430,202 @@ pub fn stop_stt(state: State<'_, AppState>) {
 #[tauri::command]
 pub fn get_stt_status(state: State<'_, AppState>) -> SttStatus {
     state.stt_status()
+}
+
+// ─── STT Provider commands ───────────────────────────────────────────────────
+
+/// List all available STT providers with their metadata and config field definitions.
+#[tauri::command]
+pub fn list_stt_providers(
+    state: State<'_, AppState>,
+) -> Vec<ow_audio::ProviderInfo> {
+    state
+        .provider_registry
+        .list()
+        .into_iter()
+        .map(|p| p.info())
+        .collect()
+}
+
+/// Get the readiness status of a specific STT provider.
+#[tauri::command]
+pub fn get_provider_status(
+    provider_id: String,
+    state: State<'_, AppState>,
+) -> Result<ow_audio::ProviderStatus, String> {
+    let provider = state
+        .provider_registry
+        .get(&provider_id)
+        .ok_or_else(|| format!("Unknown provider: {provider_id}"))?;
+    let settings = state.audio_settings.read().map_err(|e| e.to_string())?;
+    let config = settings.provider_config_for(&provider_id);
+    // Hydrate secrets from keychain
+    let config = hydrate_provider_secrets(&provider.info(), config);
+    Ok(provider.check_status(&config))
+}
+
+/// Check if a specific model is installed for a provider.
+#[tauri::command]
+pub fn check_provider_model(
+    provider_id: String,
+    model_id: String,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let provider = state
+        .provider_registry
+        .get(&provider_id)
+        .ok_or_else(|| format!("Unknown provider: {provider_id}"))?;
+    Ok(provider.is_model_installed(&model_id))
+}
+
+/// Get available models for a provider.
+#[tauri::command]
+pub fn get_provider_models(
+    provider_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<ow_audio::ModelInfo>, String> {
+    let provider = state
+        .provider_registry
+        .get(&provider_id)
+        .ok_or_else(|| format!("Unknown provider: {provider_id}"))?;
+    Ok(provider.available_models())
+}
+
+/// Download a model for a provider. Emits progress events.
+#[tauri::command]
+pub async fn download_provider_model(
+    app: AppHandle,
+    provider_id: String,
+    model_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    use reqwest::header::CONTENT_LENGTH;
+    use tokio::io::AsyncWriteExt;
+
+    let provider = state
+        .provider_registry
+        .get(&provider_id)
+        .ok_or_else(|| format!("Unknown provider: {provider_id}"))?;
+
+    let models = provider.available_models();
+    let model = models
+        .iter()
+        .find(|m| m.id == model_id)
+        .ok_or_else(|| format!("Unknown model: {model_id}"))?;
+
+    let dest = provider
+        .model_path(&model_id)
+        .ok_or_else(|| format!("Provider {provider_id} does not support local models"))?;
+
+    if let Some(parent) = dest.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("Failed to create models directory: {e}"))?;
+    }
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&model.download_url)
+        .send()
+        .await
+        .map_err(|e| format!("Download request failed: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Download failed with HTTP {}", response.status()));
+    }
+
+    let total_bytes: Option<u64> = response
+        .headers()
+        .get(CONTENT_LENGTH)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok());
+
+    let tmp = dest.with_extension("bin.tmp");
+    let mut file = tokio::fs::File::create(&tmp)
+        .await
+        .map_err(|e| format!("Failed to create temp file: {e}"))?;
+
+    let mut downloaded: u64 = 0;
+    let mut stream = response.bytes_stream();
+
+    use futures_util::StreamExt;
+    while let Some(chunk) = stream.next().await {
+        let bytes = chunk.map_err(|e| format!("Download stream error: {e}"))?;
+        file.write_all(&bytes)
+            .await
+            .map_err(|e| format!("File write error: {e}"))?;
+        downloaded += bytes.len() as u64;
+        let percent = total_bytes.map(|t| downloaded as f32 / t as f32 * 100.0);
+        let _ = app.emit(
+            "stt://model-download-progress",
+            serde_json::json!({
+                "downloaded_bytes": downloaded,
+                "total_bytes": total_bytes,
+                "percent": percent,
+                "provider": &provider_id,
+                "model": &model_id,
+            }),
+        );
+    }
+
+    file.flush()
+        .await
+        .map_err(|e| format!("File flush error: {e}"))?;
+    drop(file);
+
+    tokio::fs::rename(&tmp, &dest)
+        .await
+        .map_err(|e| format!("Failed to finalise model file: {e}"))?;
+
+    let _ = app.emit(
+        "stt://model-download-complete",
+        serde_json::json!({
+            "provider": &provider_id,
+            "model": &model_id,
+            "path": dest.to_string_lossy(),
+        }),
+    );
+    eprintln!(
+        "[stt] Model {model_id} for {provider_id} downloaded to {}",
+        dest.display()
+    );
+    Ok(())
+}
+
+/// Hydrate secret fields from the OS keychain into a provider config.
+fn hydrate_provider_secrets(
+    info: &ow_audio::ProviderInfo,
+    mut config: serde_json::Value,
+) -> serde_json::Value {
+    for field in &info.config_fields {
+        if field.is_secret {
+            let account = format!("stt_{}_{}", info.id, field.key);
+            if let Some(secret) = crate::keychain::get_secret(&account) {
+                config[&field.key] = serde_json::Value::String(secret);
+            }
+            // Also check legacy keychain entries for backward compatibility
+            if config.get(&field.key).and_then(|v| v.as_str()).unwrap_or("").is_empty()
+                && info.id == "deepgram"
+                && field.key == "api_key"
+            {
+                if let Some(key) = crate::keychain::get_deepgram_api_key() {
+                    config[&field.key] = serde_json::Value::String(key);
+                }
+            }
+        }
+    }
+    config
+}
+
+/// Save a secret field for a provider to the OS keychain.
+#[tauri::command]
+pub fn set_provider_secret(
+    provider_id: String,
+    key: String,
+    value: String,
+) -> Result<(), String> {
+    let account = format!("stt_{provider_id}_{key}");
+    crate::keychain::set_secret(&account, &value).map_err(|e| format!("Keychain error: {e}"))
 }
 
 // ─── Audio settings commands ──────────────────────────────────────────────────
@@ -517,6 +746,7 @@ pub fn detect_in_transcript(
         &state.search,
         &state.queue,
         &state.display_tx,
+        &state.blackout,
         &app,
     );
 
@@ -578,12 +808,17 @@ pub fn approve_item(
 
     if let Some(item) = q.iter_mut().find(|i| i.id == id) {
         item.status = QueueStatus::Live;
-        let event = content_event_for_item(item);
-        let _ = state.display_tx.send(event);
+        // Only push to display if not blacked out.
+        let is_blackout = state.blackout.read().map(|b| *b).unwrap_or(false);
+        if !is_blackout {
+            let event = content_event_for_item(item);
+            state.send_to_display(event);
+        }
     } else {
         return Err(format!("item {id} not found in queue"));
     }
 
+    gc_dismissed(&mut q);
     let snapshot: Vec<QueueItem> = q.iter().cloned().collect();
     drop(q);
     let _ = app.emit("detection://queue-updated", snapshot);
@@ -605,6 +840,7 @@ pub fn dismiss_item(
         return Err(format!("item {id} not found in queue"));
     }
 
+    gc_dismissed(&mut q);
     let snapshot: Vec<QueueItem> = q.iter().cloned().collect();
     drop(q);
     let _ = app.emit("detection://queue-updated", snapshot);
@@ -626,7 +862,7 @@ pub fn clear_queue(state: State<'_, AppState>, app: AppHandle) -> Result<(), Str
 // ─── Queue navigation commands ────────────────────────────────────────────────
 
 /// Build the appropriate `ContentEvent` for a queue item based on its `kind`.
-fn content_event_for_item(item: &QueueItem) -> ow_display::ContentEvent {
+pub(crate) fn content_event_for_item(item: &QueueItem) -> ow_display::ContentEvent {
     use ow_core::content_kind;
     match item.kind.as_str() {
         content_kind::SONG => {
@@ -717,9 +953,9 @@ pub fn next_item(state: State<'_, AppState>, app: AppHandle) -> Result<(), Strin
     };
 
     if let Some(item) = new_live {
-        let _ = state.display_tx.send(content_event_for_item(&item));
+        state.send_to_display(content_event_for_item(&item));
     } else {
-        let _ = state.display_tx.send(ow_display::ContentEvent::clear());
+        state.send_to_display(ow_display::ContentEvent::clear());
     }
 
     let snapshot: Vec<QueueItem> = state
@@ -766,7 +1002,7 @@ pub fn prev_item(state: State<'_, AppState>, app: AppHandle) -> Result<(), Strin
     };
 
     if let Some(item) = new_live {
-        let _ = state.display_tx.send(content_event_for_item(&item));
+        state.send_to_display(content_event_for_item(&item));
 
         let snapshot: Vec<QueueItem> = state
             .queue
@@ -794,6 +1030,7 @@ pub fn clear_live(state: State<'_, AppState>, app: AppHandle) -> Result<(), Stri
                 item.status = QueueStatus::Dismissed;
             }
         }
+        gc_dismissed(&mut q);
     }
     let _ = state.display_tx.send(ow_display::ContentEvent::clear());
 
@@ -808,6 +1045,66 @@ pub fn clear_live(state: State<'_, AppState>, app: AppHandle) -> Result<(), Stri
     Ok(())
 }
 
+// ─── Queue garbage collection ────────────────────────────────────────────────
+
+/// Purge old dismissed items, keeping at most `MAX_DISMISSED` most-recent ones.
+/// Must be called while the MutexGuard is still held.
+fn gc_dismissed(q: &mut VecDeque<QueueItem>) {
+    const MAX_DISMISSED: usize = 50;
+    let dismissed_count = q.iter().filter(|i| i.status == QueueStatus::Dismissed).count();
+    if dismissed_count <= MAX_DISMISSED {
+        return;
+    }
+    let to_remove = dismissed_count - MAX_DISMISSED;
+    let mut removed = 0;
+    q.retain(|item| {
+        if removed >= to_remove {
+            return true;
+        }
+        if item.status == QueueStatus::Dismissed {
+            removed += 1;
+            return false;
+        }
+        true
+    });
+}
+
+// ─── Blackout (non-destructive live toggle) ─────────────────────────────────
+
+/// Toggle display blackout.  When blacking out, sends a clear event to the
+/// display *without* modifying the queue.  When restoring, re-sends the
+/// current live item (if any) so the display resumes.
+#[tauri::command]
+pub fn toggle_blackout(state: State<'_, AppState>) -> Result<bool, String> {
+    let mut bo = state.blackout.write().map_err(|e| e.to_string())?;
+    *bo = !*bo;
+    let is_blackout = *bo;
+    drop(bo);
+
+    if is_blackout {
+        let _ = state.display_tx.send(ow_display::ContentEvent::clear());
+    } else {
+        // Re-send the current live item so the display picks it back up.
+        let q = state.queue.lock().map_err(|e| e.to_string())?;
+        if let Some(live) = q.iter().find(|i| i.status == QueueStatus::Live) {
+            let event = content_event_for_item(live);
+            state.send_to_display(event);
+        }
+    }
+
+    Ok(is_blackout)
+}
+
+/// Returns the current blackout state.
+#[tauri::command]
+pub fn get_blackout(state: State<'_, AppState>) -> Result<bool, String> {
+    state
+        .blackout
+        .read()
+        .map(|b| *b)
+        .map_err(|e| e.to_string())
+}
+
 // ─── Shared detection helper ──────────────────────────────────────────────────
 
 /// Detect scripture references in `text`, look them up, and push results to the
@@ -818,6 +1115,7 @@ pub(crate) fn detect_and_queue(
     search: &ow_search::SearchEngine,
     queue: &Mutex<VecDeque<QueueItem>>,
     display_tx: &BroadcastSender<ContentEvent>,
+    blackout: &RwLock<bool>,
     app: &AppHandle,
 ) {
     let detector = ScriptureDetector::new();
@@ -855,11 +1153,14 @@ pub(crate) fn detect_and_queue(
         match mode {
             DetectionMode::Auto | DetectionMode::Offline => {
                 item.status = QueueStatus::Live;
-                let _ = display_tx.send(ContentEvent::scripture(
-                    r.reference,
-                    r.text,
-                    r.translation,
-                ));
+                let is_blackout = blackout.read().map(|b| *b).unwrap_or(false);
+                if !is_blackout {
+                    let _ = display_tx.send(ContentEvent::scripture(
+                        r.reference,
+                        r.text,
+                        r.translation,
+                    ));
+                }
             }
             DetectionMode::Copilot => { /* leave Pending */ }
             DetectionMode::Airplane => unreachable!("guarded by caller"),
@@ -1683,7 +1984,7 @@ pub fn push_song_to_display(
 
     let artist = song.artist.clone().unwrap_or_default();
     let event = ContentEvent::song(song.title.clone(), song.lyrics.clone(), artist.clone());
-    let _ = state.display_tx.send(event);
+    state.send_to_display(event);
 
     // ── Update content bank ──────────────────────────────────────────────────
     let reference = song.title.clone();
@@ -1789,11 +2090,9 @@ pub fn reject_live_item(
     };
 
     if let Some((reference, text, translation)) = new_live {
-        let _ = state
-            .display_tx
-            .send(ContentEvent::scripture(reference, text, translation));
+        state.send_to_display(ContentEvent::scripture(reference, text, translation));
     } else {
-        let _ = state.display_tx.send(ContentEvent::clear());
+        state.send_to_display(ContentEvent::clear());
     }
 
     let snapshot: Vec<QueueItem> = state
@@ -1861,7 +2160,7 @@ pub fn switch_live_translation(
                 &verse.text,
                 &verse.translation,
             );
-            let _ = state.display_tx.send(event);
+            state.send_to_display(event);
 
             // Update the queue item text + translation in place.
             {
@@ -1975,7 +2274,7 @@ pub fn push_announcement_to_display(
         announcement.body.clone(),
         announcement.image_url.clone(),
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     let mut item = ow_core::QueueItem::new_announcement(
         announcement.title.clone(),
@@ -2004,7 +2303,7 @@ pub fn push_custom_slide(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let ev = ContentEvent::custom_slide(title.clone(), body.clone(), image_url.clone());
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     // Retire previous live items and add new one
     {
@@ -2046,7 +2345,7 @@ pub fn push_artifact_to_display(
         String::new(),
         Some(format!("artifact:{artifact_id}")),
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     // Retire previous live items and add new one
     {
@@ -2071,6 +2370,208 @@ pub fn push_artifact_to_display(
     Ok(())
 }
 
+// ─── Display background ─────────────────────────────────────────────────────
+
+/// Set the display background. Pass an artifact ID, preset ID, or null to clear.
+///
+/// For presets (e.g. "preset:dark_gradient"), resolves to the CSS gradient value.
+/// For artifacts (e.g. "artifact:abc123"), resolves to a base64 data URL so the
+/// display page (which may run in a browser/OBS without Tauri invoke) can render it.
+#[tauri::command]
+pub fn set_display_background(
+    background_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    // Resolve the background_id to a display-ready value
+    let ev = match &background_id {
+        Some(id) => {
+            let (resolved, bg_type) = resolve_background_value(id, &state)?;
+            ContentEvent::set_background(resolved, bg_type.as_deref())
+        }
+        None => ContentEvent::clear_background(),
+    };
+    state.send_to_display(ev);
+
+    // Persist the ID (not the resolved value) to settings
+    let mut settings = state
+        .display_settings
+        .write()
+        .map_err(|e| e.to_string())?;
+    settings.background_id = background_id;
+    settings.save().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Resolve a background ID to a display-ready value.
+///
+/// Returns `(resolved_url, bg_type)` where bg_type is `"video"`, `"image"`, or `"gradient"`.
+fn resolve_background_value(id: &str, state: &AppState) -> Result<(String, Option<String>), String> {
+    if let Some(preset_key) = id.strip_prefix("preset:") {
+        let presets = crate::backgrounds::list_presets();
+        let preset = presets
+            .iter()
+            .find(|p| p.id == id || p.id.ends_with(preset_key))
+            .ok_or_else(|| format!("Unknown preset: {id}"))?;
+        Ok((preset.value.clone(), Some("gradient".into())))
+    } else if let Some(artifact_id) = id.strip_prefix("artifact:") {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        let entry = db
+            .get_by_id(artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("Artifact not found: {artifact_id}"))?;
+        let abs_path = db.abs_path(&entry.path);
+        let mime = entry
+            .mime_type
+            .as_deref()
+            .unwrap_or("image/jpeg");
+
+        if mime.starts_with("video/") {
+            Ok((format!("owmedia://localhost/{artifact_id}"), Some("video".into())))
+        } else {
+            let bytes = std::fs::read(&abs_path)
+                .map_err(|e| format!("Failed to read artifact: {e}"))?;
+            use base64::Engine;
+            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+            Ok((format!("data:{mime};base64,{b64}"), Some("image".into())))
+        }
+    } else {
+        Ok((id.to_string(), None))
+    }
+}
+
+/// Get the current display background ID (artifact or preset).
+#[tauri::command]
+pub fn get_display_background(
+    state: State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    let settings = state
+        .display_settings
+        .read()
+        .map_err(|e| e.to_string())?;
+    Ok(settings.background_id.clone())
+}
+
+/// List preset backgrounds (CSS gradients).
+#[tauri::command]
+pub fn list_preset_backgrounds() -> Vec<crate::backgrounds::BackgroundInfo> {
+    crate::backgrounds::list_presets()
+}
+
+/// List uploaded custom backgrounds from the _backgrounds artifact folder.
+#[tauri::command]
+pub fn list_uploaded_backgrounds(
+    state: State<'_, AppState>,
+) -> Result<Vec<crate::backgrounds::BackgroundInfo>, String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entries = db
+        .list(None, Some("_backgrounds"))
+        .map_err(|e| e.to_string())?;
+    Ok(entries
+        .into_iter()
+        .filter(|e| !e.is_dir)
+        .map(|e| {
+            let is_video = e
+                .mime_type
+                .as_deref()
+                .is_some_and(|m: &str| m.starts_with("video/"));
+            crate::backgrounds::BackgroundInfo {
+                id: format!("artifact:{}", e.id),
+                name: e.name,
+                source: "uploaded".into(),
+                value: format!("artifact:{}", e.id),
+                bg_type: if is_video { "video".into() } else { "image".into() },
+            }
+        })
+        .collect())
+}
+
+/// Upload a background image/video to the _backgrounds folder.
+#[tauri::command]
+pub fn upload_background(
+    name: String,
+    bytes: Vec<u8>,
+    state: State<'_, AppState>,
+) -> Result<crate::backgrounds::BackgroundInfo, String> {
+    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = crate::artifacts::write_artifact_bytes(
+        &mut db,
+        None,
+        Some("_backgrounds".into()),
+        name,
+        bytes,
+    )
+    .map_err(|e| e.to_string())?;
+
+    let is_video = entry
+        .mime_type
+        .as_deref()
+        .is_some_and(|m: &str| m.starts_with("video/"));
+
+    Ok(crate::backgrounds::BackgroundInfo {
+        id: format!("artifact:{}", entry.id),
+        name: entry.name,
+        source: "uploaded".into(),
+        value: format!("artifact:{}", entry.id),
+        bg_type: if is_video { "video".into() } else { "image".into() },
+    })
+}
+
+/// Import a background from a native file path (no bytes over IPC).
+#[tauri::command]
+pub fn import_background_file(
+    source_path: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<crate::backgrounds::BackgroundInfo, String> {
+    let entry = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::artifacts::import_file_no_thumb(
+            &mut db,
+            None,
+            Some("_backgrounds".into()),
+            std::path::Path::new(&source_path),
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    // Background thumbnail in background thread
+    let entry_id = entry.id.clone();
+    let abs_path = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        db.abs_path(&entry.path)
+    };
+    let base_dir = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        std::path::PathBuf::from(&db.settings().base_path)
+    };
+    let db_arc = state.artifacts_db.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
+            if let Ok(db) = db_arc.lock() {
+                if let Ok(Some(mut e)) = db.get_by_id(&entry_id) {
+                    e.thumbnail_path = Some(thumb);
+                    let _ = db.upsert(&e);
+                }
+            }
+            let _ = app.emit("artifacts://thumbnail-ready", &entry_id);
+        }
+    });
+
+    let is_video = entry
+        .mime_type
+        .as_deref()
+        .is_some_and(|m: &str| m.starts_with("video/"));
+
+    Ok(crate::backgrounds::BackgroundInfo {
+        id: format!("artifact:{}", entry.id),
+        name: entry.name,
+        source: "uploaded".into(),
+        value: format!("artifact:{}", entry.id),
+        bg_type: if is_video { "video".into() } else { "image".into() },
+    })
+}
+
 // ─── Countdown timers ─────────────────────────────────────────────────────────
 
 /// Push a countdown timer to the main display.
@@ -2084,7 +2585,7 @@ pub fn start_countdown(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let ev = ContentEvent::countdown(title.clone(), duration_secs);
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     let mut item = ow_core::QueueItem::new_countdown(title, duration_secs);
     item.status = ow_core::QueueStatus::Live;
@@ -2175,7 +2676,7 @@ pub fn push_sermon_note(
         0,
         total,
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
 
     // Mark as active at slide 0.
     {
@@ -2227,7 +2728,7 @@ pub fn advance_sermon_note(app: AppHandle, state: State<'_, AppState>) -> Result
         next_index,
         total,
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
     let _ = app.emit("speaker://note-changed", ());
     Ok(())
 }
@@ -2263,7 +2764,7 @@ pub fn rewind_sermon_note(app: AppHandle, state: State<'_, AppState>) -> Result<
         prev_index,
         total,
     );
-    let _ = state.display_tx.send(ev);
+    state.send_to_display(ev);
     let _ = app.emit("speaker://note-changed", ());
     Ok(())
 }
@@ -2557,7 +3058,6 @@ fn refresh_song_refs(state: &State<'_, AppState>) {
 use crate::artifacts::{
     ArtifactEntry, ArtifactsSettings,
     create_dir as do_create_dir,
-    import_file as do_import_file,
     rename_artifact as do_rename,
     delete_artifact as do_delete,
     move_artifact as do_move,
@@ -2620,10 +3120,43 @@ pub fn import_artifact_file(
     parent_path: Option<String>,
     source_path: String,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<ArtifactEntry, String> {
-    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
-    do_import_file(&mut db, service_id, parent_path, Path::new(&source_path))
-        .map_err(|e| e.to_string())
+    let entry = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::artifacts::import_file_no_thumb(
+            &mut db,
+            service_id,
+            parent_path,
+            Path::new(&source_path),
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    // Generate thumbnail in background
+    let entry_id = entry.id.clone();
+    let abs_path = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        db.abs_path(&entry.path)
+    };
+    let base_dir = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        std::path::PathBuf::from(&db.settings().base_path)
+    };
+    let db_arc = state.artifacts_db.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
+            if let Ok(db) = db_arc.lock() {
+                if let Ok(Some(mut e)) = db.get_by_id(&entry_id) {
+                    e.thumbnail_path = Some(thumb);
+                    let _ = db.upsert(&e);
+                }
+            }
+            let _ = app.emit("artifacts://thumbnail-ready", &entry_id);
+        }
+    });
+
+    Ok(entry)
 }
 
 /// Upload raw file bytes from the frontend.  Used when the native filesystem
@@ -2635,10 +3168,44 @@ pub fn write_artifact_bytes(
     file_name: String,
     data: Vec<u8>,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<ArtifactEntry, String> {
-    let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
-    crate::artifacts::write_artifact_bytes(&mut db, service_id, parent_path, file_name, data)
-        .map_err(|e| e.to_string())
+    let entry = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::artifacts::write_artifact_bytes_no_thumb(
+            &mut db,
+            service_id,
+            parent_path,
+            file_name,
+            data,
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    // Generate thumbnail in background so the command returns immediately.
+    let entry_id = entry.id.clone();
+    let abs_path = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        db.abs_path(&entry.path)
+    };
+    let base_dir = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        std::path::PathBuf::from(&db.settings().base_path)
+    };
+    let db_arc = state.artifacts_db.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
+            if let Ok(db) = db_arc.lock() {
+                if let Ok(Some(mut e)) = db.get_by_id(&entry_id) {
+                    e.thumbnail_path = Some(thumb);
+                    let _ = db.upsert(&e);
+                }
+            }
+            let _ = app.emit("artifacts://thumbnail-ready", &entry_id);
+        }
+    });
+
+    Ok(entry)
 }
 
 #[tauri::command]
@@ -2719,6 +3286,20 @@ pub fn open_artifact(id: String, state: State<'_, AppState>) -> Result<(), Strin
     #[cfg(target_os = "linux")]
     std::process::Command::new("xdg-open").arg(&abs).spawn().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Return the absolute filesystem path for an artifact.
+/// Used by the frontend to create `convertFileSrc()` URLs for video streaming.
+#[tauri::command]
+pub fn get_artifact_path(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+    let entry = db.get_by_id(&id).map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("artifact not found: {id}"))?;
+    let abs = db.abs_path(&entry.path);
+    Ok(abs.to_string_lossy().into_owned())
 }
 
 /// Read an artifact's raw bytes. Used by the frontend preview panel to render
@@ -2844,6 +3425,7 @@ pub fn toggle_artifact_cloud_sync(
 pub async fn sync_artifact_now(
     artifact_id: String,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<CloudSyncInfo, String> {
     let config = {
         let guard = state.cloud_config.read().map_err(|e| e.to_string())?;
@@ -2869,6 +3451,12 @@ pub async fn sync_artifact_now(
         (info, abs, entry.mime_type)
     };
 
+    // Emit progress: started
+    let _ = app.emit(
+        "cloud://upload-progress",
+        serde_json::json!({ "artifact_id": artifact_id, "progress": 0.0, "phase": "started" }),
+    );
+
     let cloud_key = info.cloud_key.clone().ok_or("no cloud key")?;
     let last_etag = info.last_etag.clone();
     let client = reqwest::Client::new();
@@ -2883,6 +3471,11 @@ pub async fn sync_artifact_now(
     .await
     {
         Ok(etag) => {
+            // Emit progress: done
+            let _ = app.emit(
+                "cloud://upload-progress",
+                serde_json::json!({ "artifact_id": artifact_id, "progress": 1.0, "phase": "done" }),
+            );
             let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -2919,6 +3512,73 @@ pub async fn sync_artifact_now(
             updated.status = SyncStatus::Error;
             updated.sync_error = Some(e.to_string());
             sync_db.upsert_sync_info(&updated).map_err(|err| err.to_string())?;
+            Err(e.to_string())
+        }
+    }
+}
+
+/// Download a single artifact from cloud storage to the local filesystem.
+/// Returns the updated `CloudSyncInfo` on success.
+#[tauri::command]
+pub async fn download_artifact_from_cloud(
+    artifact_id: String,
+    state: State<'_, AppState>,
+) -> Result<CloudSyncInfo, String> {
+    let config = {
+        let guard = state.cloud_config.read().map_err(|e| e.to_string())?;
+        guard.clone().ok_or_else(|| "cloud not configured".to_string())?
+    };
+    let (mut info, local_path) = {
+        let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+        let af_db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        let mut info = sync_db
+            .get_sync_info(&artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("no sync entry for {artifact_id}"))?;
+        let entry = af_db
+            .get_by_id(&artifact_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("artifact not found: {artifact_id}"))?;
+        let abs = af_db.abs_path(&entry.path);
+        info.status = SyncStatus::Downloading;
+        sync_db.upsert_sync_info(&info).map_err(|e| e.to_string())?;
+        (info, abs)
+    };
+
+    let cloud_key = info
+        .cloud_key
+        .clone()
+        .ok_or_else(|| "artifact has no cloud key — has it been uploaded?".to_string())?;
+    let client = reqwest::Client::new();
+    match crate::cloud_sync::download_artifact(&client, &config, &cloud_key, &local_path).await {
+        Ok(etag) => {
+            let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as i64;
+            info.status = SyncStatus::Synced;
+            info.last_etag = Some(etag);
+            info.last_synced_ms = Some(now);
+            info.sync_error = None;
+            sync_db.upsert_sync_info(&info).map_err(|e| e.to_string())?;
+
+            // Update local artifact size to match the downloaded file.
+            drop(sync_db);
+            if let Ok(meta) = std::fs::metadata(&local_path) {
+                let af_db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+                if let Ok(Some(mut entry)) = af_db.get_by_id(&artifact_id) {
+                    entry.size_bytes = Some(meta.len() as i64);
+                    let _ = af_db.upsert(&entry);
+                }
+            }
+            Ok(info)
+        }
+        Err(e) => {
+            let sync_db = state.cloud_sync_db.lock().map_err(|e| e.to_string())?;
+            info.status = SyncStatus::Error;
+            info.sync_error = Some(e.to_string());
+            sync_db.upsert_sync_info(&info).map_err(|e| e.to_string())?;
             Err(e.to_string())
         }
     }

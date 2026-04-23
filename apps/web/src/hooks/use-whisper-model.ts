@@ -12,22 +12,22 @@ export interface UseWhisperModelReturn {
 interface DownloadProgressEvent {
   progress: number;
   done: boolean;
+  model?: string;
 }
 
 /**
  * Tracks Whisper model installation state.
  *
- * Subscribes to `stt://model-download-progress` for real-time progress
- * and exposes `download()` to trigger the download.
- * Used by AudioSection in Settings.
+ * @param modelFilename - Specific model file to check/download (e.g. "ggml-small.en.bin").
+ *   If omitted, checks for any usable model via the fallback chain.
  */
-export function useWhisperModel(): UseWhisperModelReturn {
+export function useWhisperModel(modelFilename?: string): UseWhisperModelReturn {
   const [installed, setInstalled] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    checkWhisperModel()
+    checkWhisperModel(modelFilename)
       .then((ok) => setInstalled(ok))
       .catch(() => setInstalled(false));
 
@@ -46,18 +46,18 @@ export function useWhisperModel(): UseWhisperModelReturn {
     return () => {
       unlisten?.();
     };
-  }, []);
+  }, [modelFilename]);
 
   const download = useCallback(async () => {
     setDownloading(true);
     setProgress(0);
     try {
-      await downloadWhisperModel();
+      await downloadWhisperModel(modelFilename);
     } catch (e) {
       console.error("[use-whisper-model] download failed:", e);
       setDownloading(false);
     }
-  }, []);
+  }, [modelFilename]);
 
   return { installed, downloading, progress, download };
 }

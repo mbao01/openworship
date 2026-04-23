@@ -65,18 +65,93 @@ export async function stopAudioMonitor(): Promise<void> {
 }
 
 /**
- * Checks whether the local Whisper base model is downloaded and available.
- * Returns true if the model file exists at ~/.openworship/models/.
+ * Checks whether a Whisper model is downloaded and available.
+ * @param model - Model filename (e.g. "ggml-small.en.bin"). If omitted, checks any usable model.
+ * @deprecated Use checkProviderModel() instead.
  */
-export async function checkWhisperModel(): Promise<boolean> {
-  return invoke<boolean>("check_whisper_model");
+export async function checkWhisperModel(model?: string): Promise<boolean> {
+  return invoke<boolean>("check_whisper_model", { model: model ?? null });
 }
 
 /**
- * Initiates a background download of the Whisper base.en model (~148 MB).
- * Emits `stt://model-download-progress` events during download and
- * `stt://model-download-complete` on completion.
+ * Initiates a background download of a Whisper model.
+ * @param model - Model filename (e.g. "ggml-small.en.bin"). Defaults to base.en.
+ * @deprecated Use downloadProviderModel() instead.
  */
-export async function downloadWhisperModel(): Promise<void> {
-  return invoke("download_whisper_model");
+export async function downloadWhisperModel(model?: string): Promise<void> {
+  return invoke("download_whisper_model", { model: model ?? null });
+}
+
+// ─── Generic STT Provider commands ──────────────────────────────────────────
+
+import type { ProviderInfo, ProviderStatus, ModelInfo } from "../types";
+
+/**
+ * List all available STT providers with their metadata and config fields.
+ */
+export async function listSttProviders(): Promise<ProviderInfo[]> {
+  return invoke<ProviderInfo[]>("list_stt_providers");
+}
+
+/**
+ * Get the readiness status of a specific STT provider.
+ */
+export async function getProviderStatus(
+  providerId: string,
+): Promise<ProviderStatus> {
+  return invoke<ProviderStatus>("get_provider_status", {
+    providerId,
+  });
+}
+
+/**
+ * Check if a specific model is installed for a provider.
+ */
+export async function checkProviderModel(
+  providerId: string,
+  modelId: string,
+): Promise<boolean> {
+  return invoke<boolean>("check_provider_model", {
+    providerId,
+    modelId,
+  });
+}
+
+/**
+ * Get available models for a provider.
+ */
+export async function getProviderModels(
+  providerId: string,
+): Promise<ModelInfo[]> {
+  return invoke<ModelInfo[]>("get_provider_models", {
+    providerId,
+  });
+}
+
+/**
+ * Download a model for a provider. Emits `stt://model-download-progress` events.
+ */
+export async function downloadProviderModel(
+  providerId: string,
+  modelId: string,
+): Promise<void> {
+  return invoke("download_provider_model", {
+    providerId,
+    modelId,
+  });
+}
+
+/**
+ * Save a secret field for a provider to the OS keychain.
+ */
+export async function setProviderSecret(
+  providerId: string,
+  key: string,
+  value: string,
+): Promise<void> {
+  return invoke("set_provider_secret", {
+    providerId,
+    key,
+    value,
+  });
 }

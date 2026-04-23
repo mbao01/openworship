@@ -44,7 +44,7 @@ function ThumbnailImage({
     <img
       src={src}
       alt=""
-      className={className || "w-full h-full object-cover rounded"}
+      className={className || "h-full w-full rounded object-cover"}
     />
   );
 }
@@ -79,25 +79,25 @@ export function AssetsPanel() {
   };
 
   return (
-    <div className="flex flex-col h-1/2 overflow-hidden border-t border-line">
+    <div className="flex h-1/2 flex-col overflow-hidden border-t border-line">
       {/* Header */}
-      <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
-        <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-line bg-bg-1 px-3.5">
+        <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
           Assets
         </span>
         <button
-          className="text-ink-3 hover:text-ink transition-colors cursor-pointer"
+          className="cursor-pointer text-ink-3 transition-colors hover:text-ink"
           onClick={() => setSearchOpen((v) => !v)}
         >
-          <SearchIcon className="w-3.5 h-3.5" />
+          <SearchIcon className="h-3.5 w-3.5" />
         </button>
       </div>
 
       {/* Search (toggled) */}
       {searchOpen && (
-        <div className="px-3 py-2.5 border-b border-line">
+        <div className="border-b border-line px-3 py-2.5">
           <input
-            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs focus:border-line-strong"
+            className="w-full rounded border border-line bg-bg-2 px-2.5 py-[7px] text-xs text-ink focus:border-line-strong"
             placeholder="Filter assets..."
             value={assetQuery}
             onChange={(e) => setAssetQuery(e.target.value)}
@@ -107,42 +107,42 @@ export function AssetsPanel() {
       )}
 
       {/* Asset grid */}
-      <div className="grid grid-cols-3 gap-1 p-2 overflow-y-auto">
+      <div className="grid grid-cols-3 gap-1 overflow-y-auto p-2">
         {filtered.map((asset) => (
           <div
             key={asset.id}
-            className="group relative aspect-square bg-bg-2 rounded border border-line overflow-hidden"
+            className="group relative aspect-square overflow-hidden rounded border border-line bg-bg-2"
           >
             {/* Thumbnail or icon */}
             {asset.thumbnail_path ? (
               <ThumbnailImage
                 artifactId={asset.id}
                 thumbnailPath={asset.thumbnail_path}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-ink-3">
-                <PaperclipIcon className="w-5 h-5" />
+              <div className="flex h-full w-full items-center justify-center text-ink-3">
+                <PaperclipIcon className="h-5 w-5" />
               </div>
             )}
             {/* Name at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 bg-bg/80 px-1.5 py-0.5">
-              <span className="text-[9px] text-ink truncate block">
+            <div className="absolute right-0 bottom-0 left-0 bg-bg/80 px-1.5 py-0.5">
+              <span className="block truncate text-[9px] text-ink">
                 {asset.name}
               </span>
             </div>
             {/* Hover actions */}
-            <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
               <button
                 type="button"
-                className="p-1 rounded bg-bg/80 text-ink-3 hover:text-accent transition-colors cursor-pointer"
+                className="cursor-pointer rounded bg-bg/80 p-1 text-ink-3 transition-colors hover:text-accent"
                 title="Push to display"
                 onClick={(e) => {
                   e.stopPropagation();
                   handlePushAsset(asset);
                 }}
               >
-                <PlayIcon className="w-3 h-3" />
+                <PlayIcon className="h-3 w-3" />
               </button>
             </div>
           </div>

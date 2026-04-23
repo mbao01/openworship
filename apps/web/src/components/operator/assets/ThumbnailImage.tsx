@@ -37,7 +37,7 @@ export function ThumbnailImage({
     <img
       src={src}
       alt=""
-      className={className || "w-full h-full object-cover rounded"}
+      className={className || "h-full w-full rounded object-cover"}
     />
   );
 }

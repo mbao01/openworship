@@ -20,29 +20,38 @@ export function LibraryScreen() {
 
   // Load some default results
   useEffect(() => {
-    invoke<VerseResult[]>("search_scriptures", { query: "Romans 8", translation: null })
+    invoke<VerseResult[]>("search_scriptures", {
+      query: "Romans 8",
+      translation: null,
+    })
       .then(setResults)
       .catch(() => {});
   }, []);
 
-  const runSearch = useCallback(async (q: string) => {
-    if (!q.trim()) return;
-    setIsSearching(true);
-    try {
-      if (tab === "scripture") {
-        const res = await invoke<VerseResult[]>("search_scriptures", { query: q, translation: null });
-        setResults(res);
-      } else {
-        const res = await searchSongs(q);
-        setSongResults(res);
+  const runSearch = useCallback(
+    async (q: string) => {
+      if (!q.trim()) return;
+      setIsSearching(true);
+      try {
+        if (tab === "scripture") {
+          const res = await invoke<VerseResult[]>("search_scriptures", {
+            query: q,
+            translation: null,
+          });
+          setResults(res);
+        } else {
+          const res = await searchSongs(q);
+          setSongResults(res);
+        }
+        setSelected(0);
+      } catch (e) {
+        toastError("Search failed")(e);
+      } finally {
+        setIsSearching(false);
       }
-      setSelected(0);
-    } catch (e) {
-      toastError("Search failed")(e);
-    } finally {
-      setIsSearching(false);
-    }
-  }, [tab]);
+    },
+    [tab],
+  );
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -62,7 +71,11 @@ export function LibraryScreen() {
 
   const handlePush = async (v: VerseResult) => {
     try {
-      await invoke("push_to_display", { reference: v.reference, text: v.text, translation: v.translation });
+      await invoke("push_to_display", {
+        reference: v.reference,
+        text: v.text,
+        translation: v.translation,
+      });
     } catch (e) {
       toastError("Failed to push")(e);
     }
@@ -75,10 +88,13 @@ export function LibraryScreen() {
   };
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {});
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => {});
   };
 
   const handleSongClick = (song: Song) => {
@@ -89,13 +105,13 @@ export function LibraryScreen() {
   const currentSong = tab === "songs" ? songResults[selected] : null;
 
   return (
-    <div className="flex-1 grid grid-cols-[1fr_2fr] h-full overflow-hidden">
+    <div className="grid h-full flex-1 grid-cols-[1fr_2fr] overflow-hidden">
       {/* Left: content list */}
-      <div className="flex flex-col border-r border-line overflow-hidden">
-        <div className="flex items-center justify-between px-3.5 h-9 shrink-0 border-b border-line bg-bg-1">
-          <span className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase">
+      <div className="flex flex-col overflow-hidden border-r border-line">
+        <div className="flex h-9 shrink-0 items-center justify-between border-b border-line bg-bg-1 px-3.5">
+          <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
             Content bank ·{" "}
-            <strong className="text-ink-2 font-medium">
+            <strong className="font-medium text-ink-2">
               {tab === "scripture" ? "scripture" : "songs"}
             </strong>
           </span>
@@ -107,9 +123,9 @@ export function LibraryScreen() {
         {/* Tab switcher */}
         <div className="flex border-b border-line bg-bg-1">
           <button
-            className={`flex-1 px-3 py-1.5 text-[11px] font-mono tracking-[0.08em] uppercase transition-colors cursor-pointer ${
+            className={`flex-1 cursor-pointer px-3 py-1.5 font-mono text-[11px] tracking-[0.08em] uppercase transition-colors ${
               tab === "scripture"
-                ? "text-accent border-b-2 border-accent"
+                ? "border-b-2 border-accent text-accent"
                 : "text-ink-3 hover:text-ink-2"
             }`}
             onClick={() => handleTabChange("scripture")}
@@ -117,9 +133,9 @@ export function LibraryScreen() {
             Scripture
           </button>
           <button
-            className={`flex-1 px-3 py-1.5 text-[11px] font-mono tracking-[0.08em] uppercase transition-colors cursor-pointer ${
+            className={`flex-1 cursor-pointer px-3 py-1.5 font-mono text-[11px] tracking-[0.08em] uppercase transition-colors ${
               tab === "songs"
-                ? "text-accent border-b-2 border-accent"
+                ? "border-b-2 border-accent text-accent"
                 : "text-ink-3 hover:text-ink-2"
             }`}
             onClick={() => handleTabChange("songs")}
@@ -128,13 +144,13 @@ export function LibraryScreen() {
           </button>
         </div>
 
-        <div className="px-3 py-2.5 border-b border-line">
+        <div className="border-b border-line px-3 py-2.5">
           <input
-            className="w-full px-2.5 py-[7px] bg-bg-2 border border-line rounded text-ink text-xs focus:border-accent focus:outline-none"
+            className="w-full rounded border border-line bg-bg-2 px-2.5 py-[7px] text-xs text-ink focus:border-accent focus:outline-none"
             placeholder={
               tab === "scripture"
-                ? "Search 31,000 verses across 50 translations\u2026"
-                : "Search songs by title, artist, or lyrics\u2026"
+                ? "Search 31,000 verses across 50 translations ..."
+                : "Search songs by title, artist, or lyrics ..."
             }
             value={query}
             onChange={handleQueryChange}
@@ -145,40 +161,50 @@ export function LibraryScreen() {
             results.map((v, i) => (
               <div
                 key={`${v.translation}-${v.reference}-${i}`}
-                className={`grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent cursor-pointer transition-colors ${
+                className={`grid cursor-pointer grid-cols-[20px_1fr_auto] items-center gap-2.5 border-b border-transparent px-3.5 py-2 transition-colors ${
                   selected === i
-                    ? "bg-accent-soft text-ink border-accent"
+                    ? "border-accent bg-accent-soft text-ink"
                     : "text-ink-2 hover:bg-bg-2 hover:text-ink"
                 }`}
                 onClick={() => setSelected(i)}
               >
-                <span className="text-accent flex items-center justify-center"><BookOpenIcon className="w-3.5 h-3.5 shrink-0" /></span>
+                <span className="flex items-center justify-center text-accent">
+                  <BookOpenIcon className="h-3.5 w-3.5 shrink-0" />
+                </span>
                 <div>
-                  <div className="font-serif italic text-sm">{v.reference}</div>
-                  <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">{v.translation}</div>
+                  <div className="font-serif text-sm italic">{v.reference}</div>
+                  <div className="font-mono text-[9.5px] tracking-[0.06em] text-ink-3">
+                    {v.translation}
+                  </div>
                 </div>
-                <span className="font-mono text-[9.5px] text-ink-3">{i + 1}</span>
+                <span className="font-mono text-[9.5px] text-ink-3">
+                  {i + 1}
+                </span>
               </div>
             ))}
           {tab === "songs" &&
             songResults.map((s, i) => (
               <div
                 key={s.id}
-                className={`grid grid-cols-[20px_1fr_auto] gap-2.5 px-3.5 py-2 items-center border-b border-transparent cursor-pointer transition-colors ${
+                className={`grid cursor-pointer grid-cols-[20px_1fr_auto] items-center gap-2.5 border-b border-transparent px-3.5 py-2 transition-colors ${
                   selected === i
-                    ? "bg-accent-soft text-ink border-accent"
+                    ? "border-accent bg-accent-soft text-ink"
                     : "text-ink-2 hover:bg-bg-2 hover:text-ink"
                 }`}
                 onClick={() => setSelected(i)}
               >
-                <span className="text-accent flex items-center justify-center"><MusicIcon className="w-3.5 h-3.5 shrink-0" /></span>
+                <span className="flex items-center justify-center text-accent">
+                  <MusicIcon className="h-3.5 w-3.5 shrink-0" />
+                </span>
                 <div>
-                  <div className="font-serif italic text-sm">{s.title}</div>
-                  <div className="font-mono text-[9.5px] text-ink-3 tracking-[0.06em]">
+                  <div className="font-serif text-sm italic">{s.title}</div>
+                  <div className="font-mono text-[9.5px] tracking-[0.06em] text-ink-3">
                     {s.artist || "Unknown artist"}
                   </div>
                 </div>
-                <span className="font-mono text-[9.5px] text-ink-3">{i + 1}</span>
+                <span className="font-mono text-[9.5px] text-ink-3">
+                  {i + 1}
+                </span>
               </div>
             ))}
         </div>
@@ -186,35 +212,36 @@ export function LibraryScreen() {
 
       {/* Right: detail */}
       <div className="overflow-y-auto px-14 py-10">
-        <div className="font-mono text-[10px] text-ink-3 tracking-[0.14em] uppercase mb-6 inline-flex items-center gap-1">
-          <CircleIcon className="w-3.5 h-3.5 shrink-0" fill="currentColor" /> DETAIL VIEW
+        <div className="mb-6 inline-flex items-center gap-1 font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
+          <CircleIcon className="h-3.5 w-3.5 shrink-0" fill="currentColor" />{" "}
+          DETAIL VIEW
         </div>
         {tab === "scripture" && current ? (
-          <div className="p-8 bg-bg-1 border border-line rounded-lg max-w-[700px]">
-            <div className="font-serif italic text-[38px] tracking-[-0.02em] text-accent mb-2">
+          <div className="max-w-[700px] rounded-lg border border-line bg-bg-1 p-8">
+            <div className="mb-2 font-serif text-[38px] tracking-[-0.02em] text-accent italic">
               {current.reference}
             </div>
-            <div className="font-mono text-[10px] text-ink-3 tracking-[0.2em] uppercase mb-7">
+            <div className="mb-7 font-mono text-[10px] tracking-[0.2em] text-ink-3 uppercase">
               {current.translation}
             </div>
-            <div className="font-serif italic text-[19px] leading-[1.55] text-ink mb-5">
+            <div className="mb-5 font-serif text-[19px] leading-[1.55] text-ink italic">
               {current.text}
             </div>
-            <div className="flex gap-2.5 pt-5 border-t border-line mt-5">
+            <div className="mt-5 flex gap-2.5 border-t border-line pt-5">
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-accent bg-accent px-3 py-[7px] text-xs font-semibold text-accent-foreground"
                 onClick={() => handlePush(current)}
               >
                 Push to display
               </button>
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong cursor-pointer"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-line bg-bg-2 px-3 py-[7px] text-xs text-ink-2 hover:border-line-strong hover:text-ink"
                 onClick={() => handleQueue(current)}
               >
                 Queue next
               </button>
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong cursor-pointer"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-line bg-bg-2 px-3 py-[7px] text-xs text-ink-2 hover:border-line-strong hover:text-ink"
                 onClick={() => handleCopy(current.text)}
               >
                 {copied ? "Copied!" : "Copy"}
@@ -222,26 +249,26 @@ export function LibraryScreen() {
             </div>
           </div>
         ) : tab === "songs" && currentSong ? (
-          <div className="p-8 bg-bg-1 border border-line rounded-lg max-w-[700px]">
-            <div className="font-serif italic text-[38px] tracking-[-0.02em] text-accent mb-2">
+          <div className="max-w-[700px] rounded-lg border border-line bg-bg-1 p-8">
+            <div className="mb-2 font-serif text-[38px] tracking-[-0.02em] text-accent italic">
               {currentSong.title}
             </div>
-            <div className="font-mono text-[10px] text-ink-3 tracking-[0.2em] uppercase mb-7">
+            <div className="mb-7 font-mono text-[10px] tracking-[0.2em] text-ink-3 uppercase">
               {currentSong.artist || "Unknown artist"}
               {currentSong.ccli_number && ` · CCLI ${currentSong.ccli_number}`}
             </div>
-            <div className="font-serif italic text-[16px] leading-[1.65] text-ink mb-5 whitespace-pre-wrap">
+            <div className="mb-5 font-serif text-[16px] leading-[1.65] whitespace-pre-wrap text-ink italic">
               {currentSong.lyrics}
             </div>
-            <div className="flex gap-2.5 pt-5 border-t border-line mt-5">
+            <div className="mt-5 flex gap-2.5 border-t border-line pt-5">
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-accent bg-accent px-3 py-[7px] text-xs font-semibold text-accent-foreground"
                 onClick={() => handleSongClick(currentSong)}
               >
                 Push to display
               </button>
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs rounded border border-line bg-bg-2 text-ink-2 hover:text-ink hover:border-line-strong cursor-pointer"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-line bg-bg-2 px-3 py-[7px] text-xs text-ink-2 hover:border-line-strong hover:text-ink"
                 onClick={() => handleCopy(currentSong.lyrics)}
               >
                 {copied ? "Copied!" : "Copy"}
@@ -249,15 +276,15 @@ export function LibraryScreen() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-sm text-muted gap-2">
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-muted">
             {tab === "scripture" ? (
               <>
-                <BookOpenIcon className="w-6 h-6 text-muted/60" />
+                <BookOpenIcon className="h-6 w-6 text-muted/60" />
                 Select a verse to view details
               </>
             ) : (
               <>
-                <MusicIcon className="w-6 h-6 text-muted/60" />
+                <MusicIcon className="h-6 w-6 text-muted/60" />
                 Search for a song to view details
               </>
             )}

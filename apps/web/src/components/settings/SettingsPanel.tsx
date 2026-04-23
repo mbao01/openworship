@@ -22,23 +22,26 @@ interface SettingsPanelProps {
  *
  * Rendered inside a Dialog by SettingsModal.
  */
-export function SettingsPanel({ identity, initialCategory = "church" }: SettingsPanelProps) {
+export function SettingsPanel({
+  identity,
+  initialCategory = "church",
+}: SettingsPanelProps) {
   const [active, setActive] = useState<SettingsCategory>(initialCategory);
 
   return (
-    <div className="flex w-full h-full overflow-hidden rounded-lg">
+    <div className="flex h-full w-full overflow-hidden rounded-lg">
       <SettingsNav active={active} onSelect={setActive} />
 
-      <div className="flex-1 overflow-hidden flex flex-col bg-bg">
-        {active === "church"     && <ChurchSection identity={identity} />}
+      <div className="flex flex-1 flex-col overflow-hidden bg-bg">
+        {active === "church" && <ChurchSection identity={identity} />}
         {active === "appearance" && <AppearanceSection />}
-        {active === "audio"      && <AudioSection />}
-        {active === "display"    && <DisplaySection />}
-        {active === "detection"  && <DetectionSection />}
-        {active === "email"      && <EmailSection identity={identity} />}
-        {active === "cloud"      && <CloudSection />}
-        {active === "shortcuts"  && <ShortcutsSection />}
-        {active === "about"      && <AboutSection />}
+        {active === "audio" && <AudioSection />}
+        {active === "display" && <DisplaySection />}
+        {active === "detection" && <DetectionSection />}
+        {active === "email" && <EmailSection identity={identity} />}
+        {active === "cloud" && <CloudSection />}
+        {active === "shortcuts" && <ShortcutsSection />}
+        {active === "about" && <AboutSection />}
       </div>
     </div>
   );

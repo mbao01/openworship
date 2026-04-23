@@ -24,7 +24,12 @@ export interface ProjectItem {
   asset_ids: string[];
 }
 
-export type TaskStatus = "backlog" | "todo" | "in_progress" | "done" | "cancelled";
+export type TaskStatus =
+  | "backlog"
+  | "todo"
+  | "in_progress"
+  | "done"
+  | "cancelled";
 
 /** A task within a service project. */
 export interface ServiceTask {
@@ -88,11 +93,62 @@ export type SttBackend = "whisper" | "deepgram" | "off";
 /** Matches Rust `ThemeMode` enum. */
 export type ThemeMode = "light" | "dark" | "system";
 
+/** Matches Rust `WhisperModel` enum. */
+export type WhisperModel = "tiny" | "base" | "small" | "medium";
+
 /** Matches Rust `AudioInputDevice` struct from `capture.rs`. */
 export interface AudioInputDevice {
   name: string;
   is_default: boolean;
 }
+
+// ─── STT Provider types ──────────────────────────────────────────────────────
+
+/** Option for a "select" config field. */
+export interface ConfigOption {
+  value: string;
+  label: string;
+  description: string;
+}
+
+/** Describes a configuration field a provider needs from the user. */
+export interface ConfigField {
+  key: string;
+  label: string;
+  /** "text" | "password" | "select" | "toggle" */
+  field_type: string;
+  options: ConfigOption[];
+  default: unknown;
+  description: string;
+  /** Whether this field is a secret stored in the OS keychain. */
+  is_secret: boolean;
+}
+
+/** Static metadata about an STT provider. */
+export interface ProviderInfo {
+  id: string;
+  name: string;
+  description: string;
+  is_local: boolean;
+  config_fields: ConfigField[];
+}
+
+/** A downloadable model for a provider. */
+export interface ModelInfo {
+  id: string;
+  label: string;
+  size_bytes: number;
+  download_url: string;
+  filename: string;
+  is_recommended: boolean;
+}
+
+/** Readiness status of a provider. */
+export type ProviderStatus =
+  | { status: "ready" }
+  | { status: "needs_model"; models: ModelInfo[] }
+  | { status: "needs_config"; missing_fields: string[] }
+  | { status: "unavailable"; reason: string };
 
 /** Matches Rust `AudioSettings` struct. */
 export interface AudioSettings {
@@ -107,6 +163,10 @@ export interface AudioSettings {
   audio_input_device: string | null;
   /** UI colour scheme preference. */
   theme: ThemeMode;
+  /** Which Whisper model to use for local STT. */
+  whisper_model: WhisperModel;
+  /** Per-provider configuration blobs. */
+  provider_config: Record<string, Record<string, unknown>>;
 }
 
 /** Matches Rust `BranchRole` enum. */
@@ -129,7 +189,6 @@ export interface BranchSyncStatus {
   hq_branch_name: string | null;
   error: string | null;
 }
-
 
 /** Matches Rust `QueueStatus` enum. */
 export type QueueStatus = "pending" | "live" | "dismissed";
@@ -248,6 +307,7 @@ export type SyncStatus =
   | "local_only"
   | "queued"
   | "syncing"
+  | "downloading"
   | "synced"
   | "conflict"
   | "error";

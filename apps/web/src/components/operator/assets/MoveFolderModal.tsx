@@ -22,7 +22,9 @@ export function MoveFolderModal({
 }) {
   const [folders, setFolders] = useState<ArtifactEntry[]>([]);
   const [browsePath, setBrowsePath] = useState<string | null>(null);
-  const [crumbs, setCrumbs] = useState<Array<{ label: string; path: string | null }>>([]);
+  const [crumbs, setCrumbs] = useState<
+    Array<{ label: string; path: string | null }>
+  >([]);
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
@@ -30,7 +32,9 @@ export function MoveFolderModal({
       serviceId: entry.service_id ?? null,
       parentPath: browsePath,
     })
-      .then((list) => setFolders(list.filter((e) => e.is_dir && e.id !== entry.id)))
+      .then((list) =>
+        setFolders(list.filter((e) => e.is_dir && e.id !== entry.id)),
+      )
       .catch(() => {});
   }, [browsePath, entry.service_id, entry.id]);
 
@@ -53,18 +57,19 @@ export function MoveFolderModal({
     setSelected(null);
   };
 
-  const destinationPath = selected ?? browsePath ?? `${entry.service_id ?? "_local"}`;
+  const destinationPath =
+    selected ?? browsePath ?? `${entry.service_id ?? "_local"}`;
 
   return (
     <Modal open={true} onClose={onCancel} className="max-w-sm">
       <ModalHeader>
         <ModalTitle>Move to Folder</ModalTitle>
       </ModalHeader>
-      <ModalBody className="px-6 py-4 flex flex-col gap-3">
+      <ModalBody className="flex flex-col gap-3 px-6 py-4">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-1 text-[11px] text-ink-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-1 text-[11px] text-ink-3">
           <button
-            className="text-ink-3 hover:text-ink transition-colors"
+            className="text-ink-3 transition-colors hover:text-ink"
             onClick={handleRoot}
           >
             Root
@@ -73,7 +78,7 @@ export function MoveFolderModal({
             <span key={i} className="flex items-center gap-1">
               <span className="text-line">/</span>
               <button
-                className="text-ink-3 hover:text-ink transition-colors"
+                className="text-ink-3 transition-colors hover:text-ink"
                 onClick={() => handleCrumb(i)}
               >
                 {c.label}
@@ -91,16 +96,16 @@ export function MoveFolderModal({
         </div>
 
         {/* Folder list */}
-        <div className="bg-bg-2 border border-line rounded min-h-[120px] max-h-[200px] overflow-y-auto">
+        <div className="max-h-[200px] min-h-[120px] overflow-y-auto rounded border border-line bg-bg-2">
           {folders.length === 0 ? (
-            <p className="text-[11px] text-line px-3 py-2 m-0">
+            <p className="m-0 px-3 py-2 text-[11px] text-line">
               No sub-folders here.
             </p>
           ) : (
             folders.map((f) => (
               <div
                 key={f.id}
-                className={`flex items-center justify-between px-3 py-[6px] cursor-pointer text-[12px] transition-colors hover:bg-bg-2 ${selected === f.path ? "text-accent bg-accent-soft" : "text-ink"}`}
+                className={`flex cursor-pointer items-center justify-between px-3 py-[6px] text-[12px] transition-colors hover:bg-bg-2 ${selected === f.path ? "bg-accent-soft text-accent" : "text-ink"}`}
                 onClick={() => setSelected(f.path)}
                 onDoubleClick={() => handleOpen(f)}
               >
@@ -109,34 +114,34 @@ export function MoveFolderModal({
                   {f.name}
                 </span>
                 <button
-                  className="text-[10px] text-line hover:text-ink transition-colors ml-2 bg-transparent border-none cursor-pointer"
+                  className="ml-2 cursor-pointer border-none bg-transparent text-[10px] text-line transition-colors hover:text-ink"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleOpen(f);
                   }}
                   title="Open folder"
                 >
-                  <ChevronDownIcon className="w-3 h-3 -rotate-90" />
+                  <ChevronDownIcon className="h-3 w-3 -rotate-90" />
                 </button>
               </div>
             ))
           )}
         </div>
 
-        <p className="text-[10px] text-ink-3 m-0">
+        <p className="m-0 text-[10px] text-ink-3">
           Moving <span className="text-ink">{entry.name}</span> to:{" "}
-          <span className="text-accent font-mono">{destinationPath}</span>
+          <span className="font-mono text-accent">{destinationPath}</span>
         </p>
       </ModalBody>
       <ModalFooter>
         <button
-          className="bg-transparent text-ink-3 border border-line rounded font-sans text-xs px-3.5 py-1.5 cursor-pointer transition-colors hover:text-ink hover:border-line-strong"
+          className="cursor-pointer rounded border border-line bg-transparent px-3.5 py-1.5 font-sans text-xs text-ink-3 transition-colors hover:border-line-strong hover:text-ink"
           onClick={onCancel}
         >
           Cancel
         </button>
         <button
-          className="bg-accent text-accent-foreground border-none rounded font-sans text-xs font-semibold px-3.5 py-1.5 cursor-pointer"
+          className="cursor-pointer rounded border-none bg-accent px-3.5 py-1.5 font-sans text-xs font-semibold text-accent-foreground"
           onClick={() => onConfirm(destinationPath)}
         >
           Move Here

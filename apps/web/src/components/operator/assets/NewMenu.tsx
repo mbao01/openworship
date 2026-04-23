@@ -22,9 +22,15 @@ export function NewMenu({
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-[3px] z-[200] bg-bg-2 border border-line-strong rounded-lg py-1 min-w-[140px] shadow-lg"
+      className="absolute top-full right-0 z-[200] mt-[3px] min-w-[140px] rounded-lg border border-line-strong bg-bg-2 py-1 shadow-lg"
     >
-      <button className={btnCls} onClick={() => { onNewFolder(); onClose(); }}>
+      <button
+        className={btnCls}
+        onClick={() => {
+          onNewFolder();
+          onClose();
+        }}
+      >
         New Folder
       </button>
     </div>

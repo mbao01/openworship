@@ -49,7 +49,7 @@ function InlineDurationCell({
     return (
       <input
         ref={inputRef}
-        className="w-full px-1 py-0.5 bg-bg-2 border border-line rounded text-[10px] text-ink text-center font-mono"
+        className="w-full rounded border border-line bg-bg-2 px-1 py-0.5 text-center font-mono text-[10px] text-ink"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => {
@@ -73,7 +73,7 @@ function InlineDurationCell({
 
   return (
     <span
-      className={`font-mono text-[10px] text-ink-3 text-center ${
+      className={`text-center font-mono text-[10px] text-ink-3 ${
         !isReadOnly ? "cursor-pointer hover:text-accent" : ""
       }`}
       onClick={(e) => {
@@ -83,7 +83,7 @@ function InlineDurationCell({
         setEditing(true);
       }}
     >
-      {durationSecs ? formatDuration(durationSecs) : "\u2014"}
+      {durationSecs ? formatDuration(durationSecs) : "—"}
     </span>
   );
 }
@@ -150,13 +150,13 @@ export function OrderOfService({
 
   return (
     <section className="mb-6">
-      <div className="flex items-baseline justify-between mb-4">
+      <div className="mb-4 flex items-baseline justify-between">
         <h2 className="font-serif text-2xl font-normal tracking-[-0.015em] text-ink">
           Order of service
         </h2>
         {!isReadOnly && (
           <button
-            className="inline-flex items-center gap-1.5 px-3 py-[7px] text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-accent bg-accent px-3 py-[7px] text-xs font-semibold text-accent-foreground"
             onClick={() => setShowAddItem((v) => !v)}
           >
             + Add item
@@ -168,11 +168,7 @@ export function OrderOfService({
         <div className="mb-4">
           <AddItemSearch
             onAdd={async (v) => {
-              await addItemToActiveProject(
-                v.reference,
-                v.text,
-                v.translation,
-              );
+              await addItemToActiveProject(v.reference, v.text, v.translation);
               await onProjectsChanged();
             }}
           />
@@ -210,7 +206,7 @@ export function OrderOfService({
             items={items.map((i) => i.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="border border-line rounded-lg overflow-hidden">
+            <div className="overflow-hidden rounded-lg border border-line">
               {items.map((item, idx) => {
                 // Compute cumulative start time
                 let cumulativeSecs = 0;
@@ -219,8 +215,7 @@ export function OrderOfService({
                 }
                 const hasComputedTime = idx === 0 || cumulativeSecs > 0;
                 const isExpanded = expandedItemId === item.id;
-                const icon =
-                  TYPE_ICONS[item.item_type] ?? TYPE_ICONS.other;
+                const icon = TYPE_ICONS[item.item_type] ?? TYPE_ICONS.other;
 
                 return (
                   <SortableItemRow
@@ -231,31 +226,31 @@ export function OrderOfService({
                     {(handleProps) => (
                       <div className="border-b border-line last:border-b-0">
                         <div
-                          className="grid grid-cols-[56px_24px_1fr_48px_24px_24px] gap-3 px-3.5 py-3 items-center cursor-pointer transition-colors hover:bg-bg-2"
+                          className="grid cursor-pointer grid-cols-[56px_24px_1fr_48px_24px_24px] items-center gap-3 px-3.5 py-3 transition-colors hover:bg-bg-2"
                           onClick={() =>
                             setExpandedItemId(isExpanded ? null : item.id)
                           }
                         >
                           {/* Computed start time */}
-                          <span className="font-mono text-[10px] text-ink-3 tracking-[0.05em]">
+                          <span className="font-mono text-[10px] tracking-[0.05em] text-ink-3">
                             {hasComputedTime
                               ? formatComputedTime(
                                   project.created_at_ms,
                                   cumulativeSecs,
                                 )
-                              : "\u2014"}
+                              : "—"}
                           </span>
 
                           {/* Type icon */}
-                          <span className="text-accent flex items-center justify-center">
+                          <span className="flex items-center justify-center text-accent">
                             {icon}
                           </span>
 
                           {/* Name / reference */}
-                          <div className="text-[12.5px] text-ink truncate">
+                          <div className="truncate text-[12.5px] text-ink">
                             {item.reference || item.text || "Untitled"}
                             {item.translation && (
-                              <span className="ml-2 font-mono text-[9.5px] text-ink-3 tracking-[0.08em] uppercase">
+                              <span className="ml-2 font-mono text-[9.5px] tracking-[0.08em] text-ink-3 uppercase">
                                 {item.translation}
                               </span>
                             )}
@@ -279,20 +274,20 @@ export function OrderOfService({
                             }`}
                             {...(isReadOnly ? {} : handleProps)}
                           >
-                            <GripVerticalIcon className="w-3.5 h-3.5 shrink-0" />
+                            <GripVerticalIcon className="h-3.5 w-3.5 shrink-0" />
                           </span>
 
                           {/* Remove button */}
                           {!isReadOnly ? (
                             <button
-                              className="text-ink-3 hover:text-danger transition-colors flex items-center justify-center cursor-pointer"
+                              className="flex cursor-pointer items-center justify-center text-ink-3 transition-colors hover:text-danger"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleRemove(item.id);
                               }}
                               title="Remove"
                             >
-                              <XIcon className="w-3.5 h-3.5 shrink-0" />
+                              <XIcon className="h-3.5 w-3.5 shrink-0" />
                             </button>
                           ) : (
                             <span />
@@ -319,8 +314,8 @@ export function OrderOfService({
           </SortableContext>
         </DndContext>
       ) : (
-        <div className="border border-line rounded-lg px-6 py-8 text-center text-sm text-muted flex flex-col items-center gap-2">
-          <ListIcon className="w-5 h-5 text-muted/60" />
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-line px-6 py-8 text-center text-sm text-muted">
+          <ListIcon className="h-5 w-5 text-muted/60" />
           No items yet. Add scripture or events to build the service order.
         </div>
       )}

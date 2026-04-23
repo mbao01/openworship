@@ -11,17 +11,51 @@ use tokio::sync::broadcast;
 /// Number of consecutive empty-text chunks before emitting a warning event.
 const EMPTY_CHUNK_WARN_THRESHOLD: u32 = 5;
 
-/// Compute the new words in `current` that weren't in `prev`.
-/// Uses a simple longest-common-prefix diff on whitespace-split words.
+/// RMS energy threshold below which audio is considered silence (~-46 dBFS).
+/// Avoids feeding quiet noise to Whisper which causes hallucinations.
+const VAD_RMS_THRESHOLD: f32 = 0.005;
+
+/// Minimum interval between transcription calls (milliseconds).
+/// Prevents redundant work when chunks arrive faster than Whisper can process.
+const TRANSCRIBE_CADENCE_MS: u64 = 1000;
+
+/// Find new words in `current` that weren't in `prev` using suffix-anchored diff.
+///
+/// Finds the longest suffix of `prev` words that matches a prefix of `current`
+/// words, then returns everything in `current` after that match. This is more
+/// robust than a simple longest-common-prefix when Whisper re-transcribes
+/// overlapping audio slightly differently.
 fn diff_new_words(prev: &str, current: &str) -> String {
     let prev_words: Vec<&str> = prev.split_whitespace().collect();
     let curr_words: Vec<&str> = current.split_whitespace().collect();
-    let common = prev_words
-        .iter()
-        .zip(curr_words.iter())
-        .take_while(|(a, b)| a == b)
-        .count();
-    curr_words[common..].join(" ")
+
+    if prev_words.is_empty() {
+        return current.trim().to_string();
+    }
+    if curr_words.is_empty() {
+        return String::new();
+    }
+
+    // Try to find the longest suffix of prev that matches a prefix of current.
+    let max_check = prev_words.len().min(curr_words.len());
+    let mut best_match_len = 0;
+
+    for suffix_start in (prev_words.len().saturating_sub(max_check))..prev_words.len() {
+        let suffix = &prev_words[suffix_start..];
+        if curr_words.len() >= suffix.len()
+            && curr_words[..suffix.len()]
+                .iter()
+                .zip(suffix.iter())
+                .all(|(a, b)| a.to_lowercase() == b.to_lowercase())
+        {
+            let candidate = suffix.len();
+            if candidate > best_match_len {
+                best_match_len = candidate;
+            }
+        }
+    }
+
+    curr_words[best_match_len..].join(" ")
 }
 
 /// Whether the STT engine is currently active.
@@ -78,7 +112,7 @@ impl SttEngine {
     ///   current thread via a dedicated keeper thread.
     /// - A separate worker thread reads from the internal channel and calls the
     ///   transcriber, keeping the transcription latency independent of capture.
-    pub fn start<T: Transcriber>(&mut self, transcriber: T, config: AudioConfig) -> Result<()> {
+    pub fn start(&mut self, transcriber: Box<dyn Transcriber>, config: AudioConfig) -> Result<()> {
         if *self.status.lock().unwrap() == SttStatus::Running {
             return Ok(());
         }
@@ -97,19 +131,19 @@ impl SttEngine {
         let start = Instant::now();
         let chunk_ms = config.chunk_ms;
 
-        // Sliding-window transcription thread: accumulates 200ms micro-chunks
-        // into a 1.5s ring buffer, transcribes after each new chunk, and diffs
-        // the output to emit only new words. This gives ~200ms perceived latency
-        // while still feeding Whisper enough audio (≥1.01s).
+        // Sliding-window transcription thread: accumulates 500ms micro-chunks
+        // into a 5s ring buffer, transcribes at most once per second, and diffs
+        // the output to emit only new words. Energy-based VAD skips silence.
         let sample_rate = config.sample_rate;
         thread::spawn(move || {
             let capturer = capturer;
-            // 1.5s sliding window — enough for Whisper to produce segments
-            let window_samples = (sample_rate as usize * 1500) / 1000; // 24,000
-            let min_samples: usize = 16_160; // Whisper minimum
+            // 5s sliding window — gives Whisper full sentence context
+            let window_samples = (sample_rate as usize * 5000) / 1000; // 80,000
+            let min_samples: usize = 32_000; // 2s minimum before transcribing
             let mut ring: Vec<f32> = Vec::with_capacity(window_samples);
             let mut prev_text = String::new();
             let mut consecutive_empty: u32 = 0;
+            let mut last_transcribe = Instant::now() - std::time::Duration::from_secs(10);
 
             loop {
                 if !running_worker.load(Ordering::Acquire) {
@@ -119,7 +153,7 @@ impl SttEngine {
                     Ok(samples) => {
                         // Append new micro-chunk to ring buffer
                         ring.extend_from_slice(&samples);
-                        // Trim to last 1.5s
+                        // Trim to last 5s
                         if ring.len() > window_samples {
                             let excess = ring.len() - window_samples;
                             ring.drain(..excess);
@@ -129,6 +163,24 @@ impl SttEngine {
                             continue;
                         }
 
+                        // Cadence gate: don't transcribe more than once per second
+                        if last_transcribe.elapsed().as_millis() < TRANSCRIBE_CADENCE_MS as u128 {
+                            continue;
+                        }
+
+                        // Energy-based VAD: skip transcription on silence
+                        let rms = (ring.iter().map(|&s| s * s).sum::<f32>()
+                            / ring.len() as f32)
+                            .sqrt();
+                        if rms < VAD_RMS_THRESHOLD {
+                            // Reset context on silence to avoid stale carry-over
+                            if !prev_text.is_empty() {
+                                prev_text.clear();
+                            }
+                            continue;
+                        }
+
+                        last_transcribe = Instant::now();
                         let offset_ms = start.elapsed().as_millis() as u64;
                         match transcriber.transcribe(&ring) {
                             Ok(text) if !text.is_empty() => {
@@ -358,6 +410,27 @@ mod tests {
     fn diff_new_words_handles_partial_overlap() {
         let result = diff_new_words("the quick", "the quick brown fox");
         assert_eq!(result, "brown fox");
+    }
+
+    #[test]
+    fn diff_new_words_suffix_anchor_sliding_window() {
+        // Simulates a sliding window: prev had "A B C D", new window starts mid-overlap
+        // with "C D E F" — suffix "C D" of prev matches prefix of current.
+        let result = diff_new_words("A B C D", "C D E F");
+        assert_eq!(result, "E F");
+    }
+
+    #[test]
+    fn diff_new_words_suffix_anchor_case_insensitive() {
+        // Whisper may capitalize differently between runs
+        let result = diff_new_words("the Lord is", "The Lord is my shepherd");
+        assert_eq!(result, "my shepherd");
+    }
+
+    #[test]
+    fn diff_new_words_no_overlap_returns_all() {
+        let result = diff_new_words("hello world", "completely different text");
+        assert_eq!(result, "completely different text");
     }
 
     #[test]

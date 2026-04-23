@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { getIdentity, setIdentity as saveIdentity } from "@/lib/commands/identity";
+import {
+  getIdentity,
+  setIdentity as saveIdentity,
+} from "@/lib/commands/identity";
 import type { ChurchIdentity } from "@/lib/types";
 
 export interface UseIdentityReturn {
@@ -15,7 +18,9 @@ export interface UseIdentityReturn {
  * Extracted from App.tsx direct invoke usage.
  */
 export function useIdentity(): UseIdentityReturn {
-  const [identity, setIdentityState] = useState<ChurchIdentity | undefined | null>(null);
+  const [identity, setIdentityState] = useState<
+    ChurchIdentity | undefined | null
+  >(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

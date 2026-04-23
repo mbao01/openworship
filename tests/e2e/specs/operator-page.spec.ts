@@ -9,8 +9,9 @@ test.describe("Operator Page", () => {
     );
   });
 
-  test("title bar shows branch name", async ({ operatorPage: page }) => {
-    await expect(page.locator('[data-qa="operator-branch"]')).toHaveText("Main");
+  test("mode toolbar shows detection modes", async ({ operatorPage: page }) => {
+    // The mode switcher should be visible with the default "Copilot" mode active
+    await expect(page.getByRole("button", { name: "Copilot" })).toBeVisible();
   });
 
   test("settings gear button is present and accessible", async ({

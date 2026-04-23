@@ -45,7 +45,9 @@ export async function getDisplaySettings(): Promise<DisplaySettings> {
 /**
  * Persists display settings to disk.
  */
-export async function setDisplaySettings(settings: DisplaySettings): Promise<void> {
+export async function setDisplaySettings(
+  settings: DisplaySettings,
+): Promise<void> {
   return invoke("set_display_settings", { settings });
 }
 

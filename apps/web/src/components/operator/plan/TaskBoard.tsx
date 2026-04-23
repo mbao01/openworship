@@ -107,25 +107,25 @@ function TaskBoardColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 min-w-[170px] bg-bg-1 border border-line rounded-lg min-h-[200px] flex flex-col ${
+      className={`flex min-h-[200px] min-w-[170px] flex-1 flex-col rounded-lg border border-line bg-bg-1 ${
         isOver ? "inset-ring-1 ring-accent/40" : ""
       }`}
     >
       {/* Column header */}
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-line">
+      <div className="flex items-center gap-2 border-b border-line px-3 py-2.5">
         <span
-          className={`inline-block w-2 h-2 rounded-full ${STATUS_STYLES[status].split(" ")[1]}`}
+          className={`inline-block h-2 w-2 rounded-full ${STATUS_STYLES[status].split(" ")[1]}`}
         />
         <span className="text-[11px] font-medium text-ink">
           {STATUS_LABELS[status]}
         </span>
-        <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-bg-3 text-[9px] font-semibold text-ink-3">
+        <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-bg-3 px-1 text-[9px] font-semibold text-ink-3">
           {tasks.length}
         </span>
       </div>
 
       {/* Cards */}
-      <div className="flex-1 p-2 flex flex-col gap-1.5">
+      <div className="flex flex-1 flex-col gap-1.5 p-2">
         {tasks.map((task) => (
           <DraggableTaskCard
             key={task.id}
@@ -169,15 +169,15 @@ function DraggableTaskCard({
       style={style}
       {...attributes}
       {...(isReadOnly ? {} : listeners)}
-      className={`group bg-bg border border-line rounded px-2.5 py-2 text-xs text-ink transition-shadow ${
+      className={`group rounded border border-line bg-bg px-2.5 py-2 text-xs text-ink transition-shadow ${
         isDragging ? "shadow-lg" : "hover:shadow-sm"
       } ${!isReadOnly ? "cursor-grab" : ""}`}
     >
       <div className="flex items-start gap-1.5">
         <button
-          className={`w-3 h-3 rounded border shrink-0 mt-0.5 flex items-center justify-center transition-colors cursor-pointer ${
+          className={`mt-0.5 flex h-3 w-3 shrink-0 cursor-pointer items-center justify-center rounded border transition-colors ${
             task.status === "done"
-              ? "bg-success border-success text-white"
+              ? "border-success bg-success text-white"
               : "border-line hover:border-accent"
           }`}
           onClick={(e) => {
@@ -186,25 +186,23 @@ function DraggableTaskCard({
           }}
           disabled={isReadOnly}
         >
-          {task.status === "done" && (
-            <CheckIcon className="w-2 h-2 shrink-0" />
-          )}
+          {task.status === "done" && <CheckIcon className="h-2 w-2 shrink-0" />}
         </button>
         <span
-          className={`flex-1 line-clamp-2 ${task.status === "cancelled" ? "line-through text-muted" : ""}`}
+          className={`line-clamp-2 flex-1 ${task.status === "cancelled" ? "text-muted line-through" : ""}`}
         >
           {task.title}
         </span>
         {!isReadOnly && (
           <button
-            className="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-danger transition-all cursor-pointer shrink-0 flex items-center"
+            className="flex shrink-0 cursor-pointer items-center text-ink-3 opacity-0 transition-all group-hover:opacity-100 hover:text-danger"
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
             }}
             title="Delete task"
           >
-            <XIcon className="w-3.5 h-3.5 shrink-0" />
+            <XIcon className="h-3.5 w-3.5 shrink-0" />
           </button>
         )}
       </div>

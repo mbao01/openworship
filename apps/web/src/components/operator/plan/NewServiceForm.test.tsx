@@ -13,9 +13,7 @@ describe("NewServiceForm", () => {
 
   it("renders the input with placeholder", () => {
     render(<NewServiceForm onCreate={onCreate} onCancel={onCancel} />);
-    expect(
-      screen.getByPlaceholderText("Untitled service"),
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Untitled service")).toBeInTheDocument();
   });
 
   it("renders Create and Cancel buttons", () => {

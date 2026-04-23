@@ -169,18 +169,18 @@ html[data-app-theme="light"] {
   *::before,
   *::after {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    /* margin: 0;
+    padding: 0; */
   }
 
   html,
   body,
   #root {
     height: 100%;
+    font-size: 16px;
     background-color: var(--color-bg);
     color: var(--color-ink);
     font-family: var(--font-sans);
-    font-size: 13px;
     line-height: 1.4;
     -webkit-font-smoothing: antialiased;
     font-feature-settings: "ss01", "cv11";

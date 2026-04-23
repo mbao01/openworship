@@ -77,21 +77,24 @@ fn is_hallucination(text: &str) -> bool {
 impl Transcriber for WhisperTranscriber {
     fn transcribe(&mut self, samples: &[f32]) -> Result<String> {
         use whisper_rs::FullParams;
-        let mut params = FullParams::new(whisper_rs::SamplingStrategy::Greedy { best_of: 1 });
+        // Beam search produces significantly better word boundaries than greedy.
+        let mut params = FullParams::new(whisper_rs::SamplingStrategy::BeamSearch {
+            beam_size: 5,
+            patience: 1.0,
+        });
         params.set_language(Some("en"));
         params.set_print_progress(false);
         params.set_print_realtime(false);
         params.set_print_timestamps(false);
         params.set_print_special(false);
-        params.set_single_segment(true);
-        // Each 1-second chunk is independent; don't carry silence/noise tokens
-        // as context into the next chunk — doing so suppresses real speech.
+        // Allow multiple segments — a 5s window can contain 2-3 natural phrases.
+        params.set_single_segment(false);
+        // Each sliding window is independent; enabling context with overlapping
+        // windows causes repetition artifacts.
         params.set_no_context(true);
-        // With 1-second chunks the default no_speech_thold (0.6) is too
-        // aggressive — even clear speech in a short window scores high on the
-        // no-speech probability, causing 0 segments. Disable the filter so
-        // every chunk produces at least one segment.
-        params.set_no_speech_thold(1.0);
+        // With the larger 5s window, the default no-speech threshold works well
+        // to filter silence segments. 0.6 is the Whisper default.
+        params.set_no_speech_thold(0.6);
 
         // Whisper requires >= 1 s of audio, but in practice needs ≥1.5 s to
         // produce any segments at all. Our default chunk is 2 s (32_000 samples).
@@ -129,36 +132,71 @@ impl Transcriber for WhisperTranscriber {
     }
 }
 
-/// Returns the canonical path where the primary Whisper model should live.
-/// This is the file that `download_whisper_model` writes to.
+/// Returns the models directory (`~/.openworship/models/`).
 #[cfg(feature = "whisper")]
-pub fn default_model_path() -> std::path::PathBuf {
+pub fn models_dir() -> std::path::PathBuf {
     let home = std::env::var("HOME").unwrap_or_default();
     std::path::PathBuf::from(home)
         .join(".openworship")
         .join("models")
-        .join("ggml-base.en.bin")
+}
+
+/// Returns the canonical path for a specific model filename.
+#[cfg(feature = "whisper")]
+pub fn model_path_for(filename: &str) -> std::path::PathBuf {
+    models_dir().join(filename)
+}
+
+/// Returns the canonical path where the primary Whisper model should live.
+/// Defaults to base.en; callers that know the configured model should use `model_path_for()`.
+#[cfg(feature = "whisper")]
+pub fn default_model_path() -> std::path::PathBuf {
+    model_path_for("ggml-base.en.bin")
+}
+
+/// Check whether a specific model file exists.
+#[cfg(feature = "whisper")]
+pub fn check_model(filename: &str) -> bool {
+    model_path_for(filename).exists()
 }
 
 /// Resolve the model path using:
 /// 1. `OPENWORSHIP_WHISPER_MODEL` env var
-/// 2. `~/.openworship/models/ggml-base.en.bin` (preferred)
-/// 3. `~/.openworship/models/ggml-tiny.en.bin`  (legacy fallback)
+/// 2. The requested model filename (if provided)
+/// 3. `~/.openworship/models/ggml-base.en.bin` (fallback)
+/// 4. `~/.openworship/models/ggml-tiny.en.bin`  (legacy fallback)
 #[cfg(feature = "whisper")]
 pub fn resolve_model_path() -> Result<std::path::PathBuf> {
+    resolve_model_path_for(None)
+}
+
+/// Resolve the model path for a specific model filename, with fallback chain.
+#[cfg(feature = "whisper")]
+pub fn resolve_model_path_for(preferred_filename: Option<&str>) -> Result<std::path::PathBuf> {
     if let Ok(p) = std::env::var("OPENWORSHIP_WHISPER_MODEL") {
         let path = std::path::PathBuf::from(p);
         if path.exists() {
             return Ok(path);
         }
     }
-    let home = std::env::var("HOME").unwrap_or_default();
-    let models_dir = std::path::PathBuf::from(&home).join(".openworship").join("models");
-    for name in ["ggml-base.en.bin", "ggml-tiny.en.bin"] {
-        let path = models_dir.join(name);
+    let dir = models_dir();
+    // Build fallback chain: preferred → base → tiny
+    let mut candidates: Vec<&str> = Vec::new();
+    if let Some(pref) = preferred_filename {
+        candidates.push(pref);
+    }
+    for fallback in ["ggml-base.en.bin", "ggml-tiny.en.bin"] {
+        if !candidates.contains(&fallback) {
+            candidates.push(fallback);
+        }
+    }
+    for name in &candidates {
+        let path = dir.join(name);
         if path.exists() {
             return Ok(path);
         }
     }
-    anyhow::bail!("Whisper model not found. Use Settings → Audio → Download Model to get ggml-base.en.bin")
+    anyhow::bail!(
+        "Whisper model not found. Use Settings → Audio → Download Model to install one."
+    )
 }

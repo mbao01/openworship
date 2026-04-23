@@ -27,9 +27,7 @@ vi.stubGlobal(
 describe("SpeakerPage", () => {
   it('renders "Waiting for sermon notes" when no slide is active', () => {
     render(<SpeakerPage />);
-    expect(
-      screen.getByText(/Waiting for sermon notes/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Waiting for sermon notes/)).toBeInTheDocument();
   });
 
   it("renders the SPEAKER NOTES header", () => {

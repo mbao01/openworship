@@ -25,13 +25,13 @@ export function ServiceList({
   onCancelNewForm: () => void;
 }) {
   return (
-    <div className="flex flex-col w-[280px] bg-bg-1 border-r border-line shrink-0">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+    <div className="flex w-[280px] shrink-0 flex-col border-r border-line bg-bg-1">
+      <div className="flex items-center justify-between border-b border-line px-4 py-3">
         <div className="flex items-center gap-2">
           <h2 className="font-serif text-base font-normal tracking-[-0.01em] text-ink">
             Services
           </h2>
-          <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-bg-3 text-[10px] font-semibold text-ink-3">
+          <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-bg-3 px-1.5 text-[10px] font-semibold text-ink-3">
             {projects.length}
           </span>
         </div>
@@ -44,39 +44,39 @@ export function ServiceList({
           return (
             <button
               key={p.id}
-              className={`w-full text-left px-4 py-3 border-b border-line transition-colors cursor-pointer ${
+              className={`w-full cursor-pointer border-b border-line px-4 py-3 text-left transition-colors ${
                 isSelected
-                  ? "bg-accent-soft border-l-2 border-l-accent"
-                  : "hover:bg-bg-2 border-l-2 border-l-transparent"
+                  ? "border-l-2 border-l-accent bg-accent-soft"
+                  : "border-l-2 border-l-transparent hover:bg-bg-2"
               }`}
               onClick={() => onSelectProject(p.id)}
             >
-              <div className="flex items-center gap-2 mb-1 group/row">
+              <div className="group/row mb-1 flex items-center gap-2">
                 <span
-                  className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                  className={`inline-block h-2 w-2 shrink-0 rounded-full ${
                     isOpen ? "bg-success" : "bg-bg-4"
                   }`}
                 />
                 <span
-                  className={`text-[13px] font-medium truncate flex-1 ${
+                  className={`flex-1 truncate text-[13px] font-medium ${
                     isOpen ? "text-ink" : "text-muted"
                   }`}
                 >
                   {p.name || "Untitled service"}
                 </span>
                 <span
-                  className="opacity-0 group-hover/row:opacity-100 text-ink-3 hover:text-danger text-sm transition-all cursor-pointer shrink-0"
+                  className="shrink-0 cursor-pointer text-sm text-ink-3 opacity-0 transition-all group-hover/row:opacity-100 hover:text-danger"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteTarget(p);
                   }}
                   title="Delete service"
                 >
-                  <Trash2Icon className="w-3 h-3 shrink-0" />
+                  <Trash2Icon className="h-3 w-3 shrink-0" />
                 </span>
               </div>
               <div
-                className={`text-[11px] pl-4 ${isOpen ? "text-ink-3" : "text-muted"}`}
+                className={`pl-4 text-[11px] ${isOpen ? "text-ink-3" : "text-muted"}`}
               >
                 {formatDate(p.created_at_ms)}
                 <span className="mx-1.5">&middot;</span>
@@ -89,15 +89,12 @@ export function ServiceList({
         })}
       </div>
 
-      <div className="p-3 border-t border-line">
+      <div className="border-t border-line p-3">
         {showNewForm ? (
-          <NewServiceForm
-            onCreate={onCreate}
-            onCancel={onCancelNewForm}
-          />
+          <NewServiceForm onCreate={onCreate} onCancel={onCancelNewForm} />
         ) : (
           <button
-            className="w-full px-3 py-2 text-xs font-semibold rounded border border-accent bg-accent text-accent-foreground cursor-pointer"
+            className="w-full cursor-pointer rounded border border-accent bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground"
             onClick={onShowNewForm}
           >
             + New service

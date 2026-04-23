@@ -32,6 +32,13 @@ pub struct ContentEvent {
     /// For `kind = "sermon_note"`: total slide count.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_slides: Option<u32>,
+    /// For `kind = "set_background"`: artifact ID or preset ID for the background.
+    /// `None` or empty clears the background.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub background_url: Option<String>,
+    /// For `kind = "set_background"`: media type hint ("video", "image", or "gradient").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub background_type: Option<String>,
 }
 
 impl ContentEvent {
@@ -50,6 +57,8 @@ impl ContentEvent {
             duration_secs: None,
             slide_index: None,
             total_slides: None,
+            background_url: None,
+            background_type: None,
         }
     }
 
@@ -69,6 +78,8 @@ impl ContentEvent {
             duration_secs: None,
             slide_index: None,
             total_slides: None,
+            background_url: None,
+            background_type: None,
         }
     }
 
@@ -84,6 +95,8 @@ impl ContentEvent {
             duration_secs: None,
             slide_index: None,
             total_slides: None,
+            background_url: None,
+            background_type: None,
         }
     }
 
@@ -103,6 +116,8 @@ impl ContentEvent {
             duration_secs: None,
             slide_index: None,
             total_slides: None,
+            background_url: None,
+            background_type: None,
         }
     }
 
@@ -122,6 +137,8 @@ impl ContentEvent {
             duration_secs: None,
             slide_index: None,
             total_slides: None,
+            background_url: None,
+            background_type: None,
         }
     }
 
@@ -137,6 +154,8 @@ impl ContentEvent {
             duration_secs: Some(duration_secs),
             slide_index: None,
             total_slides: None,
+            background_url: None,
+            background_type: None,
         }
     }
 
@@ -157,6 +176,8 @@ impl ContentEvent {
             duration_secs: None,
             slide_index: Some(slide_index),
             total_slides: Some(total_slides),
+            background_url: None,
+            background_type: None,
         }
     }
 
@@ -172,6 +193,8 @@ impl ContentEvent {
             duration_secs: None,
             slide_index: Some(slide_index),
             total_slides: None,
+            background_url: None,
+            background_type: None,
         }
     }
 
@@ -187,6 +210,43 @@ impl ContentEvent {
             duration_secs: None,
             slide_index: None,
             total_slides: None,
+            background_url: None,
+            background_type: None,
+        }
+    }
+
+    /// Set the display background. `url` is an artifact ID (e.g. "artifact:abc123")
+    /// or a preset ID (e.g. "preset:dark_gradient").
+    pub fn set_background(url: impl Into<String>, bg_type: Option<&str>) -> Self {
+        Self {
+            kind: "set_background".into(),
+            reference: String::new(),
+            text: String::new(),
+            translation: String::new(),
+            line_index: None,
+            image_url: None,
+            duration_secs: None,
+            slide_index: None,
+            total_slides: None,
+            background_url: Some(url.into()),
+            background_type: bg_type.map(|s| s.to_string()),
+        }
+    }
+
+    /// Clear the display background (return to solid black).
+    pub fn clear_background() -> Self {
+        Self {
+            kind: "set_background".into(),
+            reference: String::new(),
+            text: String::new(),
+            translation: String::new(),
+            line_index: None,
+            image_url: None,
+            duration_secs: None,
+            slide_index: None,
+            total_slides: None,
+            background_url: None,
+            background_type: None,
         }
     }
 }

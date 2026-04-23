@@ -15,14 +15,19 @@ function ConfBar({ value, variant = "default", className }: ConfBarProps) {
   return (
     <div
       data-slot="conf-bar"
-      className={cn("h-[2px] w-full overflow-hidden rounded-full bg-bg-4", className)}
+      className={cn(
+        "h-[2px] w-full overflow-hidden rounded-full bg-bg-4",
+        className,
+      )}
     >
       <div
         className={cn(
           "h-full rounded-full transition-all",
-          variant === "live"    ? "bg-live"    :
-          variant === "next"    ? "bg-accent"  :
-          "bg-accent/60"
+          variant === "live"
+            ? "bg-live"
+            : variant === "next"
+              ? "bg-accent"
+              : "bg-accent/60",
         )}
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />

@@ -21,14 +21,11 @@ describe("Button", () => {
     },
   );
 
-  it.each(["default", "sm", "icon-sm"] as const)(
-    "renders size=%s",
-    (size) => {
-      render(<Button size={size}>btn</Button>);
-      const button = screen.getByRole("button", { name: "btn" });
-      expect(button).toHaveAttribute("data-size", size);
-    },
-  );
+  it.each(["default", "sm", "icon-sm"] as const)("renders size=%s", (size) => {
+    render(<Button size={size}>btn</Button>);
+    const button = screen.getByRole("button", { name: "btn" });
+    expect(button).toHaveAttribute("data-size", size);
+  });
 
   it("is disabled when disabled prop is true", () => {
     render(<Button disabled>Disabled</Button>);

@@ -82,7 +82,7 @@ openworship/
 ├── crates/
 │   ├── ow-core/            # Core domain logic (no Tauri deps)
 │   ├── ow-search/          # Tantivy scripture search index
-│   ├── ow-audio/           # Offline STT pipeline (Whisper.cpp, Deepgram)
+│   ├── ow-audio/           # STT pipeline (pluggable providers: Whisper.cpp, Deepgram, etc.)
 │   ├── ow-display/         # Local WebSocket display server
 │   └── ow-db/              # SQLite Bible DB (KJV, WEB, BSB)
 │
@@ -159,6 +159,29 @@ pnpm dev
 | Rust tests | `cargo test` |
 | Desktop dev | `pnpm desktop:dev` |
 | Desktop build | `cd apps/desktop && cargo tauri build` |
+
+---
+
+## STT Providers
+
+OpenWorship uses a pluggable provider architecture for speech-to-text. The settings UI is **data-driven** — each provider declares its config fields, and the UI renders them automatically.
+
+### Built-in providers
+
+| Provider | Feature Flag | Type | Description |
+|----------|-------------|------|-------------|
+| **Whisper** | `whisper` | Local | Offline transcription via whisper.cpp. Models: tiny, base, small, medium. |
+| **Deepgram** | `deepgram` | Cloud | Online streaming via Deepgram Nova-2 WebSocket API. Requires API key. |
+
+### Adding a new provider
+
+See [`crates/ow-audio/PROVIDERS.md`](crates/ow-audio/PROVIDERS.md) for a step-by-step guide. In short:
+
+1. Create `crates/ow-audio/src/{name}_provider.rs` implementing the `SttProvider` trait
+2. Add a feature flag to `crates/ow-audio/Cargo.toml`
+3. Register it in `ProviderRegistry::new()` behind `#[cfg(feature = "...")]`
+
+The provider declares its config fields (text, password, select, toggle) and available models. The settings UI, model download, and STT startup wiring happen automatically.
 
 ---
 

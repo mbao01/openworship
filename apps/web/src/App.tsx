@@ -11,18 +11,27 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
 import "./styles/global.css";
 
-// FOUC prevention: read localStorage before React mounts and apply data-app-theme.
+// FOUC prevention: read localStorage before React mounts, apply theme + preset tokens.
 // useTheme() will override this once the backend settings load.
 (function bootstrapTheme() {
   try {
     const raw = localStorage.getItem("ow-ui-prefs");
     const prefs = raw ? JSON.parse(raw) : null;
     const theme = prefs?.appTheme ?? "dark";
+    const presetId = prefs?.preset ?? "parchment";
     const resolved = theme === "light" ? "light" : "dark";
     document.documentElement.setAttribute("data-app-theme", resolved);
     if (resolved === "dark") {
       document.documentElement.classList.add("dark");
     }
+    // Apply preset tokens synchronously to avoid flash of wrong colors.
+    // Uses dynamic import — if it fails, CSS fallback values in global.css apply.
+    import("./lib/themes")
+      .then(({ getPreset, applyThemeTokens }) => {
+        const preset = getPreset(presetId);
+        applyThemeTokens(resolved === "dark" ? preset.dark : preset.light);
+      })
+      .catch(() => {});
   } catch {
     document.documentElement.setAttribute("data-app-theme", "dark");
     document.documentElement.classList.add("dark");
@@ -46,7 +55,9 @@ function AppInner() {
     return (
       <SplashScreen
         isReady={identity !== null && !identityLoading}
-        onDone={() => {/* splashDone is computed, not state */}}
+        onDone={() => {
+          /* splashDone is computed, not state */
+        }}
       />
     );
   }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getAudioLevel } from "@/lib/commands/audio";
 
-const DEFAULT_INTERVAL_MS = 100;
+const DEFAULT_INTERVAL_MS = 200;
 
 /**
  * Polls `get_audio_level` at a regular interval and returns the current level

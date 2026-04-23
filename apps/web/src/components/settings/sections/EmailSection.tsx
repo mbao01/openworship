@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  getEmailSettings, setEmailSettings,
-} from "@/lib/commands/settings";
+import { getEmailSettings, setEmailSettings } from "@/lib/commands/settings";
 import {
   listEmailSubscribers,
   addEmailSubscriber,
@@ -12,7 +10,11 @@ import { Section, SettingRow } from "@/components/ui/section";
 import { Toggle } from "@/components/ui/toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { EmailSettings, EmailSubscriber, ChurchIdentity } from "@/lib/types";
+import type {
+  EmailSettings,
+  EmailSubscriber,
+  ChurchIdentity,
+} from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -70,15 +72,15 @@ export function EmailSection({ identity }: EmailSectionProps) {
 
   if (!settings) {
     return (
-      <div className="flex-1 p-6 flex items-center justify-center text-ink-3 text-sm">
+      <div className="flex flex-1 items-center justify-center p-6 text-sm text-ink-3">
         Loading…
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-0">
-      <h2 className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3 mb-6 pb-3 border-b border-line">
+    <div className="flex-1 space-y-0 overflow-y-auto p-6">
+      <h2 className="mb-6 border-b border-line pb-3 font-mono text-[10px] tracking-[0.12em] text-ink-3 uppercase">
         Service Email
       </h2>
 
@@ -87,7 +89,11 @@ export function EmailSection({ identity }: EmailSectionProps) {
           <Input
             className="w-48"
             value={settings.smtp_host}
-            onChange={(e) => setSettingsState((p) => p ? { ...p, smtp_host: e.target.value } : p)}
+            onChange={(e) =>
+              setSettingsState((p) =>
+                p ? { ...p, smtp_host: e.target.value } : p,
+              )
+            }
             placeholder="smtp.gmail.com"
           />
         </SettingRow>
@@ -96,27 +102,44 @@ export function EmailSection({ identity }: EmailSectionProps) {
             className="w-24"
             type="number"
             value={settings.smtp_port}
-            onChange={(e) => setSettingsState((p) => p ? { ...p, smtp_port: Number(e.target.value) } : p)}
+            onChange={(e) =>
+              setSettingsState((p) =>
+                p ? { ...p, smtp_port: Number(e.target.value) } : p,
+              )
+            }
           />
         </SettingRow>
         <SettingRow label="Username">
           <Input
             className="w-48"
             value={settings.smtp_username}
-            onChange={(e) => setSettingsState((p) => p ? { ...p, smtp_username: e.target.value } : p)}
+            onChange={(e) =>
+              setSettingsState((p) =>
+                p ? { ...p, smtp_username: e.target.value } : p,
+              )
+            }
           />
         </SettingRow>
         <SettingRow label="From name">
           <Input
             className="w-48"
             value={settings.from_name}
-            onChange={(e) => setSettingsState((p) => p ? { ...p, from_name: e.target.value } : p)}
+            onChange={(e) =>
+              setSettingsState((p) =>
+                p ? { ...p, from_name: e.target.value } : p,
+              )
+            }
             placeholder={identity.church_name}
           />
         </SettingRow>
 
-        <div className="flex justify-between items-center pt-3">
-          <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={testSent}>
+        <div className="flex items-center justify-between pt-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTestEmail}
+            disabled={testSent}
+          >
             {testSent ? "Sent!" : "Send test email"}
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving}>
@@ -125,17 +148,23 @@ export function EmailSection({ identity }: EmailSectionProps) {
         </div>
       </Section>
 
-      <Section title="Auto-send" separator description="AI-generated recap sent to subscribers after the service ends.">
+      <Section
+        title="Auto-send"
+        separator
+        description="AI-generated recap sent to subscribers after the service ends."
+      >
         <SettingRow label="Auto-send summary">
           <Toggle
             checked={settings.auto_send}
-            onCheckedChange={(v) => setSettingsState((p) => p ? { ...p, auto_send: v } : p)}
+            onCheckedChange={(v) =>
+              setSettingsState((p) => (p ? { ...p, auto_send: v } : p))
+            }
           />
         </SettingRow>
       </Section>
 
       <Section title="Subscribers" separator>
-        <div className="flex gap-2 mb-3">
+        <div className="mb-3 flex gap-2">
           <Input
             className="flex-1"
             type="email"
@@ -144,7 +173,12 @@ export function EmailSection({ identity }: EmailSectionProps) {
             onChange={(e) => setNewEmail(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddSubscriber()}
           />
-          <Button variant="outline" size="sm" onClick={handleAddSubscriber} disabled={!EMAIL_RE.test(newEmail)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAddSubscriber}
+            disabled={!EMAIL_RE.test(newEmail)}
+          >
             Add
           </Button>
         </div>
@@ -153,7 +187,10 @@ export function EmailSection({ identity }: EmailSectionProps) {
             <p className="text-xs text-ink-3">No subscribers yet.</p>
           ) : (
             subscribers.map((s) => (
-              <div key={s.email} className="flex items-center justify-between py-1.5 border-b border-line last:border-b-0">
+              <div
+                key={s.email}
+                className="flex items-center justify-between border-b border-line py-1.5 last:border-b-0"
+              >
                 <span className="text-sm text-ink-2">{s.email}</span>
                 <Button
                   variant="ghost"
