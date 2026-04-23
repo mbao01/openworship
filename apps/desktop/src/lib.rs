@@ -426,11 +426,14 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
                                 if let Ok(db) = db_arc.lock() {
                                     if let Ok(Some(mut e)) = db.get_by_id(&entry.id) {
-                                        e.thumbnail_path = Some(thumb);
+                                        e.thumbnail_path = Some(thumb.clone());
                                         let _ = db.upsert(&e);
                                     }
                                 }
-                                let _ = app_for_thumbs.emit("artifacts://thumbnail-ready", &entry.id);
+                                let _ = app_for_thumbs.emit("artifacts://thumbnail-ready", crate::commands::ThumbnailReadyPayload {
+                                    id: entry.id,
+                                    thumbnail_path: thumb,
+                                });
                             }
                         });
                     }

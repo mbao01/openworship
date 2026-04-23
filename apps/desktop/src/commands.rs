@@ -13,6 +13,15 @@ use std::sync::{Arc, Mutex, RwLock};
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 
+/// Payload emitted with `artifacts://thumbnail-ready`.
+/// Carries enough info for the frontend to do a surgical state update
+/// without reloading the full asset list.
+#[derive(serde::Serialize, Clone)]
+pub struct ThumbnailReadyPayload {
+    pub id: String,
+    pub thumbnail_path: String,
+}
+
 /// Search scripture by reference ("John 3:16") or free-text keywords.
 /// Pass `translation` to filter results (e.g. "KJV", "WEB", "BSB").
 #[tauri::command]
@@ -2569,11 +2578,14 @@ pub fn import_background_file(
         if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
             if let Ok(db) = db_arc.lock() {
                 if let Ok(Some(mut e)) = db.get_by_id(&entry_id) {
-                    e.thumbnail_path = Some(thumb);
+                    e.thumbnail_path = Some(thumb.clone());
                     let _ = db.upsert(&e);
                 }
             }
-            let _ = app.emit("artifacts://thumbnail-ready", &entry_id);
+            let _ = app.emit("artifacts://thumbnail-ready", ThumbnailReadyPayload {
+                id: entry_id,
+                thumbnail_path: thumb,
+            });
         }
     });
 
@@ -3167,11 +3179,14 @@ pub fn import_artifact_file(
         if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
             if let Ok(db) = db_arc.lock() {
                 if let Ok(Some(mut e)) = db.get_by_id(&entry_id) {
-                    e.thumbnail_path = Some(thumb);
+                    e.thumbnail_path = Some(thumb.clone());
                     let _ = db.upsert(&e);
                 }
             }
-            let _ = app.emit("artifacts://thumbnail-ready", &entry_id);
+            let _ = app.emit("artifacts://thumbnail-ready", ThumbnailReadyPayload {
+                id: entry_id,
+                thumbnail_path: thumb,
+            });
         }
     });
 
@@ -3216,11 +3231,14 @@ pub fn write_artifact_bytes(
         if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
             if let Ok(db) = db_arc.lock() {
                 if let Ok(Some(mut e)) = db.get_by_id(&entry_id) {
-                    e.thumbnail_path = Some(thumb);
+                    e.thumbnail_path = Some(thumb.clone());
                     let _ = db.upsert(&e);
                 }
             }
-            let _ = app.emit("artifacts://thumbnail-ready", &entry_id);
+            let _ = app.emit("artifacts://thumbnail-ready", ThumbnailReadyPayload {
+                id: entry_id,
+                thumbnail_path: thumb,
+            });
         }
     });
 
@@ -3378,11 +3396,14 @@ pub fn regenerate_thumbnails(
             if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
                 if let Ok(db) = db_arc.lock() {
                     if let Ok(Some(mut e)) = db.get_by_id(&entry.id) {
-                        e.thumbnail_path = Some(thumb);
+                        e.thumbnail_path = Some(thumb.clone());
                         let _ = db.upsert(&e);
                     }
                 }
-                let _ = app.emit("artifacts://thumbnail-ready", &entry.id);
+                let _ = app.emit("artifacts://thumbnail-ready", ThumbnailReadyPayload {
+                    id: entry.id,
+                    thumbnail_path: thumb,
+                });
             }
         });
     }
