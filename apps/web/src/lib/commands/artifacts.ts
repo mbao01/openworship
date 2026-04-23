@@ -153,10 +153,11 @@ export async function openArtifact(id: string): Promise<void> {
 // ─── Thumbnails ──────────────────────────────────────────────────────────────
 
 /**
- * Reads thumbnail bytes for an artifact by ID.
+ * Returns an owmedia:// URL that serves the artifact's thumbnail image.
+ * Uses the custom Tauri protocol — no IPC round-trip, no blob allocation.
  */
-export async function readThumbnail(id: string): Promise<number[]> {
-  return invoke<number[]>("read_thumbnail", { id });
+export function thumbnailUrl(id: string): string {
+  return `owmedia://localhost/thumbnail/${id}`;
 }
 
 /**
