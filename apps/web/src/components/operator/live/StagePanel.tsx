@@ -48,11 +48,21 @@ function StageBtn({
   if (disabled) cls += " opacity-40 pointer-events-none cursor-not-allowed";
 
   return (
-    <button className={cls} onClick={onClick} disabled={disabled} title={label}>
+    <button
+      className={cls}
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      aria-keyshortcuts={kbd}
+    >
       {Icon && <Icon className="block h-3 w-3 xl:hidden" />}
       <span className={Icon ? "hidden xl:inline" : ""}>{label}</span>
       {kbd && (
-        <kbd className="rounded-sm bg-bg-4 px-1 py-px font-mono text-[8.5px] text-ink-3">
+        <kbd
+          aria-hidden="true"
+          className="rounded-sm bg-bg-4 px-1 py-px font-mono text-[8.5px] text-ink-3"
+        >
           {kbd}
         </kbd>
       )}
