@@ -12,6 +12,7 @@ mod identity;
 mod keychain;
 mod service;
 mod settings;
+mod slide_import;
 mod slides;
 mod songs;
 mod state;
@@ -708,6 +709,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::create_artifact_dir,
             commands::import_artifact_file,
             commands::write_artifact_bytes,
+            commands::import_pptx,
+            commands::import_pdf,
             commands::rename_artifact,
             commands::delete_artifact,
             commands::move_artifact,

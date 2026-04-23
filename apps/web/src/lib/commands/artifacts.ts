@@ -7,7 +7,7 @@
  */
 
 import { invoke } from "../tauri";
-import type { ArtifactEntry, StorageUsage } from "../types";
+import type { ArtifactEntry, SlideImportResult, StorageUsage } from "../types";
 
 // ─── Listing ──────────────────────────────────────────────────────────────────
 
@@ -148,6 +148,33 @@ export async function starArtifact(
  */
 export async function openArtifact(id: string): Promise<void> {
   return invoke("open_artifact", { id });
+}
+
+
+// ─── Slide import ────────────────────────────────────────────────────────────────
+
+/**
+ * Imports one or more `.pptx` files, extracting each slide as an individual
+ * image artifact. Text is extracted per-slide for searchability.
+ */
+export async function importPptx(
+  sourcePaths: string[],
+  serviceId?: string | null,
+  parentPath?: string | null,
+): Promise<SlideImportResult[]> {
+  return invoke<SlideImportResult[]>("import_pptx", { serviceId, parentPath, sourcePaths });
+}
+
+/**
+ * Imports one or more `.pdf` files, extracting each page as an individual
+ * image artifact. Text is extracted per-page for searchability.
+ */
+export async function importPdf(
+  sourcePaths: string[],
+  serviceId?: string | null,
+  parentPath?: string | null,
+): Promise<SlideImportResult[]> {
+  return invoke<SlideImportResult[]>("import_pdf", { serviceId, parentPath, sourcePaths });
 }
 
 // ─── Thumbnails ──────────────────────────────────────────────────────────────

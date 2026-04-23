@@ -44,5 +44,10 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png",
 base64 = "0.22"
 tauri-plugin-dialog = "2.7.0"
 
+# Slide import — PPTX/PDF parsing and text extraction
+zip = "2"
+quick-xml = "0.37"
+lopdf = "0.34"
+# Backup — archive creation/extraction (required by backup.rs)
 flate2 = "1"
 tar = "0.4"

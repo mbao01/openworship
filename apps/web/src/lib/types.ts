@@ -302,6 +302,15 @@ export interface ArtifactsSettings {
   base_path: string;
 }
 
+
+/** Matches Rust `SlideImportResult` struct. */
+export interface SlideImportResult {
+  artifact: ArtifactEntry;
+  slide_index: number;
+  text_content: string;
+  source_file: string;
+}
+
 // ─── Phase 16: Cloud Sync, Multi-Branch & Sharing ─────────────────────────────
 
 /** Matches Rust `SyncStatus` enum. */

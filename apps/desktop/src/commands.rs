@@ -3297,6 +3297,50 @@ pub fn write_artifact_bytes(
     Ok(entry)
 }
 
+/// Import slides from one or more `.pptx` files.
+#[tauri::command]
+pub fn import_pptx(
+    service_id: Option<String>,
+    parent_path: Option<String>,
+    source_paths: Vec<String>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<Vec<crate::slide_import::SlideImportResult>, String> {
+    let results = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::slide_import::import_pptx(&mut db, service_id, parent_path, source_paths)
+            .map_err(|e| e.to_string())?
+    };
+    for r in &results {
+        if r.artifact.thumbnail_path.is_some() {
+            let _ = app.emit("artifacts://thumbnail-ready", &r.artifact.id);
+        }
+    }
+    Ok(results)
+}
+
+/// Import pages from one or more `.pdf` files.
+#[tauri::command]
+pub fn import_pdf(
+    service_id: Option<String>,
+    parent_path: Option<String>,
+    source_paths: Vec<String>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<Vec<crate::slide_import::SlideImportResult>, String> {
+    let results = {
+        let mut db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        crate::slide_import::import_pdf(&mut db, service_id, parent_path, source_paths)
+            .map_err(|e| e.to_string())?
+    };
+    for r in &results {
+        if r.artifact.thumbnail_path.is_some() {
+            let _ = app.emit("artifacts://thumbnail-ready", &r.artifact.id);
+        }
+    }
+    Ok(results)
+}
+
 #[tauri::command]
 pub fn rename_artifact(
     id: String,

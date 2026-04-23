@@ -7,7 +7,12 @@ import {
   updateUpload,
   removeUpload,
 } from "../../stores/upload-store";
-import { importArtifactFile, regenerateThumbnails } from "../../lib/commands/artifacts";
+import {
+  importArtifactFile,
+  importPdf,
+  importPptx,
+  regenerateThumbnails,
+} from "../../lib/commands/artifacts";
 import type {
   ArtifactCategory,
   ArtifactEntry,
@@ -462,6 +467,43 @@ export function AssetsScreen() {
     }
   };
 
+
+  const handleImportSlides = async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selected = await open({
+      multiple: true,
+      title: "Import Slides",
+      filters: [{ name: "Presentations & PDFs", extensions: ["pptx", "pdf"] }],
+    });
+    if (!selected) return;
+    const paths = Array.isArray(selected) ? selected : [selected];
+    const svcId = nav.kind === "service" ? nav.id : null;
+    const pptxPaths = paths.filter((p) => p.toLowerCase().endsWith(".pptx"));
+    const pdfPaths = paths.filter((p) => p.toLowerCase().endsWith(".pdf"));
+    const placeholderIds: string[] = [];
+    for (const p of paths) {
+      const fileName = p.split("/").pop() ?? p;
+      const pid = `importing-slides-${fileName}-${Date.now()}`;
+      placeholderIds.push(pid);
+      addUpload({ id: pid, name: fileName, previewUrl: "", size: 0, status: "uploading", serviceId: svcId, parentPath });
+    }
+    try {
+      const [pptxResults, pdfResults] = await Promise.all([
+        pptxPaths.length > 0 ? importPptx(pptxPaths, svcId, parentPath) : Promise.resolve([]),
+        pdfPaths.length > 0 ? importPdf(pdfPaths, svcId, parentPath) : Promise.resolve([]),
+      ]);
+      const allArtifacts = [...pptxResults.map((r) => r.artifact), ...pdfResults.map((r) => r.artifact)];
+      setEntries((prev) => {
+        const existingIds = new Set(prev.map((e) => e.id));
+        return [...allArtifacts.filter((a) => !existingIds.has(a.id)), ...prev];
+      });
+      for (const pid of placeholderIds) removeUpload(pid);
+    } catch (err) {
+      setError(String(err));
+      for (const pid of placeholderIds) updateUpload(pid, { status: "error", error: String(err) });
+    }
+  };
+
   const sectionTitle =
     nav.kind === "all"
       ? "All Assets"
@@ -677,6 +719,7 @@ export function AssetsScreen() {
                   {showNewMenu && (
                     <NewMenu
                       onNewFolder={() => setNewFolder(true)}
+                      onImportSlides={handleImportSlides}
                       onClose={() => setShowNewMenu(false)}
                     />
                   )}

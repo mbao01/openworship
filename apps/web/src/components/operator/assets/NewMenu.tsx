@@ -2,9 +2,11 @@ import { useEffect, useRef } from "react";
 
 export function NewMenu({
   onNewFolder,
+  onImportSlides,
   onClose,
 }: {
   onNewFolder: () => void;
+  onImportSlides: () => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -22,7 +24,7 @@ export function NewMenu({
   return (
     <div
       ref={ref}
-      className="absolute top-full right-0 z-[200] mt-[3px] min-w-[140px] rounded-lg border border-line-strong bg-bg-2 py-1 shadow-lg"
+      className="absolute top-full right-0 z-[200] mt-[3px] min-w-[160px] rounded-lg border border-line-strong bg-bg-2 py-1 shadow-lg"
     >
       <button
         className={btnCls}
@@ -32,6 +34,15 @@ export function NewMenu({
         }}
       >
         New Folder
+      </button>
+      <button
+        className={btnCls}
+        onClick={() => {
+          onImportSlides();
+          onClose();
+        }}
+      >
+        Import Slides (PPTX/PDF)
       </button>
     </div>
   );
