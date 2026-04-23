@@ -131,6 +131,13 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Tauri updater signing — generate key pair with `tauri signer generate`
+          # then store private key + password in repo secrets:
+          #   TAURI_PRIVATE_KEY  — base64-encoded .key file contents
+          #   TAURI_KEY_PASSWORD — passphrase used when generating the key
+          # The matching public key must be set in tauri.conf.json plugins.updater.pubkey.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}

@@ -9,6 +9,7 @@ import { DisplayPage } from "./pages/DisplayPage";
 import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { SpeakerPage } from "./pages/SpeakerPage";
 import { SplashScreen } from "./components/SplashScreen";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
 import { toast } from "@/lib/toast";
@@ -109,6 +110,7 @@ function App() {
     <TooltipProvider>
       <AppInner />
       <Toaster />
+      <UpdateBanner />
     </TooltipProvider>
   );
 }

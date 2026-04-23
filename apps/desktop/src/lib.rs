@@ -16,6 +16,7 @@ mod slides;
 mod songs;
 mod state;
 mod summaries;
+mod updater;
 
 use ow_audio::SttEngine;
 use ow_core::{QueueItem, SongRef};
@@ -254,6 +255,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         .manage(app_state)
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .register_uri_scheme_protocol("owmedia", move |_ctx, request| {
             // Custom protocol handler for local media and thumbnails.
             //
@@ -416,6 +419,10 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                     );
                 }
             }
+
+            // Background update check — silent, non-blocking; emits
+            // `updater://update-available` if a newer version is found.
+            updater::spawn_background_check(app.handle().clone());
 
             // Backfill thumbnails for any artifacts that are missing one.
             {
@@ -752,6 +759,10 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             // ── Backup / restore (OPE-154) ─────────────────────────────────
             backup::create_backup,
             backup::restore_backup,
+            // ── Auto-updater (OPE-161) ─────────────────────────────────────
+            updater::check_for_updates,
+            updater::install_update,
+            updater::restart_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
