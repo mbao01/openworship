@@ -24,7 +24,7 @@ vi.mock("../../lib/commands/settings", () => ({
   getEmailSettings: vi.fn().mockResolvedValue({}),
 }));
 
-const mockToastError = vi.fn(() => vi.fn());
+const mockToastError = vi.hoisted(() => vi.fn(() => vi.fn()));
 
 vi.mock("../../lib/toast", () => ({
   toastError: mockToastError,
