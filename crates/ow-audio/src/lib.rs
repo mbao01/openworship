@@ -34,6 +34,8 @@ pub use transcribe::{
 };
 #[cfg(feature = "deepgram")]
 pub use deepgram::DeepgramTranscriber;
+#[cfg(feature = "deepgram")]
+pub use event::DeepgramConnectionEvent;
 
 #[cfg(test)]
 mod tests {
