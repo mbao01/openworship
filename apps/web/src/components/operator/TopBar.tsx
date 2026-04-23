@@ -44,22 +44,18 @@ export function TopBar({
     };
   }, []);
 
-  // Load audio settings on mount
+  // Load audio settings on mount — suppress errors on startup
   useEffect(() => {
-    try {
-      getAudioSettings().then((s) =>
-        setInputLabel(s.audio_input_device || "INPUT"),
-      );
-    } catch {
-      // ignore
-    }
+    getAudioSettings()
+      .then((s) => setInputLabel(s.audio_input_device || "INPUT"))
+      .catch(() => {});
   }, []);
 
-  // Load initial mode from backend
+  // Load initial mode from backend — suppress errors on startup
   useEffect(() => {
     invoke<DetectionMode>("get_detection_mode")
       .then(onModeChange)
-      .catch(toastError("Failed to load detection mode"));
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
