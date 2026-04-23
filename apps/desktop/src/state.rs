@@ -85,7 +85,10 @@ pub struct AppState {
 
 impl AppState {
     pub fn stt_status(&self) -> SttStatus {
-        self.stt.lock().unwrap().status()
+        self.stt
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .status()
     }
 
     /// Send a content event to the display, but only if blackout is off.
