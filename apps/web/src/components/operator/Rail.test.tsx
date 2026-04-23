@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe } from "vitest-axe";
 import { Rail } from "./Rail";
 
 describe("Rail", () => {
@@ -62,5 +63,13 @@ describe("Rail", () => {
     rerender(<Rail screen="settings" onScreenChange={() => {}} />);
     accentBars = container.querySelectorAll(".bg-accent");
     expect(accentBars.length).toBe(1);
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = render(
+      <Rail screen="live" onScreenChange={() => {}} />,
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

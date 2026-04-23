@@ -383,6 +383,7 @@ export function StagePanel({ mode, visible = true }: { mode: DetectionMode; visi
         <div className="flex shrink-0 items-center gap-2 rounded border border-line bg-bg-2 px-2.5 py-1.5 font-mono text-[10px] tracking-[0.1em] text-ink-2 uppercase">
           <span className="hidden xl:inline">Translation</span>
           <select
+            aria-label="Bible translation"
             className="cursor-pointer border-0 bg-transparent p-0 font-mono text-[10px] tracking-[0.1em] text-accent uppercase outline-0"
             value={activeTranslation}
             onChange={(e) =>
