@@ -2377,15 +2377,19 @@ pub fn push_artifact_to_display(
 /// For presets (e.g. "preset:dark_gradient"), resolves to the CSS gradient value.
 /// For artifacts (e.g. "artifact:abc123"), resolves to a base64 data URL so the
 /// display page (which may run in a browser/OBS without Tauri invoke) can render it.
+///
+/// File reading and base64 encoding are offloaded to a blocking thread so the
+/// async Tauri command thread is never stalled by disk I/O.
 #[tauri::command]
-pub fn set_display_background(
+pub async fn set_display_background(
     background_id: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // Resolve the background_id to a display-ready value
+    // Resolve the background_id to a display-ready value.
+    // For image artifacts the file read is deferred to spawn_blocking below.
     let ev = match &background_id {
         Some(id) => {
-            let (resolved, bg_type) = resolve_background_value(id, &state)?;
+            let (resolved, bg_type) = resolve_background_value(id, &state).await?;
             ContentEvent::set_background(resolved, bg_type.as_deref())
         }
         None => ContentEvent::clear_background(),
@@ -2406,7 +2410,10 @@ pub fn set_display_background(
 /// Resolve a background ID to a display-ready value.
 ///
 /// Returns `(resolved_url, bg_type)` where bg_type is `"video"`, `"image"`, or `"gradient"`.
-fn resolve_background_value(id: &str, state: &AppState) -> Result<(String, Option<String>), String> {
+///
+/// For image artifacts the file read and base64 encoding are done in a
+/// `spawn_blocking` task so the async runtime thread is never blocked by disk I/O.
+async fn resolve_background_value(id: &str, state: &AppState) -> Result<(String, Option<String>), String> {
     if let Some(preset_key) = id.strip_prefix("preset:") {
         let presets = crate::backgrounds::list_presets();
         let preset = presets
@@ -2415,25 +2422,37 @@ fn resolve_background_value(id: &str, state: &AppState) -> Result<(String, Optio
             .ok_or_else(|| format!("Unknown preset: {id}"))?;
         Ok((preset.value.clone(), Some("gradient".into())))
     } else if let Some(artifact_id) = id.strip_prefix("artifact:") {
-        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
-        let entry = db
-            .get_by_id(artifact_id)
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| format!("Artifact not found: {artifact_id}"))?;
-        let abs_path = db.abs_path(&entry.path);
-        let mime = entry
-            .mime_type
-            .as_deref()
-            .unwrap_or("image/jpeg");
+        // Acquire the DB lock only long enough to look up the path and mime type —
+        // no I/O happens here.
+        let (abs_path, mime, is_video) = {
+            let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+            let entry = db
+                .get_by_id(artifact_id)
+                .map_err(|e| e.to_string())?
+                .ok_or_else(|| format!("Artifact not found: {artifact_id}"))?;
+            let abs_path = db.abs_path(&entry.path);
+            let mime = entry
+                .mime_type
+                .clone()
+                .unwrap_or_else(|| "image/jpeg".to_string());
+            let is_video = mime.starts_with("video/");
+            (abs_path, mime, is_video)
+        }; // lock released here
 
-        if mime.starts_with("video/") {
+        if is_video {
             Ok((format!("owmedia://localhost/{artifact_id}"), Some("video".into())))
         } else {
-            let bytes = std::fs::read(&abs_path)
-                .map_err(|e| format!("Failed to read artifact: {e}"))?;
-            use base64::Engine;
-            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-            Ok((format!("data:{mime};base64,{b64}"), Some("image".into())))
+            // Offload blocking file read + base64 encode to a dedicated thread.
+            let data_url = tauri::async_runtime::spawn_blocking(move || {
+                let bytes = std::fs::read(&abs_path)
+                    .map_err(|e| format!("Failed to read artifact: {e}"))?;
+                use base64::Engine;
+                let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+                Ok::<String, String>(format!("data:{mime};base64,{b64}"))
+            })
+            .await
+            .map_err(|e| format!("spawn_blocking failed: {e}"))??;
+            Ok((data_url, Some("image".into())))
         }
     } else {
         Ok((id.to_string(), None))
@@ -3411,6 +3430,21 @@ pub fn get_cloud_sync_info(
         .lock()
         .map_err(|e| e.to_string())?
         .get_sync_info(&artifact_id)
+        .map_err(|e| e.to_string())
+}
+
+/// Batch-fetch cloud sync state for multiple artifacts in a single DB query.
+/// Returns only entries that have a row in cloud_sync (unsynchronised artifacts are absent).
+#[tauri::command]
+pub fn get_cloud_sync_infos(
+    artifact_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<CloudSyncInfo>, String> {
+    state
+        .cloud_sync_db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .get_sync_infos_batch(&artifact_ids)
         .map_err(|e| e.to_string())
 }
 
