@@ -416,17 +416,23 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                         Err(_) => return,
                     };
                     eprintln!("[thumbnail] backfilling {} artifacts with missing thumbnails", entries.len());
+                    // Spawn a per-artifact blocking task so all thumbnails are generated concurrently.
                     for entry in entries {
-                        let abs_path = base_dir.join(&entry.path);
-                        if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
-                            if let Ok(db) = db_arc.lock() {
-                                if let Ok(Some(mut e)) = db.get_by_id(&entry.id) {
-                                    e.thumbnail_path = Some(thumb);
-                                    let _ = db.upsert(&e);
+                        let db_arc = db_arc.clone();
+                        let app_for_thumbs = app_for_thumbs.clone();
+                        let base_dir = base_dir.clone();
+                        tauri::async_runtime::spawn_blocking(move || {
+                            let abs_path = base_dir.join(&entry.path);
+                            if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
+                                if let Ok(db) = db_arc.lock() {
+                                    if let Ok(Some(mut e)) = db.get_by_id(&entry.id) {
+                                        e.thumbnail_path = Some(thumb);
+                                        let _ = db.upsert(&e);
+                                    }
                                 }
+                                let _ = app_for_thumbs.emit("artifacts://thumbnail-ready", &entry.id);
                             }
-                            let _ = app_for_thumbs.emit("artifacts://thumbnail-ready", &entry.id);
-                        }
+                        });
                     }
                 });
             }
