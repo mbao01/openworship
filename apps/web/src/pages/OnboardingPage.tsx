@@ -1,3 +1,4 @@
+import { ChevronRightIcon } from "lucide-react";
 import { useState } from "react";
 import { invoke } from "../lib/tauri";
 import type { ChurchIdentity } from "../lib/types";
@@ -49,26 +50,32 @@ function PickFlow({ onSelect }: { onSelect: (f: Flow) => void }) {
       </p>
       <div className="mt-2 flex flex-col gap-2">
         <button
-          className="flex cursor-pointer flex-col gap-1 rounded border border-line bg-bg-1 px-6 py-4 text-left transition-[border-color,background] duration-150 ease-out hover:border-line-strong hover:bg-bg-2"
+          className="flex cursor-pointer items-center gap-4 rounded border border-line bg-bg-1 px-6 py-4 text-left transition-[border-color,background] duration-150 ease-out hover:border-line-strong hover:bg-bg-2"
           onClick={() => onSelect("create")}
         >
-          <span className="font-sans text-[13px] font-medium text-ink">
-            Create a new church
+          <span className="flex flex-1 flex-col gap-1">
+            <span className="font-sans text-[13px] font-medium text-ink">
+              Create a new church
+            </span>
+            <span className="text-[12px] leading-[1.4] text-ink-3">
+              Start fresh — you'll be the headquarters branch.
+            </span>
           </span>
-          <span className="text-[12px] leading-[1.4] text-ink-3">
-            Start fresh — you'll be the headquarters branch.
-          </span>
+          <ChevronRightIcon className="size-4 shrink-0 text-ink-3" />
         </button>
         <button
-          className="flex cursor-pointer flex-col gap-1 rounded border border-line bg-bg-1 px-6 py-4 text-left transition-[border-color,background] duration-150 ease-out hover:border-line-strong hover:bg-bg-2"
+          className="flex cursor-pointer items-center gap-4 rounded border border-line bg-bg-1 px-6 py-4 text-left transition-[border-color,background] duration-150 ease-out hover:border-line-strong hover:bg-bg-2"
           onClick={() => onSelect("join")}
         >
-          <span className="font-sans text-[13px] font-medium text-ink">
-            Join an existing church
+          <span className="flex flex-1 flex-col gap-1">
+            <span className="font-sans text-[13px] font-medium text-ink">
+              Join an existing church
+            </span>
+            <span className="text-[12px] leading-[1.4] text-ink-3">
+              Enter an invite code from your HQ branch.
+            </span>
           </span>
-          <span className="text-[12px] leading-[1.4] text-ink-3">
-            Enter an invite code from your HQ branch.
-          </span>
+          <ChevronRightIcon className="size-4 shrink-0 text-ink-3" />
         </button>
       </div>
     </>
