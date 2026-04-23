@@ -107,9 +107,14 @@ function getTargetRect(selector: string): TargetRect | null {
 interface TourOverlayProps {
   /** Called when Step 5 "Open Plan →" is clicked */
   onOpenPlan?: () => void;
+  /**
+   * Called by TourOverlay when an interactive step auto-advances (Steps 2 and 3).
+   * OperatorPage wires this to `advanceStep()` so it stays in control of tour state.
+   */
+  onAdvance?: () => void;
 }
 
-export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
+export function TourOverlay({ onOpenPlan, onAdvance }: TourOverlayProps) {
   const { isTourActive, currentStep, exitConfirmVisible } = useTour();
   const [rect, setRect] = useState<TargetRect | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -188,13 +193,15 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
   }, [currentStep, isTourActive, clearGhostTimers]);
 
   // ── Auto-advance events ─────────────────────────────────────────────────────
+  // Window events dispatched by ScriptureSearchPanel; OperatorPage owns the
+  // advance action via the onAdvance prop so it stays in control of tour state.
 
   useEffect(() => {
     const onResult = () => {
-      if (currentStep === 2) void advanceStep();
+      if (currentStep === 2) onAdvance?.();
     };
     const onPushed = () => {
-      if (currentStep === 3) void advanceStep();
+      if (currentStep === 3) onAdvance?.();
     };
     window.addEventListener("tour:scripture-result-appeared", onResult);
     window.addEventListener("tour:scripture-pushed", onPushed);
@@ -202,7 +209,7 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
       window.removeEventListener("tour:scripture-result-appeared", onResult);
       window.removeEventListener("tour:scripture-pushed", onPushed);
     };
-  }, [currentStep]);
+  }, [currentStep, onAdvance]);
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -274,13 +281,18 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
   const spotW = rect ? rect.width + SPOTLIGHT_PADDING * 2 : 0;
   const spotH = rect ? rect.height + SPOTLIGHT_PADDING * 2 : 0;
 
-  // Popover position: try below the spotlight, keeping inside the viewport
-  const popoverTop = rect ? spotTop + spotH + POPOVER_GAP : window.innerHeight / 2;
+  // Popover position: anchor right for narrow targets (e.g. Rail icon buttons),
+  // below for wider targets (column-level or panel-level spotlights).
+  const isNarrowTarget = rect ? rect.width < 200 : false;
+  const popoverTop = rect
+    ? isNarrowTarget
+      ? spotTop
+      : spotTop + spotH + POPOVER_GAP
+    : window.innerHeight / 2;
   const popoverLeft = rect
-    ? Math.min(
-        Math.max(spotLeft, 8),
-        window.innerWidth - 320 - 8,
-      )
+    ? isNarrowTarget
+      ? Math.min(spotLeft + spotW + POPOVER_GAP, window.innerWidth - 320 - 8)
+      : Math.min(Math.max(spotLeft, 8), window.innerWidth - 320 - 8)
     : window.innerWidth / 2 - 160;
 
   return createPortal(

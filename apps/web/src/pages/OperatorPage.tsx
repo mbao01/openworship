@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ChurchIdentity, DetectionMode } from "../lib/types";
 import { useQueue } from "../hooks/use-queue";
+import { advanceStep } from "../stores/tour-store";
 import { Rail } from "../components/operator/Rail";
 import { TopBar } from "../components/operator/TopBar";
 import { LiveScreen } from "../components/operator/LiveScreen";
@@ -40,6 +41,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
   }, []);
 
   const handleCloseCmdK = useCallback(() => setCmdkOpen(false), []);
+  const handleTourAdvance = useCallback(() => void advanceStep(), []);
   const handlePush = useCallback(() => {
     const first = queue[0];
     if (first) approve(first.id).catch((err) => console.error(err));
@@ -108,7 +110,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
         onClose={() => setSettingsOpen(false)}
       />
       {cmdkOpen && <CommandPalette onClose={handleCloseCmdK} />}
-      <TourOverlay onOpenPlan={() => setScreen("plan")} />
+      <TourOverlay onOpenPlan={() => setScreen("plan")} onAdvance={handleTourAdvance} />
     </div>
   );
 }
