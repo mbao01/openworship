@@ -33,45 +33,23 @@ export interface UseDisplayBackgroundReturn {
 
 /**
  * Resolve an artifact reference to a usable URL.
- * Videos → convertFileSrc (no blob, streams from disk).
- * Images → blob URL via read_artifact_bytes.
+ * All types use owmedia:// — no IPC round-trip, no blob allocation.
  */
-async function resolveArtifactUrl(
-  artifactId: string,
-  bgType: string,
-): Promise<string | null> {
-  try {
-    if (bgType === "video") {
-      // Videos: use the custom owmedia:// protocol (streamed from Rust)
-      return `owmedia://localhost/${artifactId}`;
-    }
-    // Images: read bytes and create blob URL
-    const bytes = await invoke<number[]>("read_artifact_bytes", {
-      id: artifactId,
-    });
-    const blob = new Blob([new Uint8Array(bytes)]);
-    return URL.createObjectURL(blob);
-  } catch {
-    return null;
-  }
+function resolveArtifactUrl(artifactId: string): string {
+  return `owmedia://localhost/${artifactId}`;
 }
 
 /**
  * Resolve uploaded background values to renderable URLs.
  */
-async function resolveUploadedValues(
-  items: BackgroundInfo[],
-): Promise<BackgroundInfo[]> {
-  return Promise.all(
-    items.map(async (bg) => {
-      if (bg.value.startsWith("artifact:")) {
-        const artId = bg.value.replace("artifact:", "");
-        const url = await resolveArtifactUrl(artId, bg.bg_type);
-        if (url) return { ...bg, value: url };
-      }
-      return bg;
-    }),
-  );
+function resolveUploadedValues(items: BackgroundInfo[]): BackgroundInfo[] {
+  return items.map((bg) => {
+    if (bg.value.startsWith("artifact:")) {
+      const artId = bg.value.replace("artifact:", "");
+      return { ...bg, value: resolveArtifactUrl(artId) };
+    }
+    return bg;
+  });
 }
 
 export function useDisplayBackground(): UseDisplayBackgroundReturn {
@@ -80,7 +58,6 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
   const [presets, setPresets] = useState<BackgroundInfo[]>([]);
   const [uploaded, setUploaded] = useState<BackgroundInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const blobUrls = useRef<string[]>([]);
   const uploadedLoaded = useRef(false);
 
   // Fast mount: load presets + active background ID.
@@ -94,19 +71,11 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
         // Eagerly resolve the active background if it's an artifact
         if (bg?.startsWith("artifact:")) {
           const artId = bg.replace("artifact:", "");
-          // Fetch the bg_type to know if it's a video
           try {
             const all = await listUploadedBackgrounds();
             const active = all.find((u) => u.id === bg);
             if (active) {
-              const url = await resolveArtifactUrl(
-                artId,
-                active.bg_type,
-              );
-              if (url) {
-                if (url.startsWith("blob:")) blobUrls.current.push(url);
-                setUploaded([{ ...active, value: url }]);
-              }
+              setUploaded([{ ...active, value: resolveArtifactUrl(artId) }]);
             }
           } catch {
             // non-critical — bg picker will load all later
@@ -115,11 +84,6 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-
-    const urls = blobUrls.current;
-    return () => {
-      for (const url of urls) URL.revokeObjectURL(url);
-    };
   }, []);
 
   // Lazy: load ALL uploaded backgrounds on demand (called when picker opens)
@@ -127,11 +91,8 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
     if (uploadedLoaded.current) return;
     uploadedLoaded.current = true;
     listUploadedBackgrounds()
-      .then(async (u) => {
-        const resolved = await resolveUploadedValues(u);
-        for (const r of resolved) {
-          if (r.value.startsWith("blob:")) blobUrls.current.push(r.value);
-        }
+      .then((u) => {
+        const resolved = resolveUploadedValues(u);
         // Merge with any eagerly-loaded active background
         setUploaded((prev) => {
           const prevIds = new Set(prev.map((p) => p.id));
@@ -160,12 +121,11 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
     });
     if (info.value.startsWith("artifact:")) {
       const artId = info.value.replace("artifact:", "");
-      const url = await resolveArtifactUrl(artId, info.bg_type);
-      if (url) {
-        if (url.startsWith("blob:")) blobUrls.current.push(url);
-        setUploaded((prev) => [...prev, { ...info, value: url }]);
-        return;
-      }
+      setUploaded((prev) => [
+        ...prev,
+        { ...info, value: resolveArtifactUrl(artId) },
+      ]);
+      return;
     }
     setUploaded((prev) => [...prev, info]);
   }, []);
