@@ -639,32 +639,41 @@ pub fn set_provider_secret(
 
 // ─── Audio settings commands ──────────────────────────────────────────────────
 
-/// Return the current audio settings, with the Deepgram API key populated from
-/// the OS keychain (never from disk).
+/// Return the current audio settings.
+///
+/// Note: `deepgram_api_key` is skipped during serialisation (`#[serde(skip_serializing)]`)
+/// and is therefore never sent to the frontend. Secrets are managed via
+/// [`set_provider_secret`] / [`crate::keychain`] instead.
 #[tauri::command]
 pub fn get_audio_settings(state: State<'_, AppState>) -> Result<AudioSettings, String> {
-    let mut settings = state
+    state
         .audio_settings
         .read()
         .map(|s| s.clone())
-        .map_err(|e| e.to_string())?;
-    // Always refresh from keychain so the UI sees the current stored value.
-    settings.deepgram_api_key = crate::keychain::get_deepgram_api_key().unwrap_or_default();
-    Ok(settings)
+        .map_err(|e| e.to_string())
 }
 
 /// Persist updated audio settings.
 ///
-/// The Deepgram API key is saved to the OS keychain; all other fields go to
-/// `~/.openworship/settings.json` (the key is excluded from that file).
+/// If the caller supplies a non-empty `deepgram_api_key`, it is saved to the
+/// OS keychain (legacy path).  An empty string is treated as "no change" —
+/// the existing keychain entry is left intact.  All other fields go to
+/// `~/.openworship/settings.json` (the key is excluded from that file via
+/// `#[serde(skip_serializing)]`).
 #[tauri::command]
 pub fn set_audio_settings(
     settings: AudioSettings,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // Save the key to the keychain before updating shared state.
-    crate::keychain::set_deepgram_api_key(&settings.deepgram_api_key)
-        .map_err(|e| format!("keychain error: {e}"))?;
+    // Only update the keychain when the caller supplies a non-empty key.
+    // An empty string means "keep the existing keychain entry" — this prevents
+    // accidental deletion when the frontend saves other audio settings without
+    // re-sending the key (it is never returned by get_audio_settings because of
+    // skip_serializing).
+    if !settings.deepgram_api_key.is_empty() {
+        crate::keychain::set_deepgram_api_key(&settings.deepgram_api_key)
+            .map_err(|e| format!("keychain error: {e}"))?;
+    }
 
     let mut s = state
         .audio_settings
@@ -3414,15 +3423,16 @@ pub fn regenerate_thumbnails(
 
 use crate::cloud_sync::{AclEntry, AccessLevel, CloudSyncInfo, S3Config, SyncStatus};
 
-/// Return the current S3 cloud config (without the secret key).
+/// Return the current S3 cloud config.
+///
+/// `secret_access_key` is **never** included in the response: `S3Config` uses
+/// `#[serde(skip_serializing)]` on that field, so Tauri's IPC serialiser omits
+/// it automatically.  The frontend should use `setCloudConfig` with a non-empty
+/// `secret_access_key` only when the user is updating the credential.
 #[tauri::command]
 pub fn get_cloud_config(state: State<'_, AppState>) -> Result<Option<S3Config>, String> {
     let cfg = state.cloud_config.read().map_err(|e| e.to_string())?;
-    Ok(cfg.as_ref().map(|c| {
-        let mut safe = c.clone();
-        safe.secret_access_key = String::new();
-        safe
-    }))
+    Ok(cfg.clone())
 }
 
 /// Save S3 cloud configuration. The secret key is stored in the OS keychain;

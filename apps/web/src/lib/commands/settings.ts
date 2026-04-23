@@ -27,7 +27,7 @@ export async function getAudioSettings(): Promise<AudioSettings> {
 
 /**
  * Persists the full audio settings struct to disk.
- * Sensitive fields (deepgram_api_key) are stored in the OS keychain.
+ * Sensitive fields (e.g. Deepgram API key) are stored in the OS keychain via setProviderSecret.
  */
 export async function setAudioSettings(settings: AudioSettings): Promise<void> {
   return invoke("set_audio_settings", { settings });
