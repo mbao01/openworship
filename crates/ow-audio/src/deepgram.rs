@@ -1,14 +1,17 @@
 //! Deepgram online STT backend — streams 16 kHz PCM audio over WebSocket and
-//! receives transcripts asynchronously.
+//! receives transcripts asynchronously, with automatic reconnection.
 //!
 //! Only compiled when the `deepgram` feature is enabled.
 
 #![cfg(feature = "deepgram")]
 
+use crate::event::DeepgramConnectionEvent;
 use crate::transcribe::Transcriber;
 use anyhow::Result;
 use futures_util::{SinkExt, StreamExt};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::{
     connect_async,
     tungstenite::{client::IntoClientRequest, Message},
@@ -24,41 +27,61 @@ const DEEPGRAM_URL: &str =
      &interim_results=true\
      &punctuate=true";
 
+/// Exponential backoff parameters for reconnection.
+const INITIAL_BACKOFF_SECS: u64 = 1;
+const MAX_BACKOFF_SECS: u64 = 30;
+
+/// What caused a single WebSocket session to end.
+enum SessionOutcome {
+    /// The audio channel was closed — clean shutdown requested.
+    AudioClosed,
+    /// The WebSocket disconnected unexpectedly — should reconnect.
+    WsDisconnected,
+}
+
 /// Streams microphone audio to the Deepgram WebSocket API and collects
 /// transcripts into a shared buffer.
 ///
 /// The struct implements [`Transcriber`]: each call to [`transcribe`] sends the
 /// current audio chunk to Deepgram and drains any transcript that has arrived
-/// since the previous call. This keeps the caller's synchronous worker loop
-/// unchanged while achieving real-time streaming latency.
+/// since the previous call.
 ///
-/// A dedicated single-threaded Tokio runtime lives inside the struct so that
-/// the networking tasks are independent of Tauri's runtime.
+/// A dedicated Tokio runtime lives inside the struct so that the networking
+/// tasks are independent of Tauri's runtime. The background task automatically
+/// reconnects with exponential backoff when the WebSocket drops.
 pub struct DeepgramTranscriber {
-    audio_tx: tokio::sync::mpsc::Sender<Vec<f32>>,
+    audio_tx: mpsc::Sender<Vec<f32>>,
     transcript_buf: Arc<Mutex<String>>,
     /// Keeps the runtime alive for the lifetime of the transcriber.
     _rt: tokio::runtime::Runtime,
 }
 
 impl DeepgramTranscriber {
-    /// Create a new transcriber and immediately start the background WebSocket
-    /// session for the given API key.
+    /// Create a new transcriber without connection event reporting.
     pub fn new(api_key: &str) -> Result<Self> {
+        Self::new_with_events(api_key, None)
+    }
+
+    /// Create a new transcriber. Connection state changes are sent on
+    /// `connection_tx` so callers can forward them as Tauri events.
+    ///
+    /// Use `"stt://deepgram-connection"` as the event name on the Tauri side.
+    pub fn new_with_events(
+        api_key: &str,
+        connection_tx: Option<mpsc::Sender<DeepgramConnectionEvent>>,
+    ) -> Result<Self> {
         let rt = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .enable_all()
             .build()?;
 
-        let (audio_tx, audio_rx) = tokio::sync::mpsc::channel::<Vec<f32>>(32);
+        let (audio_tx, audio_rx) = mpsc::channel::<Vec<f32>>(32);
         let transcript_buf: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
         let buf_clone = transcript_buf.clone();
         let api_key = api_key.to_owned();
 
         rt.spawn(async move {
-            if let Err(e) = run_session(api_key, audio_rx, buf_clone).await {
-                eprintln!("[ow-audio/deepgram] session error: {e}");
-            }
+            run_reconnect_loop(api_key, audio_rx, buf_clone, connection_tx).await;
         });
 
         Ok(Self { audio_tx, transcript_buf, _rt: rt })
@@ -70,7 +93,7 @@ impl Transcriber for DeepgramTranscriber {
     /// since the last call.  Returns `Ok("")` when nothing has arrived yet —
     /// the engine will silently skip empty strings.
     fn transcribe(&mut self, samples: &[f32]) -> Result<String> {
-        // try_send is sync and non-blocking; drop the chunk if the channel is full.
+        // try_send is sync and non-blocking; drops the chunk if the channel is full.
         let _ = self.audio_tx.try_send(samples.to_vec());
 
         let mut buf = self.transcript_buf.lock().unwrap_or_else(|e| e.into_inner());
@@ -82,24 +105,106 @@ impl Transcriber for DeepgramTranscriber {
     }
 }
 
-// ─── Background async session ─────────────────────────────────────────────────
+// ─── Reconnection loop ────────────────────────────────────────────────────────
 
-async fn run_session(
+/// Top-level background task: runs WebSocket sessions with exponential backoff
+/// reconnection on unexpected disconnects.
+async fn run_reconnect_loop(
     api_key: String,
-    mut audio_rx: tokio::sync::mpsc::Receiver<Vec<f32>>,
+    mut audio_rx: mpsc::Receiver<Vec<f32>>,
     transcript_buf: Arc<Mutex<String>>,
-) -> Result<()> {
+    connection_tx: Option<mpsc::Sender<DeepgramConnectionEvent>>,
+) {
+    let mut backoff_secs = INITIAL_BACKOFF_SECS;
+    let mut attempt: u32 = 0;
+
+    loop {
+        let result = run_one_session(
+            &api_key,
+            &mut audio_rx,
+            &transcript_buf,
+            &connection_tx,
+            attempt > 0,
+        )
+        .await;
+
+        match result {
+            Ok(SessionOutcome::AudioClosed) => break,
+            Ok(SessionOutcome::WsDisconnected) => {
+                attempt += 1;
+                eprintln!(
+                    "[deepgram] WebSocket disconnected — reconnecting in {backoff_secs}s \
+                     (attempt {attempt})"
+                );
+            }
+            Err(e) => {
+                attempt += 1;
+                eprintln!(
+                    "[deepgram] connection error: {e} — retrying in {backoff_secs}s \
+                     (attempt {attempt})"
+                );
+            }
+        }
+
+        // Notify the frontend that reconnection is in progress.
+        if let Some(ref tx) = connection_tx {
+            let _ = tx.try_send(DeepgramConnectionEvent::Reconnecting {
+                attempt,
+                delay_secs: backoff_secs,
+            });
+        }
+
+        // Drain stale audio that accumulated while the connection was down so
+        // Deepgram gets fresh audio on reconnect rather than a burst of old frames.
+        while audio_rx.try_recv().is_ok() {}
+
+        tokio::time::sleep(Duration::from_secs(backoff_secs)).await;
+
+        // Exit cleanly if the audio channel was closed while we were sleeping.
+        if audio_rx.is_closed() {
+            break;
+        }
+
+        // Double the backoff for next time, capped at MAX_BACKOFF_SECS.
+        backoff_secs = (backoff_secs * 2).min(MAX_BACKOFF_SECS);
+    }
+}
+
+/// Run a single WebSocket session until it ends (cleanly or by error/disconnect).
+///
+/// - Returns `Ok(AudioClosed)` when `audio_rx` is closed (clean shutdown).
+/// - Returns `Ok(WsDisconnected)` when the WebSocket drops unexpectedly.
+/// - Returns `Err(…)` when the initial connection attempt fails.
+///
+/// `is_reconnect` controls whether a successful connect emits `Restored`.
+async fn run_one_session(
+    api_key: &str,
+    audio_rx: &mut mpsc::Receiver<Vec<f32>>,
+    transcript_buf: &Arc<Mutex<String>>,
+    connection_tx: &Option<mpsc::Sender<DeepgramConnectionEvent>>,
+    is_reconnect: bool,
+) -> Result<SessionOutcome> {
     let mut request = DEEPGRAM_URL.into_client_request()?;
-    request.headers_mut().insert(
-        "Authorization",
-        format!("Token {api_key}").parse()?,
-    );
+    request
+        .headers_mut()
+        .insert("Authorization", format!("Token {api_key}").parse()?);
 
     let (ws_stream, _) = connect_async(request).await?;
+
+    // Successfully (re)connected — notify frontend.
+    if is_reconnect {
+        eprintln!("[deepgram] reconnected successfully");
+        if let Some(ref tx) = connection_tx {
+            let _ = tx.try_send(DeepgramConnectionEvent::Restored);
+        }
+    }
+
     let (mut write, mut read) = ws_stream.split();
 
-    // Reader: parse Deepgram JSON responses and append to the shared buffer.
+    // Reader task: parse Deepgram JSON responses and detect WebSocket close.
     let buf_clone = transcript_buf.clone();
+    let (ws_closed_tx, ws_closed_rx) = oneshot::channel::<()>();
+
     tokio::spawn(async move {
         while let Some(msg) = read.next().await {
             match msg {
@@ -114,24 +219,44 @@ async fn run_session(
                         }
                     }
                 }
-                Ok(Message::Close(_)) | Err(_) => break,
+                Ok(Message::Close(_)) | Err(_) => {
+                    let _ = ws_closed_tx.send(());
+                    break;
+                }
                 _ => {}
             }
         }
+        // ws_closed_tx is dropped here if the stream ended without a Close frame,
+        // which also signals ws_closed_rx in the writer below.
     });
 
-    // Writer: receive f32 audio chunks and forward as 16-bit PCM binary frames.
-    while let Some(samples) = audio_rx.recv().await {
-        let bytes = f32_to_i16_le(samples.as_slice());
-        if write.send(Message::Binary(bytes.into())).await.is_err() {
-            break;
+    // Writer loop: forward audio chunks and react to reader-detected closes.
+    let mut ws_closed_rx = ws_closed_rx;
+    loop {
+        tokio::select! {
+            recv = audio_rx.recv() => {
+                match recv {
+                    Some(samples) => {
+                        let bytes = f32_to_i16_le(samples.as_slice());
+                        if write.send(Message::Binary(bytes.into())).await.is_err() {
+                            return Ok(SessionOutcome::WsDisconnected);
+                        }
+                    }
+                    None => {
+                        // Audio channel closed — send CloseStream and exit cleanly.
+                        let _ = write
+                            .send(Message::Text(r#"{"type":"CloseStream"}"#.into()))
+                            .await;
+                        return Ok(SessionOutcome::AudioClosed);
+                    }
+                }
+            }
+            _ = &mut ws_closed_rx => {
+                // Reader task detected WebSocket close/error.
+                return Ok(SessionOutcome::WsDisconnected);
+            }
         }
     }
-
-    // Send a CloseStream message so Deepgram finalises any in-progress utterance.
-    let _ = write.send(Message::Text(r#"{"type":"CloseStream"}"#.into())).await;
-
-    Ok(())
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -212,5 +337,30 @@ mod tests {
         assert_eq!(pos, i16::MAX);
         // −2.0 clamped to −1.0 → i16::MIN+1 (cast from -1.0 * 32767.0)
         assert!(neg < 0);
+    }
+
+    #[test]
+    fn backoff_doubles_and_caps() {
+        let mut b = INITIAL_BACKOFF_SECS;
+        for _ in 0..10 {
+            b = (b * 2).min(MAX_BACKOFF_SECS);
+        }
+        assert_eq!(b, MAX_BACKOFF_SECS);
+    }
+
+    #[test]
+    fn connection_event_reconnecting_serializes() {
+        let evt = DeepgramConnectionEvent::Reconnecting { attempt: 3, delay_secs: 8 };
+        let json = serde_json::to_string(&evt).unwrap();
+        assert!(json.contains("\"status\":\"reconnecting\""), "got: {json}");
+        assert!(json.contains("\"attempt\":3"), "got: {json}");
+        assert!(json.contains("\"delay_secs\":8"), "got: {json}");
+    }
+
+    #[test]
+    fn connection_event_restored_serializes() {
+        let evt = DeepgramConnectionEvent::Restored;
+        let json = serde_json::to_string(&evt).unwrap();
+        assert!(json.contains("\"status\":\"restored\""), "got: {json}");
     }
 }
