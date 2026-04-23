@@ -8,6 +8,7 @@ export type SettingsCategory =
   | "detection"
   | "email"
   | "cloud"
+  | "backup"
   | "shortcuts"
   | "about";
 
@@ -19,6 +20,7 @@ const CATEGORIES: { id: SettingsCategory; label: string }[] = [
   { id: "detection", label: "Detection" },
   { id: "email", label: "Service" },
   { id: "cloud", label: "Cloud" },
+  { id: "backup", label: "Backup" },
   { id: "shortcuts", label: "Shortcuts" },
   { id: "about", label: "About" },
 ];
