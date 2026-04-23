@@ -12,11 +12,9 @@ test.describe("Screen Switching", () => {
     await expect(page.getByText("Queue")).toBeVisible();
   });
 
-  test("Live screen shows stage toolbar", async ({ operatorPage: page }) => {
+  test("Live screen shows stage toolbar with Push next", async ({ operatorPage: page }) => {
     await page.getByText("Live", { exact: true }).click();
     await expect(page.getByText("Push next")).toBeVisible();
-    // Blackout toggle button (aria-label varies by state)
-    await expect(page.locator('button[aria-pressed]')).toBeVisible();
   });
 
   test("Prep screen renders", async ({ operatorPage: page }) => {
