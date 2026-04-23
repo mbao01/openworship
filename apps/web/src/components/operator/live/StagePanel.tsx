@@ -106,10 +106,12 @@ function ScaledPreview({
   return (
     <div
       ref={containerRef}
-      className={`relative aspect-video w-full overflow-hidden border border-line-strong ${
+      className={`relative aspect-video w-full overflow-hidden border ${
         dimmed
           ? "border-[rgba(201,167,106,0.35)] opacity-[0.85] hover:opacity-[0.95]"
-          : ""
+          : label === "LIVE"
+          ? "border-live/60"
+          : "border-line-strong"
       }`}
       style={{
         boxShadow: dimmed
@@ -117,6 +119,10 @@ function ScaledPreview({
           : "0 20px 60px -20px rgba(0,0,0,0.6), inset 0 0 120px rgba(0,0,0,0.6)",
       }}
     >
+      {/* Red top-bar treatment for active LIVE panel */}
+      {label === "LIVE" && !dimmed && (
+        <div className="absolute top-0 left-0 right-0 z-30 h-[3px] bg-live" />
+      )}
       <div
         style={{
           width: REF_WIDTH,
@@ -134,9 +140,13 @@ function ScaledPreview({
       </div>
       {/* Label overlay — rendered at preview scale, not inside the 1920×1080 content */}
       <div
-        className="absolute top-0 right-0 left-0 z-20 flex justify-between px-4 py-2 font-mono text-[9.5px] tracking-[0.18em] uppercase"
+        className="absolute top-0 right-0 left-0 z-20 flex items-center justify-between px-4 py-2 font-mono text-[9.5px] tracking-[0.18em] uppercase"
         style={{
-          color: dimmed ? "rgba(201,167,106,0.75)" : "rgba(245,239,223,0.5)",
+          color: dimmed
+            ? "rgba(201,167,106,0.75)"
+            : label === "LIVE"
+            ? "rgba(245,239,223,0.9)"
+            : "rgba(245,239,223,0.5)",
         }}
       >
         <span className="inline-flex items-center gap-1">
@@ -145,7 +155,20 @@ function ScaledPreview({
           )}
           {label} · {sublabel}
         </span>
-        <span>openworship</span>
+        {label === "PREVIEW" && item ? (
+          <span
+            className="rounded-sm px-1.5 py-0.5 font-mono text-[8px] tracking-[0.15em] uppercase"
+            style={{
+              background: "rgba(201,167,106,0.1)",
+              color: "rgba(201,167,106,0.65)",
+              border: "1px solid rgba(201,167,106,0.2)",
+            }}
+          >
+            NEXT
+          </span>
+        ) : (
+          <span>openworship</span>
+        )}
       </div>
     </div>
   );
