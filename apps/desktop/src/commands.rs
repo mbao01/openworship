@@ -4056,3 +4056,294 @@ mod tests {
         assert_eq!(ev.kind, "scripture");
     }
 }
+
+// ── Demo data seeding (OPE-172) ───────────────────────────────────────────────
+
+/// Result of a [`seed_demo_data`] call.
+#[derive(Debug, serde::Serialize)]
+pub struct SeedResult {
+    /// Number of sample songs inserted (0 if all titles already existed).
+    pub songs_seeded: usize,
+    /// `true` if a demo service project was created.
+    pub project_seeded: bool,
+}
+
+/// Seed sample songs and a demo service project for first-run onboarding.
+///
+/// Idempotent:
+/// - Songs are skipped when an exact title match already exists in the library.
+/// - The demo service project is skipped when *any* project already exists.
+///
+/// Returns counts of what was actually written so the frontend can show a
+/// "demo content loaded" confirmation.
+#[tauri::command]
+pub fn seed_demo_data(state: State<'_, AppState>) -> Result<SeedResult, String> {
+    // ── Seed sample songs ─────────────────────────────────────────────────────
+    let demo_songs = build_demo_song_imports();
+    let inserted = {
+        let db = state.songs_db.lock().map_err(|e| e.to_string())?;
+        db.import_batch(&demo_songs).map_err(|e| e.to_string())?
+    };
+
+    // Keep in-memory song refs up-to-date so the title detector picks up the
+    // new songs without requiring a restart.
+    if !inserted.is_empty() {
+        if let Ok(mut refs) = state.song_refs.write() {
+            for song in &inserted {
+                refs.push(ow_core::SongRef { id: song.id, title: song.title.clone() });
+            }
+        }
+    }
+
+    // ── Seed demo service project ─────────────────────────────────────────────
+    let already_has_project = {
+        let projects = state.projects.read().map_err(|e| e.to_string())?;
+        !projects.is_empty()
+    };
+
+    let project_seeded = if !already_has_project {
+        let demo = build_demo_service_project();
+        let project_id = demo.id.clone();
+
+        {
+            let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+            projects.push(demo);
+            crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+        }
+
+        // Open the demo project so the operator can interact with it right away.
+        {
+            let mut active = state.active_project_id.write().map_err(|e| e.to_string())?;
+            *active = Some(project_id);
+        }
+
+        true
+    } else {
+        false
+    };
+
+    Ok(SeedResult { songs_seeded: inserted.len(), project_seeded })
+}
+
+// ── Demo content builders ─────────────────────────────────────────────────────
+
+fn build_demo_song_imports() -> Vec<crate::songs::SongImport> {
+    vec![
+        crate::songs::SongImport {
+            title: "Amazing Grace".into(),
+            artist: Some("John Newton".into()),
+            ccli_number: None,
+            source: "demo".into(),
+            lyrics: "\
+[Verse 1]
+Amazing grace how sweet the sound
+That saved a wretch like me
+I once was lost but now am found
+Was blind but now I see
+
+[Verse 2]
+'Twas grace that taught my heart to fear
+And grace my fears relieved
+How precious did that grace appear
+The hour I first believed
+
+[Chorus]
+My chains are gone I've been set free
+My God my Savior has ransomed me
+And like a flood His mercy rains
+Unending love amazing grace
+
+[Verse 3]
+The Lord has promised good to me
+His word my hope secures
+He will my shield and portion be
+As long as life endures
+
+[Verse 4]
+When we've been there ten thousand years
+Bright shining as the sun
+We've no less days to sing God's praise
+Than when we first begun"
+                .into(),
+        },
+        crate::songs::SongImport {
+            title: "Holy Holy Holy".into(),
+            artist: Some("Reginald Heber".into()),
+            ccli_number: None,
+            source: "demo".into(),
+            lyrics: "\
+[Verse 1]
+Holy holy holy Lord God Almighty
+Early in the morning our song shall rise to thee
+Holy holy holy merciful and mighty
+God in three persons blessed Trinity
+
+[Verse 2]
+Holy holy holy all the saints adore thee
+Casting down their golden crowns around the glassy sea
+Cherubim and seraphim falling down before thee
+Which wert and art and evermore shalt be
+
+[Verse 3]
+Holy holy holy though the darkness hide thee
+Though the eye of sinful man thy glory may not see
+Only thou art holy there is none beside thee
+Perfect in power in love and purity
+
+[Verse 4]
+Holy holy holy Lord God Almighty
+All thy works shall praise thy name in earth and sky and sea
+Holy holy holy merciful and mighty
+God in three persons blessed Trinity"
+                .into(),
+        },
+        crate::songs::SongImport {
+            title: "To God Be the Glory".into(),
+            artist: Some("Fanny Crosby".into()),
+            ccli_number: None,
+            source: "demo".into(),
+            lyrics: "\
+[Verse 1]
+To God be the glory great things He hath taught us
+Great things He hath done and great our rejoicing
+Through Jesus the Son but purer and higher
+And greater our wonder His glory the theme
+
+[Chorus]
+Praise the Lord praise the Lord
+Let the earth hear His voice
+Praise the Lord praise the Lord
+Let the people rejoice
+O come to the Father through Jesus the Son
+And give Him the glory great things He hath done
+
+[Verse 2]
+O perfect redemption the purchase of bloodshed
+To every believer the promise of God
+The vilest offender who truly believes
+That moment from Jesus a pardon receives
+
+[Verse 3]
+Great things He hath taught us great things He hath done
+And great our rejoicing through Jesus the Son
+But purer and higher and greater will be
+Our wonder our transport when Jesus we see"
+                .into(),
+        },
+    ]
+}
+
+fn build_demo_service_project() -> crate::service::ServiceProject {
+    use crate::service::{ProjectItem, ServiceProject, ServiceTask, TaskStatus, new_id, now_ms};
+
+    let svc_id = new_id();
+    let ts = now_ms();
+
+    ServiceProject {
+        id: svc_id.clone(),
+        name: "Sunday Morning Service (Demo)".into(),
+        description: Some(
+            "A sample service plan pre-loaded by OpenWorship. \
+             Feel free to edit or delete it once you're comfortable."
+                .into(),
+        ),
+        created_at_ms: ts,
+        closed_at_ms: None,
+        scheduled_at_ms: None,
+        items: vec![
+            ProjectItem {
+                id: new_id(),
+                reference: "Psalm 100:1-4".into(),
+                text: "Make a joyful noise unto the LORD all ye lands. \
+                       Serve the LORD with gladness: come before his presence with singing. \
+                       Know ye that the LORD he is God: it is he that hath made us and not we ourselves; \
+                       we are his people and the sheep of his pasture. \
+                       Enter into his gates with thanksgiving and into his courts with praise: \
+                       be thankful unto him and bless his name.".into(),
+                translation: "KJV".into(),
+                position: 0,
+                added_at_ms: ts,
+                item_type: "scripture".into(),
+                duration_secs: Some(90),
+                notes: Some("Opening call to worship".into()),
+                asset_ids: vec![],
+            },
+            ProjectItem {
+                id: new_id(),
+                reference: "Amazing Grace".into(),
+                text: "Amazing grace how sweet the sound / That saved a wretch like me / \
+                       I once was lost but now am found / Was blind but now I see".into(),
+                translation: String::new(),
+                position: 1,
+                added_at_ms: ts,
+                item_type: "song".into(),
+                duration_secs: Some(240),
+                notes: Some("All 4 verses".into()),
+                asset_ids: vec![],
+            },
+            ProjectItem {
+                id: new_id(),
+                reference: "John 3:16-17".into(),
+                text: "For God so loved the world that he gave his only begotten Son \
+                       that whosoever believeth in him should not perish but have everlasting life. \
+                       For God sent not his Son into the world to condemn the world; \
+                       but that the world through him might be saved.".into(),
+                translation: "KJV".into(),
+                position: 2,
+                added_at_ms: ts,
+                item_type: "scripture".into(),
+                duration_secs: Some(120),
+                notes: Some("Message text".into()),
+                asset_ids: vec![],
+            },
+            ProjectItem {
+                id: new_id(),
+                reference: "Holy Holy Holy".into(),
+                text: "Holy holy holy Lord God Almighty / \
+                       Early in the morning our song shall rise to thee / \
+                       Holy holy holy merciful and mighty / \
+                       God in three persons blessed Trinity".into(),
+                translation: String::new(),
+                position: 3,
+                added_at_ms: ts,
+                item_type: "song".into(),
+                duration_secs: Some(240),
+                notes: Some("Worship response".into()),
+                asset_ids: vec![],
+            },
+            ProjectItem {
+                id: new_id(),
+                reference: "Romans 8:28".into(),
+                text: "And we know that all things work together for good \
+                       to them that love God to them who are the called according to his purpose.".into(),
+                translation: "KJV".into(),
+                position: 4,
+                added_at_ms: ts,
+                item_type: "scripture".into(),
+                duration_secs: Some(60),
+                notes: Some("Benediction verse".into()),
+                asset_ids: vec![],
+            },
+        ],
+        tasks: vec![
+            ServiceTask {
+                id: new_id(),
+                service_id: svc_id.clone(),
+                title: "Sound check".into(),
+                description: Some("Test microphone levels and monitor mix".into()),
+                status: TaskStatus::Todo,
+                created_at_ms: ts,
+                updated_at_ms: ts,
+            },
+            ServiceTask {
+                id: new_id(),
+                service_id: svc_id,
+                title: "Print order of service".into(),
+                description: None,
+                status: TaskStatus::Backlog,
+                created_at_ms: ts,
+                updated_at_ms: ts,
+            },
+        ],
+    }
+}
