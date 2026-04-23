@@ -791,6 +791,9 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             updater::check_for_updates,
             updater::install_update,
             updater::restart_app,
+            // ── Tutorial onboarding (OPE-170) ──────────────────────────────
+            commands::get_tutorial_state,
+            commands::set_tutorial_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

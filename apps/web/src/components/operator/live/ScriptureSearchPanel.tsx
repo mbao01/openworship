@@ -46,6 +46,10 @@ export function ScriptureSearchPanel({ onPush }: ScriptureSearchPanelProps) {
     try {
       const res = await searchScriptures(q);
       setResults(res);
+      if (res.length > 0) {
+        // Notify tour that first results appeared (for Step 2 auto-advance)
+        window.dispatchEvent(new CustomEvent("tour:scripture-result-appeared"));
+      }
     } catch {
       // silent
     } finally {
@@ -166,6 +170,7 @@ export function ScriptureSearchPanel({ onPush }: ScriptureSearchPanelProps) {
               <ListIcon className="h-3 w-3" />
             </button>
             <input
+              data-qa="scripture-search-input"
               className="min-w-0 flex-1 bg-transparent px-2.5 text-xs text-ink outline-0 placeholder:text-ink-3"
               placeholder="Romans 8:38 ..."
               value={query}
@@ -236,8 +241,13 @@ export function ScriptureSearchPanel({ onPush }: ScriptureSearchPanelProps) {
         {results.map((v, i) => (
           <div
             key={`${v.translation}-${v.reference}-${i}`}
+            data-qa={i === 0 ? "scripture-result-0" : undefined}
             className="grid cursor-pointer grid-cols-[20px_1fr_auto] items-center gap-2.5 border-b border-transparent px-3.5 py-2 text-ink-2 transition-colors hover:bg-bg-2 hover:text-ink"
-            onClick={() => onPush(v.reference, v.text, v.translation)}
+            onClick={() => {
+              onPush(v.reference, v.text, v.translation);
+              // Notify tour that a verse was pushed (for Step 3 auto-advance)
+              window.dispatchEvent(new CustomEvent("tour:scripture-pushed"));
+            }}
           >
             <span className="flex items-center justify-center text-accent">
               <BookOpenIcon className="h-2 w-2 shrink-0" />
