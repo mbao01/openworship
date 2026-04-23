@@ -468,4 +468,41 @@ mod tests {
         assert_eq!(s.backend, SttBackend::Whisper);
         assert_eq!(s.detection_mode, DetectionMode::Copilot);
     }
+
+    /// The IPC response from get_audio_settings must never include the Deepgram
+    /// key — the field has `#[serde(skip_serializing)]` so it is always absent.
+    /// This ensures the frontend never receives a secret via the Tauri bridge.
+    #[test]
+    fn ipc_response_never_contains_deepgram_key() {
+        let s = AudioSettings {
+            backend: SttBackend::Deepgram,
+            deepgram_api_key: "dg-secret-key".into(),
+            ..AudioSettings::default()
+        };
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(
+            !json.contains("dg-secret-key"),
+            "Deepgram key must not appear in IPC JSON; got: {json}"
+        );
+        // The field name itself should also be absent so no empty placeholder leaks.
+        assert!(
+            !json.contains("deepgram_api_key"),
+            "deepgram_api_key field must not appear in IPC JSON; got: {json}"
+        );
+    }
+
+    /// When the frontend sends AudioSettings without a deepgram_api_key field
+    /// (as it does after the TypeScript type was updated to omit the field),
+    /// deserialisation should succeed with an empty key — the real key is in
+    /// the keychain and must not be overwritten.
+    #[test]
+    fn deserialize_from_frontend_without_deepgram_key() {
+        let json = r#"{"backend":"deepgram","semantic_enabled":true,"semantic_threshold_auto":0.75,"semantic_threshold_copilot":0.82,"lyrics_threshold_auto":0.70,"lyrics_threshold_copilot":0.78,"audio_input_device":null,"theme":"system","detection_mode":"copilot","whisper_model":"base","provider_config":{}}"#;
+        let s: AudioSettings = serde_json::from_str(json).unwrap();
+        assert!(
+            s.deepgram_api_key.is_empty(),
+            "missing deepgram_api_key should default to empty (no key from keychain)"
+        );
+        assert_eq!(s.backend, SttBackend::Deepgram);
+    }
 }

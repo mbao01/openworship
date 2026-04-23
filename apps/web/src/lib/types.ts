@@ -153,7 +153,9 @@ export type ProviderStatus =
 /** Matches Rust `AudioSettings` struct. */
 export interface AudioSettings {
   backend: SttBackend;
-  deepgram_api_key: string;
+  // deepgram_api_key is intentionally absent: the Rust field uses
+  // #[serde(skip_serializing)] so it is never returned over IPC.
+  // Manage Deepgram credentials via setProviderSecret("deepgram", "api_key", …).
   semantic_enabled: boolean;
   semantic_threshold_auto: number;
   semantic_threshold_copilot: number;

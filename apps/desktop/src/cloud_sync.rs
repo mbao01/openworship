@@ -145,8 +145,10 @@ pub struct S3Config {
     pub bucket: String,
     pub region: String,
     pub access_key_id: String,
-    /// Never serialised in responses — stored in keychain at runtime.
-    #[serde(default)]
+    /// Secret key — stored in the OS keychain, never written to disk or sent
+    /// over the IPC bridge.  `skip_serializing` ensures it is absent from any
+    /// JSON output (file saves, Tauri IPC responses).
+    #[serde(skip_serializing, default)]
     pub secret_access_key: String,
 }
 
@@ -893,10 +895,9 @@ pub fn save_config(config: &S3Config) -> Result<()> {
     if let Some(p) = path.parent() {
         std::fs::create_dir_all(p)?;
     }
-    // Never persist the secret_access_key to disk — caller stores it in keychain.
-    let mut safe = config.clone();
-    safe.secret_access_key = String::new();
-    std::fs::write(&path, serde_json::to_vec_pretty(&safe)?)?;
+    // `secret_access_key` has `#[serde(skip_serializing)]` so it is never
+    // included in the JSON output — the keychain is the only storage location.
+    std::fs::write(&path, serde_json::to_vec_pretty(config)?)?;
     Ok(())
 }
 
@@ -1033,5 +1034,41 @@ mod tests {
         let dt = s3_datetime_now();
         assert_eq!(dt.len(), 16);
         assert!(dt.ends_with('Z'));
+    }
+
+    /// `secret_access_key` must never appear in JSON output — it is keychain-only.
+    #[test]
+    fn s3_config_secret_not_serialized() {
+        let cfg = S3Config {
+            endpoint_url: "https://s3.example.com".into(),
+            bucket: "my-bucket".into(),
+            region: "us-east-1".into(),
+            access_key_id: "AKIAIOSFODNN7EXAMPLE".into(),
+            secret_access_key: "super-secret-key".into(),
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        assert!(
+            !json.contains("super-secret-key"),
+            "secret_access_key must not appear in serialized JSON; got: {json}"
+        );
+        assert!(
+            !json.contains("secret_access_key"),
+            "secret_access_key field name must not appear in serialized JSON; got: {json}"
+        );
+        // Non-secret fields should still be present.
+        assert!(json.contains("AKIAIOSFODNN7EXAMPLE"));
+        assert!(json.contains("my-bucket"));
+    }
+
+    /// A JSON file that omits `secret_access_key` (as written by `save_config`)
+    /// should deserialize with an empty key — the real value lives in the keychain.
+    #[test]
+    fn s3_config_missing_secret_deserializes_as_empty() {
+        let json = r#"{"endpoint_url":"https://s3.example.com","bucket":"b","region":"us-east-1","access_key_id":"AKIA"}"#;
+        let cfg: S3Config = serde_json::from_str(json).unwrap();
+        assert!(
+            cfg.secret_access_key.is_empty(),
+            "missing secret should default to empty"
+        );
     }
 }
