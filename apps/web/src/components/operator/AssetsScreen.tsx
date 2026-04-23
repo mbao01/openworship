@@ -221,17 +221,17 @@ export function AssetsScreen() {
   }, [nav, parentPath, debouncedQuery]);
 
   const loadSyncInfo = (list: ArtifactEntry[]) => {
-    for (const e of list) {
-      invoke<CloudSyncInfo | null>("get_cloud_sync_info", {
-        artifactId: e.id,
+    if (list.length === 0) return;
+    const ids = list.map((e) => e.id);
+    invoke<CloudSyncInfo[]>("get_cloud_sync_infos", { artifactIds: ids })
+      .then((infos) => {
+        const next = new Map<string, CloudSyncInfo>();
+        for (const info of infos) {
+          next.set(info.artifact_id, info);
+        }
+        setSyncInfoMap(next);
       })
-        .then((info) => {
-          if (info) {
-            setSyncInfoMap((prev) => new Map(prev).set(e.id, info));
-          }
-        })
-        .catch(() => {});
-    }
+      .catch(() => {});
   };
 
   useEffect(() => {

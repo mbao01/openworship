@@ -664,6 +664,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::get_cloud_config,
             commands::set_cloud_config,
             commands::get_cloud_sync_info,
+            commands::get_cloud_sync_infos,
             commands::toggle_artifact_cloud_sync,
             commands::sync_artifact_now,
             commands::download_artifact_from_cloud,

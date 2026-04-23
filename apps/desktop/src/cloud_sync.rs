@@ -285,6 +285,36 @@ impl CloudSyncDb {
         Ok(out.into_iter().next())
     }
 
+    /// Batch-fetch sync info for a list of artifact IDs in a single SQL query.
+    pub fn get_sync_infos_batch(&self, artifact_ids: &[String]) -> Result<Vec<CloudSyncInfo>> {
+        if artifact_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        // Build parameterised placeholders: ?,?,?,...
+        let placeholders = artifact_ids
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(",");
+        let sql = format!(
+            "SELECT artifact_id, sync_enabled, status, cloud_key, last_etag,
+                    last_synced_ms, sync_error
+             FROM cloud_sync WHERE artifact_id IN ({placeholders})"
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        // rusqlite requires a slice of &dyn ToSql; build it from the owned Strings.
+        let params: Vec<&dyn rusqlite::types::ToSql> = artifact_ids
+            .iter()
+            .map(|s| s as &dyn rusqlite::types::ToSql)
+            .collect();
+        let rows = stmt.query_map(params.as_slice(), map_sync_row)?;
+        let mut out = Vec::new();
+        for r in rows {
+            out.push(r?);
+        }
+        Ok(out)
+    }
+
     pub fn upsert_sync_info(&self, info: &CloudSyncInfo) -> Result<()> {
         self.conn.execute(
             "INSERT INTO cloud_sync
