@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { useAudioSettings } from "@/hooks/use-audio-settings";
 import { useAudioLevel } from "@/hooks/use-audio-level";
 import { Section, SettingRow } from "@/components/ui/section";
@@ -37,19 +38,27 @@ export function AudioSection() {
   const [micTesting, setMicTesting] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
 
-  // Poll for audio device changes every 3s to detect hot-plug
+  // Load devices + providers on mount, then re-fetch devices whenever the
+  // Rust device-watcher detects a hot-plug change (audio://devices-changed).
+  // Replaces the 3 s setInterval poll — no IPC round-trips while idle.
   useEffect(() => {
-    const refresh = () => {
+    const loadDevices = () => {
       listAudioInputDevices()
         .then(setDevices)
-        .catch((err) => console.error(err));
+        .catch(() => {});
     };
-    refresh();
+    loadDevices();
     listSttProviders()
       .then(setProviders)
-      .catch((err) => console.error(err));
-    const interval = setInterval(refresh, 3000);
-    return () => clearInterval(interval);
+      .catch(() => {});
+
+    let unlisten: (() => void) | undefined;
+    listen("audio://devices-changed", loadDevices).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      unlisten?.();
+    };
   }, []);
 
   // Auto-start audio monitor on mount, stop on unmount

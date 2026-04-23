@@ -470,10 +470,38 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                 detect_song_refs,
                 tx_for_detect,
                 detect_blackout,
-                app_handle,
+                app_handle.clone(),
                 detect_translation,
                 detect_announcements,
             ));
+
+            // Device hot-plug watcher: polls the cpal device list every 2 s and
+            // emits `audio://devices-changed` when the list of input devices changes.
+            // This replaces the 3 s setInterval in AudioSection.tsx (IPC poll → push).
+            {
+                let app_for_devices = app_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    use ow_audio::list_input_devices;
+                    let mut prev: Vec<String> = list_input_devices()
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|d| d.name)
+                        .collect();
+                    loop {
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                        let current: Vec<String> = list_input_devices()
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|d| d.name)
+                            .collect();
+                        if current != prev {
+                            eprintln!("[device-watcher] device list changed, emitting audio://devices-changed");
+                            let _ = app_for_devices.emit("audio://devices-changed", ());
+                            prev = current;
+                        }
+                    }
+                });
+            }
 
             // Resolve the pre-built index path for the active translation.
             // Indices are named scripture_index_<TRANSLATION>.bin (e.g. scripture_index_KJV.bin).
