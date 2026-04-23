@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { listen } from "@tauri-apps/api/event";
 import { useIdentity } from "./hooks/use-identity";
 import { useTheme } from "./hooks/use-theme";
 import { OnboardingPage } from "./pages/OnboardingPage";
@@ -9,6 +11,7 @@ import { SpeakerPage } from "./pages/SpeakerPage";
 import { SplashScreen } from "./components/SplashScreen";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
+import { toast } from "@/lib/toast";
 import "./styles/global.css";
 
 // FOUC prevention: read localStorage before React mounts, apply theme + preset tokens.
@@ -48,6 +51,17 @@ function AppInner() {
   // Initialize theme — applies DOM attrs and CSS vars immediately.
   // Called here so theme is active for all child components.
   useTheme();
+
+  // Show a persistent error toast if the display WebSocket server could not
+  // bind to any port (e.g. another instance of OpenWorship is already running).
+  useEffect(() => {
+    const unlisten = listen<string>("display://port-unavailable", (e) => {
+      toast.error(e.payload);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   const splashDone = !isMainWindow || !identityLoading;
 

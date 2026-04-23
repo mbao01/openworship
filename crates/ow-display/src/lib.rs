@@ -251,14 +251,11 @@ impl ContentEvent {
     }
 }
 
-/// Start the WebSocket display server.
-/// Pass a `broadcast::Sender<ContentEvent>` — each accepted client subscribes
-/// to it and receives events pushed from the desktop app.
-///
-/// Tries `WS_PORT` first, then falls back to the next 9 consecutive ports.
-/// If none are available, logs a warning and returns without panicking.
-pub async fn start_server(tx: broadcast::Sender<ContentEvent>) {
-    let listener = (WS_PORT..WS_PORT + 10).find_map(|port| {
+/// Try to bind a TCP listener on `WS_PORT`, falling back to the next 9
+/// consecutive ports. Returns the bound `std::net::TcpListener` and the
+/// port it was bound on, or `None` if all ports are unavailable.
+pub fn bind_listener() -> Option<(std::net::TcpListener, u16)> {
+    (WS_PORT..WS_PORT + 10).find_map(|port| {
         let addr = SocketAddr::from(([127, 0, 0, 1], port));
         match std::net::TcpListener::bind(addr) {
             Ok(l) => {
@@ -267,24 +264,17 @@ pub async fn start_server(tx: broadcast::Sender<ContentEvent>) {
                         "[display] port {WS_PORT} in use — bound display server on port {port}"
                     );
                 }
-                Some(l)
+                Some((l, port))
             }
             Err(_) => None,
         }
-    });
+    })
+}
 
-    let std_listener = match listener {
-        Some(l) => l,
-        None => {
-            eprintln!(
-                "[display] WARNING: could not bind display WebSocket server on any port \
-                 {WS_PORT}–{}. Display output will be unavailable.",
-                WS_PORT + 9
-            );
-            return;
-        }
-    };
-
+/// Run the WebSocket accept loop on an already-bound listener.
+/// Pass a `broadcast::Sender<ContentEvent>` — each accepted client subscribes
+/// to it and receives events pushed from the desktop app.
+pub async fn run_server(std_listener: std::net::TcpListener, tx: broadcast::Sender<ContentEvent>) {
     let listener = match TcpListener::from_std(std_listener) {
         Ok(l) => l,
         Err(e) => {
@@ -296,6 +286,23 @@ pub async fn start_server(tx: broadcast::Sender<ContentEvent>) {
     while let Ok((stream, _)) = listener.accept().await {
         let rx = tx.subscribe();
         tokio::spawn(handle_client(stream, rx));
+    }
+}
+
+/// Start the WebSocket display server.
+/// Convenience wrapper: calls [`bind_listener`] then [`run_server`].
+/// Tries `WS_PORT` first, then falls back to the next 9 consecutive ports.
+/// If none are available, logs a warning and returns without panicking.
+pub async fn start_server(tx: broadcast::Sender<ContentEvent>) {
+    match bind_listener() {
+        Some((listener, _port)) => run_server(listener, tx).await,
+        None => {
+            eprintln!(
+                "[display] WARNING: could not bind display WebSocket server on any port \
+                 {WS_PORT}–{}. Display output will be unavailable.",
+                WS_PORT + 9
+            );
+        }
     }
 }
 
