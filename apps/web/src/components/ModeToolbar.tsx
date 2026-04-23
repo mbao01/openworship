@@ -2,12 +2,33 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { DetectionMode } from "../lib/types";
 import { toastError } from "../lib/toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const MODES: { value: DetectionMode; label: string }[] = [
-  { value: "auto", label: "AUTO" },
-  { value: "copilot", label: "COPILOT" },
-  { value: "airplane", label: "AIRPLANE" },
-  { value: "offline", label: "OFFLINE" },
+const MODES: { value: DetectionMode; label: string; description: string }[] = [
+  {
+    value: "auto",
+    label: "AUTO",
+    description: "Engine approves and pushes high-confidence matches automatically",
+  },
+  {
+    value: "copilot",
+    label: "COPILOT",
+    description: "Engine queues candidates; you manually approve each one",
+  },
+  {
+    value: "airplane",
+    label: "AIRPLANE",
+    description: "Detection disabled; push content manually",
+  },
+  {
+    value: "offline",
+    label: "OFFLINE",
+    description: "Full offline mode — no STT or semantic matching",
+  },
 ];
 
 interface Props {
@@ -47,20 +68,26 @@ export function ModeToolbar({ onModeChange }: Props) {
         role="group"
         aria-label="Mode"
       >
-        {MODES.map(({ value, label }) => (
-          <button
-            key={value}
-            data-qa={`mode-btn-${value}`}
-            className={`cursor-pointer border-b-2 border-none bg-transparent px-4 font-sans text-[11px] font-medium tracking-[0.1em] transition-all uppercase${
-              mode === value
-                ? "border-b-accent text-ink"
-                : "border-b-transparent text-ink-3 hover:text-ink"
-            }`}
-            onClick={() => handleModeChange(value)}
-            aria-pressed={mode === value}
-          >
-            {label}
-          </button>
+        {MODES.map(({ value, label, description }) => (
+          <Tooltip key={value}>
+            <TooltipTrigger asChild>
+              <button
+                data-qa={`mode-btn-${value}`}
+                className={`cursor-pointer border-b-2 border-none bg-transparent px-4 font-sans text-[11px] font-medium tracking-[0.1em] transition-all uppercase${
+                  mode === value
+                    ? "border-b-accent text-ink"
+                    : "border-b-transparent text-ink-3 hover:text-ink"
+                }`}
+                onClick={() => handleModeChange(value)}
+                aria-pressed={mode === value}
+              >
+                {label}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6}>
+              {description}
+            </TooltipContent>
+          </Tooltip>
         ))}
       </div>
     </div>

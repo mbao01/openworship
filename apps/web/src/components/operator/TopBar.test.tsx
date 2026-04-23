@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { TopBar } from "./TopBar";
+
+function renderWithProviders(ui: React.ReactElement) {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+}
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockResolvedValue("copilot"),
@@ -41,7 +46,7 @@ describe("TopBar", () => {
   });
 
   it("renders all mode buttons", () => {
-    render(<TopBar {...defaultProps} />);
+    renderWithProviders(<TopBar {...defaultProps} />);
     expect(screen.getByText("Auto")).toBeInTheDocument();
     expect(screen.getByText("Copilot")).toBeInTheDocument();
     expect(screen.getByText("Airplane")).toBeInTheDocument();
@@ -49,13 +54,13 @@ describe("TopBar", () => {
   });
 
   it("renders the search button with cmd-K shortcut", () => {
-    render(<TopBar {...defaultProps} />);
+    renderWithProviders(<TopBar {...defaultProps} />);
     expect(screen.getByText("Search")).toBeInTheDocument();
   });
 
   it("calls onOpenCmdK when search button is clicked", async () => {
     const user = userEvent.setup();
-    render(<TopBar {...defaultProps} />);
+    renderWithProviders(<TopBar {...defaultProps} />);
 
     await user.click(screen.getByText("Search"));
     expect(defaultProps.onOpenCmdK).toHaveBeenCalledOnce();
@@ -63,7 +68,7 @@ describe("TopBar", () => {
 
   it("renders the Push button and calls onPush when clicked", async () => {
     const user = userEvent.setup();
-    render(<TopBar {...defaultProps} />);
+    renderWithProviders(<TopBar {...defaultProps} />);
 
     const pushButton = screen.getByText("Push");
     expect(pushButton).toBeInTheDocument();
@@ -73,12 +78,12 @@ describe("TopBar", () => {
   });
 
   it("renders the clock with 'Service' label", () => {
-    render(<TopBar {...defaultProps} />);
+    renderWithProviders(<TopBar {...defaultProps} />);
     expect(screen.getByText("Service")).toBeInTheDocument();
   });
 
   it("renders brand name", () => {
-    render(<TopBar {...defaultProps} />);
+    renderWithProviders(<TopBar {...defaultProps} />);
     expect(screen.getByText("openworship")).toBeInTheDocument();
   });
 });
