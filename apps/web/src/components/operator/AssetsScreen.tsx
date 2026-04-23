@@ -238,18 +238,26 @@ export function AssetsScreen() {
     loadEntries();
   }, [loadEntries]);
 
-  // Refresh entries when a background thumbnail becomes ready
+  // Patch thumbnail_path in-place when a background thumbnail becomes ready
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     import("@tauri-apps/api/event").then(({ listen }) => {
-      listen("artifacts://thumbnail-ready", () => {
-        loadEntries();
-      }).then((fn) => {
+      listen<{ id: string; thumbnail_path: string }>(
+        "artifacts://thumbnail-ready",
+        (ev) => {
+          const { id, thumbnail_path } = ev.payload;
+          setEntries((prev) =>
+            prev.map((e) =>
+              e.id === id ? { ...e, thumbnail_path } : e,
+            ),
+          );
+        },
+      ).then((fn) => {
         unlisten = fn;
       });
     });
     return () => unlisten?.();
-  }, [loadEntries]);
+  }, []);
 
   const handleNav = (n: Nav) => {
     setNav(n);

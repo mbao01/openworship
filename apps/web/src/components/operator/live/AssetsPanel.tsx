@@ -43,16 +43,24 @@ export function AssetsPanel() {
     loadAssets();
   }, [loadAssets]);
 
-  // Refresh asset list when a thumbnail becomes ready (generated in background)
+  // Patch thumbnail_path in-place when a background thumbnail becomes ready
   useEffect(() => {
     let unlisten: (() => void) | undefined;
-    listen("artifacts://thumbnail-ready", () => {
-      loadAssets();
-    }).then((fn) => {
+    listen<{ id: string; thumbnail_path: string }>(
+      "artifacts://thumbnail-ready",
+      (ev) => {
+        const { id, thumbnail_path } = ev.payload;
+        setAssets((prev) =>
+          prev.map((a) =>
+            a.id === id ? { ...a, thumbnail_path } : a,
+          ),
+        );
+      },
+    ).then((fn) => {
       unlisten = fn;
     });
     return () => unlisten?.();
-  }, [loadAssets]);
+  }, []);
 
   const filtered = (
     assetQuery.trim()
