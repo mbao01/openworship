@@ -169,15 +169,6 @@ export async function regenerateThumbnails(): Promise<number> {
   return invoke<number>("regenerate_thumbnails");
 }
 
-/**
- * Queues thumbnail generation for all artifacts that are missing one.
- * Runs in the background; emits `artifacts://thumbnail-ready` per artifact.
- * Returns the number of artifacts queued.
- */
-export async function regenerateThumbnails(): Promise<number> {
-  return invoke<number>("regenerate_thumbnails");
-}
-
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
 /**
