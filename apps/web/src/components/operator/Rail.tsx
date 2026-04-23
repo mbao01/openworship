@@ -9,7 +9,7 @@ const ITEMS = [
   { id: "live", label: "Live", icon: LiveIcon },
   { id: "library", label: "Bank", icon: LibraryIcon },
   { id: "assets", label: "Assets", icon: AssetsIcon },
-  { id: "logs", label: "Logs", icon: LogsIcon },
+  { id: "logs", label: "History", icon: LogsIcon },
   { id: "display", label: "Screen", icon: DisplayIcon },
 ];
 

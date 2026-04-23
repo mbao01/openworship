@@ -10,7 +10,7 @@ describe("Rail", () => {
     "Live",
     "Bank",
     "Assets",
-    "Logs",
+    "History",
     "Screen",
     "Set",
   ];
