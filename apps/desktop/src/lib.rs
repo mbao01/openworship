@@ -1,4 +1,5 @@
 mod artifacts;
+mod backup;
 mod backgrounds;
 mod branch_sync;
 mod claude_api;
@@ -732,6 +733,9 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             display_window::get_display_settings,
             display_window::set_display_settings,
             display_window::get_obs_display_url,
+            // ── Backup / restore (OPE-154) ─────────────────────────────────
+            backup::create_backup,
+            backup::restore_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

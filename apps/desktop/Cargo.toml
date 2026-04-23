@@ -43,3 +43,6 @@ hmac = { workspace = true }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 base64 = "0.22"
 tauri-plugin-dialog = "2.7.0"
+
+flate2 = "1"
+tar = "0.4"

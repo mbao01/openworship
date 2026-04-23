@@ -9,6 +9,7 @@ import { DisplaySection } from "./sections/DisplaySection";
 import { EmailSection } from "./sections/EmailSection";
 import { ShortcutsSection } from "./sections/ShortcutsSection";
 import { AboutSection } from "./sections/AboutSection";
+import { BackupSection } from "./sections/BackupSection";
 import type { ChurchIdentity } from "@/lib/types";
 
 interface SettingsPanelProps {
@@ -40,6 +41,7 @@ export function SettingsPanel({
         {active === "detection" && <DetectionSection />}
         {active === "email" && <EmailSection identity={identity} />}
         {active === "cloud" && <CloudSection />}
+        {active === "backup" && <BackupSection />}
         {active === "shortcuts" && <ShortcutsSection />}
         {active === "about" && <AboutSection />}
       </div>
