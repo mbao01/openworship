@@ -399,7 +399,23 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             let app_handle = app.handle().clone();
 
             // Start the WebSocket display server.
-            tauri::async_runtime::spawn(ow_display::start_server(tx_for_server));
+            // bind_listener() runs synchronously so we can emit a user-visible
+            // error immediately if all ports are unavailable, rather than
+            // silently swallowing the failure in a background task.
+            match ow_display::bind_listener() {
+                Some((listener, _port)) => {
+                    tauri::async_runtime::spawn(ow_display::run_server(listener, tx_for_server));
+                }
+                None => {
+                    let _ = app_handle.emit(
+                        "display://port-unavailable",
+                        format!(
+                            "Display port {} is in use. Close the other instance of OpenWorship.",
+                            ow_display::WS_PORT
+                        ),
+                    );
+                }
+            }
 
             // Backfill thumbnails for any artifacts that are missing one.
             {
