@@ -413,3 +413,16 @@ export interface EmailSettings {
   send_delay_hours: number;
   auto_send: boolean;
 }
+
+// ── Tutorial state ─────────────────────────────────────────────────────────────
+
+/** Tour onboarding state persisted to ~/.openworship/tutorial.json. */
+export type TutorialState =
+  | "not_started"
+  | "in_progress_step_1"
+  | "in_progress_step_2"
+  | "in_progress_step_3"
+  | "in_progress_step_4"
+  | "in_progress_step_5"
+  | "completed"
+  | "dismissed";

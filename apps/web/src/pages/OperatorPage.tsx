@@ -13,6 +13,7 @@ import { SettingsScreen } from "../components/operator/SettingsScreen";
 import { CommandPalette } from "../components/operator/CommandPalette";
 import { AssetsScreen } from "../components/operator/AssetsScreen";
 import { ErrorBoundary } from "../components/ui/error-boundary";
+import { TourOverlay } from "../components/operator/tour/TourOverlay";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
@@ -107,6 +108,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
         onClose={() => setSettingsOpen(false)}
       />
       {cmdkOpen && <CommandPalette onClose={handleCloseCmdK} />}
+      <TourOverlay onOpenPlan={() => setScreen("plan")} />
     </div>
   );
 }
