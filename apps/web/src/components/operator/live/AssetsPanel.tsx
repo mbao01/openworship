@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { PaperclipIcon, PlayIcon, SearchIcon } from "lucide-react";
 import {
   listRecentArtifacts,
@@ -55,11 +56,26 @@ export function AssetsPanel() {
   const [assetQuery, setAssetQuery] = useState("");
   const { pushAsset } = useQueue();
 
-  useEffect(() => {
+  const loadAssets = useCallback(() => {
     listRecentArtifacts(50)
       .then(setAssets)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadAssets();
+  }, [loadAssets]);
+
+  // Refresh asset list when a thumbnail becomes ready (generated in background)
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen("artifacts://thumbnail-ready", () => {
+      loadAssets();
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => unlisten?.();
+  }, [loadAssets]);
 
   const filtered = (
     assetQuery.trim()

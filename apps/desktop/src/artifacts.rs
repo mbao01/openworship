@@ -228,6 +228,23 @@ impl ArtifactsDb {
         Ok(out)
     }
 
+    /// Returns all non-directory artifacts that have no thumbnail yet.
+    pub fn list_missing_thumbnails(&self) -> Result<Vec<ArtifactEntry>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id,service_id,path,name,is_dir,parent_path,size_bytes,mime_type,
+                    starred,created_at_ms,modified_at_ms,thumbnail_path
+             FROM artifacts
+             WHERE is_dir=0
+               AND thumbnail_path IS NULL
+               AND name != '_thumbnails' AND path NOT LIKE '%/_thumbnails/%'
+             ORDER BY modified_at_ms DESC",
+        )?;
+        let rows = stmt.query_map([], map_row)?;
+        let mut out = Vec::new();
+        for r in rows { out.push(r?); }
+        Ok(out)
+    }
+
     pub fn search(&self, query: &str, service_id: Option<&str>) -> Result<Vec<ArtifactEntry>> {
         let pattern = format!("%{query}%");
         let mut stmt = self.conn.prepare(
@@ -383,9 +400,13 @@ fn platform_thumbnail(file_path: &std::path::Path, mime: &str) -> Option<image::
     if let Some(img) = os_native_thumbnail(file_path) {
         return Some(img);
     }
+    eprintln!("[thumbnail] OS-native thumbnailer failed for {:?} ({})", file_path.file_name(), mime);
     // Fallback: use ffmpeg for video files (cross-platform)
     if mime.starts_with("video/") {
-        return ffmpeg_thumbnail(file_path);
+        if let Some(img) = ffmpeg_thumbnail(file_path) {
+            return Some(img);
+        }
+        eprintln!("[thumbnail] ffmpeg fallback also failed for {:?} — is ffmpeg installed?", file_path.file_name());
     }
     None
 }

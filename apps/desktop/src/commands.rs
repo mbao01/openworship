@@ -3328,6 +3328,44 @@ pub fn read_thumbnail(id: String, state: State<'_, AppState>) -> Result<Vec<u8>,
     std::fs::read(&abs).map_err(|e| e.to_string())
 }
 
+/// Regenerate thumbnails for all artifacts that are missing one.
+/// Runs generation in background threads and emits `artifacts://thumbnail-ready`
+/// for each successful thumbnail. Returns the number of artifacts queued.
+#[tauri::command]
+pub fn regenerate_thumbnails(
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<usize, String> {
+    let entries = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        db.list_missing_thumbnails().map_err(|e| e.to_string())?
+    };
+    let count = entries.len();
+    if count == 0 {
+        return Ok(0);
+    }
+    let base_dir = {
+        let db = state.artifacts_db.lock().map_err(|e| e.to_string())?;
+        std::path::PathBuf::from(&db.settings().base_path)
+    };
+    let db_arc = state.artifacts_db.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        for entry in entries {
+            let abs_path = base_dir.join(&entry.path);
+            if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
+                if let Ok(db) = db_arc.lock() {
+                    if let Ok(Some(mut e)) = db.get_by_id(&entry.id) {
+                        e.thumbnail_path = Some(thumb);
+                        let _ = db.upsert(&e);
+                    }
+                }
+                let _ = app.emit("artifacts://thumbnail-ready", &entry.id);
+            }
+        }
+    });
+    Ok(count)
+}
+
 // ── Phase 16: Cloud Sync ───────────────────────────────────────────────────────
 
 use crate::cloud_sync::{AclEntry, AccessLevel, CloudSyncInfo, S3Config, SyncStatus};

@@ -19,7 +19,7 @@ mod summaries;
 use ow_audio::SttEngine;
 use ow_core::{QueueItem, SongRef};
 use ow_embed::SemanticIndex;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use settings::{AudioSettings, DisplaySettings};
 use songs::SongsDb;
 use state::AppState;
@@ -299,7 +299,36 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             // Start the WebSocket display server.
             tauri::async_runtime::spawn(ow_display::start_server(tx_for_server));
 
-
+            // Backfill thumbnails for any artifacts that are missing one.
+            {
+                let state: tauri::State<'_, AppState> = app.state();
+                let db_arc = state.artifacts_db.clone();
+                let app_for_thumbs = app.handle().clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let entries = match db_arc.lock() {
+                        Ok(db) => db.list_missing_thumbnails().unwrap_or_default(),
+                        Err(_) => vec![],
+                    };
+                    if entries.is_empty() { return; }
+                    let base_dir = match db_arc.lock() {
+                        Ok(db) => std::path::PathBuf::from(&db.settings().base_path),
+                        Err(_) => return,
+                    };
+                    eprintln!("[thumbnail] backfilling {} artifacts with missing thumbnails", entries.len());
+                    for entry in entries {
+                        let abs_path = base_dir.join(&entry.path);
+                        if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
+                            if let Ok(db) = db_arc.lock() {
+                                if let Ok(Some(mut e)) = db.get_by_id(&entry.id) {
+                                    e.thumbnail_path = Some(thumb);
+                                    let _ = db.upsert(&e);
+                                }
+                            }
+                            let _ = app_for_thumbs.emit("artifacts://thumbnail-ready", &entry.id);
+                        }
+                    }
+                });
+            }
 
             // Start the detection loop (scripture + song).
             tauri::async_runtime::spawn(detection::run_loop(
@@ -562,6 +591,7 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::get_artifact_path,
             commands::read_artifact_bytes,
             commands::read_thumbnail,
+            commands::regenerate_thumbnails,
             // ── Phase 14: Summaries + email ────────────────────────────────
             commands::generate_service_summary,
             commands::list_service_summaries,
