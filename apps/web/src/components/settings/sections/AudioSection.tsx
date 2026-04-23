@@ -42,12 +42,12 @@ export function AudioSection() {
     const refresh = () => {
       listAudioInputDevices()
         .then(setDevices)
-        .catch(() => {});
+        .catch((err) => console.error(err));
     };
     refresh();
     listSttProviders()
       .then(setProviders)
-      .catch(() => {});
+      .catch((err) => console.error(err));
     const interval = setInterval(refresh, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -56,9 +56,9 @@ export function AudioSection() {
   useEffect(() => {
     startAudioMonitor()
       .then(() => setMicTesting(true))
-      .catch(() => {});
+      .catch((err) => console.error(err));
     return () => {
-      stopAudioMonitor().catch(() => {});
+      stopAudioMonitor().catch((err) => console.error(err));
     };
   }, []);
 

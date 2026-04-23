@@ -39,7 +39,7 @@ export function CloudSection() {
   useEffect(() => {
     getCloudConfig()
       .then(setConfigState)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const handleSave = async () => {

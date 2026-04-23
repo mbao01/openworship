@@ -27,7 +27,7 @@ export function QueueTranscriptPanel({ visible: isVisible = true }: { visible?: 
           setMicActive(isSttActive(s));
           setFallbackReason(sttFallbackReason(s));
         })
-        .catch(() => {});
+        .catch((err) => console.error(err));
     update();
     const id = setInterval(update, 2000);
     return () => clearInterval(id);
@@ -35,7 +35,7 @@ export function QueueTranscriptPanel({ visible: isVisible = true }: { visible?: 
 
   const handleMicToggle = async () => {
     if (micActive) {
-      await stopStt().catch(() => {});
+      await stopStt().catch((err) => console.error(err));
       setMicActive(false);
     } else {
       try {

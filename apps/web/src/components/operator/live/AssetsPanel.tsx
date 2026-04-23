@@ -36,7 +36,7 @@ export function AssetsPanel() {
   const loadAssets = useCallback(() => {
     listRecentArtifacts(50)
       .then(setAssets)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {

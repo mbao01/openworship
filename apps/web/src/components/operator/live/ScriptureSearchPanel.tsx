@@ -115,7 +115,7 @@ export function ScriptureSearchPanel({ onPush }: ScriptureSearchPanelProps) {
     setIsSearching(true);
     searchScriptures(q)
       .then(setResults)
-      .catch(() => {})
+      .catch((err) => console.error(err))
       .finally(() => setIsSearching(false));
   }, [mode, book, chapter, fromVerse, toVerse]);
 

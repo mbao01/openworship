@@ -92,7 +92,7 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
       .then((l) => {
         if (l > 0.01) autoToggle("mic");
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
 
     listAudioInputDevices()
       .then((d) => {
@@ -100,13 +100,13 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
           updateSub("mic", d[0].name);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
 
     getDisplayWindowOpen()
       .then((open) => {
         if (open) autoToggle("display");
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
 
     listMonitors()
       .then((m) => {
@@ -117,7 +117,7 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
           updateSub("display", info);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
 
     listTranslations()
       .then((t) => {
@@ -126,20 +126,20 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
           updateSub("translation", t.map((tr) => tr.abbreviation).join(", "));
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
 
     getSttStatus()
       .then((s) => {
         if (isSttActive(s)) autoToggle("internet");
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   // ── Load active project on mount ────────────────────────────────────────────
   useEffect(() => {
     getActiveProject()
       .then(setProject)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   // ── Countdown to scheduled_at_ms ──────────────────────────────────────────
@@ -218,7 +218,7 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
     if (!simulateText.trim()) return;
     detectInTranscript(simulateText)
       .then(setDetections)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   };
 
   // ── Resolve checklist sub-text ──────────────────────────────────────────────

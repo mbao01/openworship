@@ -40,7 +40,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
   const handleCloseCmdK = useCallback(() => setCmdkOpen(false), []);
   const handlePush = useCallback(() => {
     const first = queue[0];
-    if (first) approve(first.id).catch(() => {});
+    if (first) approve(first.id).catch((err) => console.error(err));
   }, [queue, approve]);
 
   // When Rail selects "settings", open the modal instead of switching screens

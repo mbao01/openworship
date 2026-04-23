@@ -113,7 +113,7 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
           }
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error(err))
       .finally(() => setLoading(false));
 
     const urls = blobUrls.current;
@@ -139,7 +139,7 @@ export function useDisplayBackground(): UseDisplayBackgroundReturn {
           return [...prev, ...newItems];
         });
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const applyToLive = useCallback(async (id: string | null) => {

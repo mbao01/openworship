@@ -35,7 +35,7 @@ export function MoveFolderModal({
       .then((list) =>
         setFolders(list.filter((e) => e.is_dir && e.id !== entry.id)),
       )
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, [browsePath, entry.service_id, entry.id]);
 
   const handleOpen = (folder: ArtifactEntry) => {

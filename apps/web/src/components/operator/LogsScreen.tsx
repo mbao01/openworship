@@ -26,7 +26,7 @@ export function LogsScreen() {
 
     listServiceSummaries()
       .then(setSummaries)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const current = projects[selected];

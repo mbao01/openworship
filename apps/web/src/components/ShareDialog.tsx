@@ -121,7 +121,7 @@ export function ShareDialog({
   useEffect(() => {
     invoke<ChurchIdentity | null>("get_identity")
       .then((id) => setIdentity(id))
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {
@@ -132,7 +132,7 @@ export function ShareDialog({
         setAcl(entries);
         setAccessLevel(level);
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, [artifact.id]);
 
   const handleSave = async () => {

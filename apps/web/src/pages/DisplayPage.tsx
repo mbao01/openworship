@@ -16,7 +16,8 @@ interface ContentEvent extends DisplayContentEvent {
 }
 
 const WS_URL = "ws://127.0.0.1:9000";
-const RECONNECT_DELAY_MS = 2000;
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 30_000;
 const AUTO_ADVANCE_SECS = 6;
 const LINES_PER_CHUNK = 2;
 
@@ -103,12 +104,16 @@ export function DisplayPage() {
   useEffect(() => {
     let ws: WebSocket | null = null;
     let destroyed = false;
+    let reconnectDelay = RECONNECT_BASE_MS;
 
     function connect() {
       if (destroyed) return;
       ws = new WebSocket(WS_URL);
 
-      ws.onopen = () => setConnected(true);
+      ws.onopen = () => {
+        setConnected(true);
+        reconnectDelay = RECONNECT_BASE_MS;
+      };
 
       ws.onmessage = (evt) => {
         try {
@@ -165,7 +170,10 @@ export function DisplayPage() {
 
       ws.onclose = () => {
         setConnected(false);
-        if (!destroyed) setTimeout(connect, RECONNECT_DELAY_MS);
+        if (!destroyed) {
+          setTimeout(connect, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX_MS);
+        }
       };
 
       ws.onerror = () => ws?.close();

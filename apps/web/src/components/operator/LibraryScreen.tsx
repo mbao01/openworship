@@ -25,7 +25,7 @@ export function LibraryScreen() {
       translation: null,
     })
       .then(setResults)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const runSearch = useCallback(
@@ -94,7 +94,7 @@ export function LibraryScreen() {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
   };
 
   const handleSongClick = (song: Song) => {

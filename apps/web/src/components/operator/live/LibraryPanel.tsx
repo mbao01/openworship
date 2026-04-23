@@ -28,7 +28,7 @@ export function LibraryPanel() {
     if (tab === "slides") {
       listAnnouncements()
         .then(setSlides)
-        .catch(() => {});
+        .catch((err) => console.error(err));
     }
   }, [tab]);
 

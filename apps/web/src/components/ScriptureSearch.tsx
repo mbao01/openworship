@@ -47,7 +47,7 @@ export function ScriptureSearch() {
   useEffect(() => {
     invoke<TranslationInfo[]>("list_translations")
       .then(setTranslations)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const runSearch = useCallback(async (q: string, t: string) => {
