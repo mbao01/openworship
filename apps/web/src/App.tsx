@@ -12,6 +12,7 @@ import { SplashScreen } from "./components/SplashScreen";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
 import { toast } from "@/lib/toast";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import "./styles/global.css";
 
 // FOUC prevention: read localStorage before React mounts, apply theme + preset tokens.
@@ -78,8 +79,22 @@ function AppInner() {
 
   return (
     <Routes>
-      <Route path="/display" element={<DisplayPage />} />
-      <Route path="/speaker" element={<SpeakerPage />} />
+      <Route
+        path="/display"
+        element={
+          <ErrorBoundary panelName="Display" className="bg-[#050403] text-white">
+            <DisplayPage />
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/speaker"
+        element={
+          <ErrorBoundary panelName="Speaker">
+            <SpeakerPage />
+          </ErrorBoundary>
+        }
+      />
       <Route
         path="/artifacts"
         element={<ArtifactsPage onBack={() => navigate("/")} />}

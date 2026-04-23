@@ -12,6 +12,7 @@ import { DisplayScreen } from "../components/operator/DisplayScreen";
 import { SettingsScreen } from "../components/operator/SettingsScreen";
 import { CommandPalette } from "../components/operator/CommandPalette";
 import { AssetsScreen } from "../components/operator/AssetsScreen";
+import { ErrorBoundary } from "../components/ui/error-boundary";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
@@ -71,14 +72,24 @@ export function OperatorPage({ identity }: OperatorPageProps) {
         <main className="relative flex flex-1 overflow-hidden bg-bg">
           {/* Live screen stays mounted (hidden via CSS) so background video keeps playing */}
           <div className={`flex flex-1 overflow-hidden ${screen !== "live" ? "invisible absolute inset-0" : ""}`}>
-            <LiveScreen mode={mode} visible={screen === "live"} />
+            <ErrorBoundary panelName="Live panel">
+              <LiveScreen mode={mode} visible={screen === "live"} />
+            </ErrorBoundary>
           </div>
-          {screen === "plan" && <PlanScreen />}
+          {screen === "plan" && (
+            <ErrorBoundary panelName="Plan panel">
+              <PlanScreen />
+            </ErrorBoundary>
+          )}
           {screen === "preview" && (
             <PreviewScreen onGoLive={() => setScreen("live")} />
           )}
           {screen === "library" && <LibraryScreen />}
-          {screen === "assets" && <AssetsScreen />}
+          {screen === "assets" && (
+            <ErrorBoundary panelName="Assets panel">
+              <AssetsScreen />
+            </ErrorBoundary>
+          )}
           {screen === "logs" && <LogsScreen />}
           {screen === "display" && <DisplayScreen />}
         </main>
