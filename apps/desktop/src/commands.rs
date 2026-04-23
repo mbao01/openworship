@@ -163,6 +163,7 @@ pub fn push_to_display(
         }
     }
 
+    crate::crash_reporting::breadcrumb_display_push("scripture");
     Ok(())
 }
 
@@ -227,6 +228,7 @@ pub fn start_stt(app: AppHandle, state: State<'_, AppState>) -> Result<(), Strin
     let mut engine = state.stt.lock().map_err(|e| e.to_string())?;
 
     start_stt_with_settings(&mut engine, config, &settings, &app).map_err(|e| e.to_string())?;
+    crate::crash_reporting::breadcrumb_stt_start();
 
     // Subscribe to the broadcast channel and forward events to the UI only.
     // Detection is handled by the background `detection::run_loop` task.
@@ -476,6 +478,7 @@ pub fn stop_stt(state: State<'_, AppState>) {
     } else {
         eprintln!("[stt] failed to acquire lock for stop; mutex poisoned");
     }
+    crate::crash_reporting::breadcrumb_stt_stop();
 }
 
 /// Return the current STT engine status.
@@ -718,12 +721,27 @@ pub fn set_audio_settings(
             .map_err(|e| format!("keychain error: {e}"))?;
     }
 
+    let prev_crash_reporting = state
+        .audio_settings
+        .read()
+        .map(|s| s.send_crash_reports)
+        .unwrap_or(false);
+
     let mut s = state
         .audio_settings
         .write()
         .map_err(|e| e.to_string())?;
     *s = settings.clone();
+    let new_crash_reporting = settings.send_crash_reports;
     drop(s);
+
+    // Toggle Sentry if the crash-reporting preference changed.
+    if new_crash_reporting && !prev_crash_reporting {
+        crate::crash_reporting::enable();
+    } else if !new_crash_reporting && prev_crash_reporting {
+        crate::crash_reporting::disable();
+    }
+
     settings.save().map_err(|e| e.to_string())
 }
 
@@ -2022,6 +2040,7 @@ pub fn import_songs_ccli(text: String, state: State<'_, AppState>) -> Result<Vec
         .map_err(|e| e.to_string())?;
     if !inserted.is_empty() {
         refresh_song_refs(&state);
+        crate::crash_reporting::breadcrumb_song_import(inserted.len());
     }
     Ok(inserted)
 }
@@ -2040,6 +2059,7 @@ pub fn import_songs_openlp(xml: String, state: State<'_, AppState>) -> Result<Ve
         .map_err(|e| e.to_string())?;
     if !inserted.is_empty() {
         refresh_song_refs(&state);
+        crate::crash_reporting::breadcrumb_song_import(inserted.len());
     }
     Ok(inserted)
 }

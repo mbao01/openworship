@@ -112,6 +112,10 @@ pub struct AudioSettings {
     /// Example: `{ "whisper": { "model": "small" }, "deepgram": {} }`
     #[serde(default)]
     pub provider_config: HashMap<String, serde_json::Value>,
+    /// Whether the operator has opted in to Sentry crash reporting.
+    /// Defaults to `false` (opt-in, never silent).
+    #[serde(default)]
+    pub send_crash_reports: bool,
 }
 
 impl Default for AudioSettings {
@@ -129,6 +133,7 @@ impl Default for AudioSettings {
             detection_mode: DetectionMode::default(),
             whisper_model: WhisperModel::default(),
             provider_config: HashMap::new(),
+            send_crash_reports: false,
         }
     }
 }
@@ -190,6 +195,8 @@ struct AudioSettingsFile {
     whisper_model: Option<WhisperModel>,
     #[serde(default)]
     provider_config: Option<HashMap<String, serde_json::Value>>,
+    #[serde(default)]
+    send_crash_reports: bool,
 }
 
 impl AudioSettings {
@@ -257,6 +264,7 @@ impl AudioSettings {
             detection_mode: file.detection_mode.unwrap_or(defaults.detection_mode),
             whisper_model: file.whisper_model.unwrap_or(defaults.whisper_model),
             provider_config: file.provider_config.unwrap_or_default(),
+            send_crash_reports: file.send_crash_reports,
         })
     }
 
