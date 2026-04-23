@@ -30,7 +30,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
             <span className="absolute top-2.5 bottom-2.5 left-[-8px] w-[3px] bg-accent" />
           )}
           <item.icon />
-          <span className="font-mono text-[8.5px] tracking-[0.1em] uppercase">
+          <span className="font-mono text-[10px] tracking-[0.1em] uppercase">
             {item.label}
           </span>
         </button>
@@ -50,7 +50,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
           <span className="absolute top-2.5 bottom-2.5 left-[-8px] w-[3px] bg-accent" />
         )}
         <SettingsIcon />
-        <span className="font-mono text-[8.5px] tracking-[0.1em] uppercase">
+        <span className="font-mono text-[10px] tracking-[0.1em] uppercase">
           Set
         </span>
       </button>
