@@ -29,6 +29,11 @@ vi.mock("@/lib/commands/detection", () => ({
   toggleBlackout: (...args: unknown[]) => mockToggleBlackout(...(args as [])),
 }));
 
+const mockInvoke = vi.fn().mockResolvedValue(undefined);
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: (...args: unknown[]) => mockInvoke(...args),
+}));
+
 // Mock the Tauri event listener
 let eventCallback: (() => void) | null = null;
 const mockUnlisten = vi.fn();
@@ -41,6 +46,21 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 
 import { useQueue } from "./use-queue";
+import type { ArtifactEntry } from "@/lib/types";
+
+const makeArtifact = (overrides: Partial<ArtifactEntry> & { id: string; name: string }): ArtifactEntry => ({
+  service_id: null,
+  path: `media/${overrides.name}`,
+  is_dir: false,
+  parent_path: "media",
+  size_bytes: 1000,
+  mime_type: "video/mp4",
+  starred: false,
+  thumbnail_path: null,
+  created_at_ms: Date.now(),
+  modified_at_ms: Date.now(),
+  ...overrides,
+});
 
 const makePendingItem = (id: string): QueueItem => ({
   id,
@@ -167,5 +187,75 @@ describe("useQueue", () => {
     });
 
     expect(mockSkipItem).toHaveBeenCalledWith("s1");
+  });
+
+  it("pushAsset sets live state optimistically without waiting for queue reload", async () => {
+    vi.useRealTimers();
+    mockGetQueue.mockResolvedValue([]);
+    mockInvoke.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useQueue());
+    await waitFor(() => expect(mockGetQueue).toHaveBeenCalled());
+
+    const asset = makeArtifact({ id: "video-123", name: "worship.mp4" });
+
+    await act(async () => {
+      await result.current.pushAsset(asset);
+    });
+
+    // Live should be set immediately with artifact data
+    expect(result.current.live).not.toBeNull();
+    expect(result.current.live!.kind).toBe("custom_slide");
+    expect(result.current.live!.image_url).toBe("artifact:video-123");
+    expect(result.current.live!.reference).toBe("worship.mp4");
+    expect(result.current.live!.status).toBe("live");
+  });
+
+  it("pushAsset calls push_artifact_to_display via invoke", async () => {
+    vi.useRealTimers();
+    mockGetQueue.mockResolvedValue([]);
+    mockInvoke.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useQueue());
+    await waitFor(() => expect(mockGetQueue).toHaveBeenCalled());
+
+    await act(async () => {
+      await result.current.pushAsset(makeArtifact({ id: "abc", name: "test.mp4" }));
+    });
+
+    expect(mockInvoke).toHaveBeenCalledWith("push_artifact_to_display", {
+      artifactId: "abc",
+    });
+  });
+
+  it("loadQueue clears pending debounce to prevent double-reload", async () => {
+    mockGetQueue.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useQueue());
+
+    // Wait for initial load
+    await vi.advanceTimersByTimeAsync(0);
+    mockGetQueue.mockClear();
+
+    // Fire event to start debounce timer
+    act(() => {
+      eventCallback?.();
+    });
+
+    // Manually trigger a queue action (which calls loadQueue directly)
+    mockGetQueue.mockResolvedValue([makeLiveItem("x")]);
+    await act(async () => {
+      await result.current.approve("x");
+    });
+
+    const callCountAfterApprove = mockGetQueue.mock.calls.length;
+
+    // Advance past the original debounce — should NOT fire again
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    // loadQueue should not have been called again by the debounce
+    expect(mockGetQueue).toHaveBeenCalledTimes(callCountAfterApprove);
   });
 });

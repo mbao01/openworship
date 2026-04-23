@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { PaperclipIcon, PlayIcon, SearchIcon } from "lucide-react";
 import {
   listRecentArtifacts,
@@ -7,6 +6,7 @@ import {
 } from "../../../lib/commands/artifacts";
 import type { ArtifactEntry } from "../../../lib/types";
 import { toastError } from "../../../lib/toast";
+import { useQueue } from "../../../hooks/use-queue";
 
 function ThumbnailImage({
   artifactId,
@@ -53,6 +53,7 @@ export function AssetsPanel() {
   const [assets, setAssets] = useState<ArtifactEntry[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [assetQuery, setAssetQuery] = useState("");
+  const { pushAsset } = useQueue();
 
   useEffect(() => {
     listRecentArtifacts(50)
@@ -72,7 +73,7 @@ export function AssetsPanel() {
 
   const handlePushAsset = async (asset: ArtifactEntry) => {
     try {
-      await invoke("push_artifact_to_display", { artifactId: asset.id });
+      await pushAsset(asset);
     } catch (e) {
       toastError("Failed to push asset")(e);
     }
