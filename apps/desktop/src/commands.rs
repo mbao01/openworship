@@ -3368,8 +3368,12 @@ pub fn regenerate_thumbnails(
         std::path::PathBuf::from(&db.settings().base_path)
     };
     let db_arc = state.artifacts_db.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        for entry in entries {
+    // Spawn a per-artifact blocking task so all thumbnails are generated concurrently.
+    for entry in entries {
+        let db_arc = db_arc.clone();
+        let app = app.clone();
+        let base_dir = base_dir.clone();
+        tauri::async_runtime::spawn_blocking(move || {
             let abs_path = base_dir.join(&entry.path);
             if let Some(thumb) = crate::artifacts::generate_thumbnail(&abs_path, &base_dir) {
                 if let Ok(db) = db_arc.lock() {
@@ -3380,8 +3384,8 @@ pub fn regenerate_thumbnails(
                 }
                 let _ = app.emit("artifacts://thumbnail-ready", &entry.id);
             }
-        }
-    });
+        });
+    }
     Ok(count)
 }
 
