@@ -19,6 +19,23 @@ export default defineConfig(async () => ({
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],
     exclude: ["e2e/**", "node_modules/**"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov", "html"],
+      exclude: [
+        "e2e/**",
+        "node_modules/**",
+        "src/test-setup.ts",
+        "src/**/*.d.ts",
+        "src/routeTree.gen.ts",
+        "**/*.config.*",
+      ],
+      thresholds: {
+        lines: 40,
+        branches: 80,
+        functions: 50,
+      },
+    },
   },
   server: {
     port: 1420,
