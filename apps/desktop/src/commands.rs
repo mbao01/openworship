@@ -270,8 +270,19 @@ fn start_stt_with_settings(
                 "Deepgram unavailable: API key not configured — fell back to Whisper",
             );
         } else {
-            use ow_audio::DeepgramTranscriber;
-            match DeepgramTranscriber::new(&settings.deepgram_api_key) {
+            use ow_audio::{DeepgramConnectionEvent, DeepgramTranscriber};
+            let (conn_tx, mut conn_rx) =
+                tokio::sync::mpsc::channel::<DeepgramConnectionEvent>(8);
+            let app_clone = app.clone();
+            tauri::async_runtime::spawn(async move {
+                while let Some(evt) = conn_rx.recv().await {
+                    let _ = app_clone.emit("stt://deepgram-connection", &evt);
+                }
+            });
+            match DeepgramTranscriber::new_with_events(
+                &settings.deepgram_api_key,
+                Some(conn_tx),
+            ) {
                 Ok(dg) => {
                     // When both Deepgram and Whisper are available, wrap in
                     // FallbackTranscriber so the session automatically recovers if
