@@ -284,7 +284,7 @@ export function DisplayContent({
             className="w-full text-center font-mono tracking-[0.2em] text-[#3A332C] uppercase"
             style={{ fontSize: 14 }}
           >
-            — no content on screen —
+            Nothing pushed · select from the library
           </div>
         ) : null}
       </div>
