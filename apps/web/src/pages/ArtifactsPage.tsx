@@ -1134,7 +1134,7 @@ function MoveFolderModal({
       .then((list) =>
         setFolders(list.filter((e) => e.is_dir && e.id !== entry.id)),
       )
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, [browsePath, entry.service_id, entry.id]);
 
   const handleOpen = (folder: ArtifactEntry) => {
@@ -1530,13 +1530,13 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     invoke<ServiceProject[]>("list_service_projects")
       .then((list) => setProjects(list.filter((p) => p.closed_at_ms === null)))
-      .catch(() => {});
+      .catch((err) => console.error(err));
     invoke<ArtifactsSettings>("get_artifacts_settings")
       .then(setSettings)
-      .catch(() => {});
+      .catch((err) => console.error(err));
     invoke<StorageUsage>("get_storage_usage")
       .then(setStorageUsage)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const loadEntries = useCallback(async () => {
@@ -1596,7 +1596,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
             setSyncInfoMap((prev) => new Map(prev).set(e.id, info));
           }
         })
-        .catch(() => {});
+        .catch((err) => console.error(err));
     }
   };
 
@@ -1731,7 +1731,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
         setSyncInfoMap((prev) => new Map(prev).set(e.id, updated));
         invoke<StorageUsage>("get_storage_usage")
           .then(setStorageUsage)
-          .catch(() => {});
+          .catch((err) => console.error(err));
       })
       .catch((err) => {
         setSyncInfoMap((prev) => {
@@ -1759,7 +1759,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
       await loadEntries();
       invoke<StorageUsage>("get_storage_usage")
         .then(setStorageUsage)
-        .catch(() => {});
+        .catch((err) => console.error(err));
       if (result.failed > 0) {
         setError(
           `Sync completed: ${result.succeeded}/${result.total} succeeded, ${result.failed} failed.`,
@@ -2404,7 +2404,7 @@ export function ArtifactsPage({ onBack }: { onBack: () => void }) {
               loadEntries();
               invoke<StorageUsage>("get_storage_usage")
                 .then(setStorageUsage)
-                .catch(() => {});
+                .catch((err) => console.error(err));
             }}
           />
         )}

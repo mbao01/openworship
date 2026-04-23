@@ -57,11 +57,11 @@ export function ProviderConfigPanel({
   useEffect(() => {
     getProviderStatus(provider.id)
       .then(setStatus)
-      .catch(() => {});
+      .catch((err) => console.error(err));
     if (provider.is_local) {
       getProviderModels(provider.id)
         .then(setModels)
-        .catch(() => {});
+        .catch((err) => console.error(err));
     }
   }, [provider.id, provider.is_local, installed]);
 

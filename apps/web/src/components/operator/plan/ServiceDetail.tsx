@@ -125,7 +125,7 @@ export function ServiceDetail({
                 const value = e.target.value;
                 switchLiveTranslation(value)
                   .then(() => setActiveTranslation(value))
-                  .catch(() => {});
+                  .catch((err) => console.error(err));
               }}
             >
               {translations.map((t) => (
@@ -151,7 +151,7 @@ export function ServiceDetail({
                 };
                 setAudioSettings(updated)
                   .then(() => setAudioSettingsState(updated))
-                  .catch(() => {});
+                  .catch((err) => console.error(err));
               }}
             >
               <option value={8}>8s</option>
@@ -170,7 +170,7 @@ export function ServiceDetail({
                 };
                 setEmailSettings(updated)
                   .then(() => setEmailSettingsState(updated))
-                  .catch(() => {});
+                  .catch((err) => console.error(err));
               }}
             />
             <span className="text-[10px] text-ink-3">Email summary</span>

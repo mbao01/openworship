@@ -72,13 +72,13 @@ export function PlanScreen() {
         setTranslations(list);
         setActiveTranslation(active);
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
     getAudioSettings()
       .then(setAudioSettingsState)
-      .catch(() => {});
+      .catch((err) => console.error(err));
     getEmailSettings()
       .then(setEmailSettingsState)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const selectedProject = projects.find((p) => p.id === selectedId) ?? null;

@@ -35,10 +35,10 @@ export function EmailSection({ identity }: EmailSectionProps) {
   useEffect(() => {
     getEmailSettings()
       .then(setSettingsState)
-      .catch(() => {});
+      .catch((err) => console.error(err));
     listEmailSubscribers()
       .then(setSubscribers)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const handleSave = async () => {

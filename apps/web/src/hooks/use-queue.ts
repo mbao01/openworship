@@ -72,7 +72,7 @@ export function useQueue(): UseQueueReturn {
     loadQueue();
     getBlackout()
       .then((v) => setBlackout(v === true))
-      .catch(() => {});
+      .catch((err) => console.error(err));
 
     let unlisten: (() => void) | undefined;
     listen("detection://queue-updated", () => {

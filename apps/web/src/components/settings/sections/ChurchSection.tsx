@@ -21,7 +21,7 @@ export function ChurchSection({ identity }: ChurchSectionProps) {
   useEffect(() => {
     getBranchSyncStatus()
       .then(setSyncStatus)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const handleCopy = () => {

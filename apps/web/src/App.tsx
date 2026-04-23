@@ -31,7 +31,7 @@ import "./styles/global.css";
         const preset = getPreset(presetId);
         applyThemeTokens(resolved === "dark" ? preset.dark : preset.light);
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
   } catch {
     document.documentElement.setAttribute("data-app-theme", "dark");
     document.documentElement.classList.add("dark");

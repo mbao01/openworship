@@ -69,20 +69,20 @@ export function TopBar({
   useEffect(() => {
     getAudioSettings()
       .then((s) => setInputLabel(s.audio_input_device || "INPUT"))
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   // Load initial mode from backend — suppress errors on startup
   useEffect(() => {
     invoke<DetectionMode>("get_detection_mode")
       .then(onModeChange)
-      .catch(() => {});
+      .catch((err) => console.error(err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleMicToggle = async () => {
     if (micActive) {
-      await stopStt().catch(() => {});
+      await stopStt().catch((err) => console.error(err));
       setMicActive(false);
     } else {
       try {

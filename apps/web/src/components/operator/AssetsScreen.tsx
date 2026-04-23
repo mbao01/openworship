@@ -145,13 +145,13 @@ export function AssetsScreen() {
   useEffect(() => {
     invoke<ServiceProject[]>("list_service_projects")
       .then((list) => setProjects(list.filter((p) => p.closed_at_ms === null)))
-      .catch(() => {});
+      .catch((err) => console.error(err));
     invoke<ArtifactsSettings>("get_artifacts_settings")
       .then(setSettings)
-      .catch(() => {});
+      .catch((err) => console.error(err));
     invoke<StorageUsage>("get_storage_usage")
       .then(setStorageUsage)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   const loadEntries = useCallback(async () => {
@@ -231,7 +231,7 @@ export function AssetsScreen() {
         }
         setSyncInfoMap(next);
       })
-      .catch(() => {});
+      .catch((err) => console.error(err));
   };
 
   useEffect(() => {
@@ -374,7 +374,7 @@ export function AssetsScreen() {
         setSyncInfoMap((prev) => new Map(prev).set(e.id, updated));
         invoke<StorageUsage>("get_storage_usage")
           .then(setStorageUsage)
-          .catch(() => {});
+          .catch((err) => console.error(err));
       })
       .catch((err) => {
         setSyncInfoMap((prev) => {
@@ -402,7 +402,7 @@ export function AssetsScreen() {
       await loadEntries();
       invoke<StorageUsage>("get_storage_usage")
         .then(setStorageUsage)
-        .catch(() => {});
+        .catch((err) => console.error(err));
       if (result.failed > 0) {
         setError(
           `Sync completed: ${result.succeeded}/${result.total} succeeded, ${result.failed} failed.`,
@@ -879,7 +879,7 @@ export function AssetsScreen() {
               loadEntries();
               invoke<StorageUsage>("get_storage_usage")
                 .then(setStorageUsage)
-                .catch(() => {});
+                .catch((err) => console.error(err));
             }}
           />
         )}

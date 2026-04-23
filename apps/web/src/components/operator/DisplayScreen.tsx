@@ -70,7 +70,7 @@ export function DisplayScreen() {
   useEffect(() => {
     getObsDisplayUrl()
       .then(setDisplayUrl)
-      .catch(() => {});
+      .catch((err) => console.error(err));
   }, []);
 
   // Use hook's OBS URL if available
