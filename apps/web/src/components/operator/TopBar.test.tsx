@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TopBar } from "./TopBar";
@@ -29,8 +29,10 @@ vi.mock("../../lib/commands/settings", () => ({
   getEmailSettings: vi.fn().mockResolvedValue({}),
 }));
 
+const mockToastError = vi.hoisted(() => vi.fn(() => vi.fn()));
+
 vi.mock("../../lib/toast", () => ({
-  toastError: () => () => {},
+  toastError: mockToastError,
 }));
 
 describe("TopBar", () => {
@@ -85,5 +87,21 @@ describe("TopBar", () => {
   it("renders brand name", () => {
     renderWithProviders(<TopBar {...defaultProps} />);
     expect(screen.getByText("openworship")).toBeInTheDocument();
+  });
+
+  it("does not show a toast when startup invoke calls fail", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const { getAudioSettings } = await import("../../lib/commands/settings");
+    vi.mocked(invoke).mockRejectedValueOnce(new Error("backend not ready"));
+    vi.mocked(getAudioSettings).mockRejectedValueOnce(
+      new Error("backend not ready"),
+    );
+
+    render(<TopBar {...defaultProps} />);
+
+    // Give async effects time to settle
+    await waitFor(() => {
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
   });
 });
