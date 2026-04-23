@@ -27,7 +27,7 @@ vi.mock("../../lib/commands/settings", () => ({
 const mockToastError = vi.fn(() => vi.fn());
 
 vi.mock("../../lib/toast", () => ({
-  toastError: (...args: unknown[]) => mockToastError(...args),
+  toastError: mockToastError,
 }));
 
 describe("TopBar", () => {
