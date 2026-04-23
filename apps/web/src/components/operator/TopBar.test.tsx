@@ -97,7 +97,7 @@ describe("TopBar", () => {
       new Error("backend not ready"),
     );
 
-    render(<TopBar {...defaultProps} />);
+    renderWithProviders(<TopBar {...defaultProps} />);
 
     // Give async effects time to settle
     await waitFor(() => {
