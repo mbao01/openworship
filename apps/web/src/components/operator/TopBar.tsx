@@ -6,6 +6,11 @@ import { startStt, stopStt } from "../../lib/commands/audio";
 import { getAudioSettings } from "../../lib/commands/settings";
 import { toastError } from "../../lib/toast";
 import { useAudioLevel } from "@/hooks/use-audio-level";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TopBarProps {
   mode: DetectionMode;
@@ -14,11 +19,27 @@ interface TopBarProps {
   onPush?: () => void;
 }
 
-const MODES: { value: DetectionMode; label: string }[] = [
-  { value: "auto", label: "Auto" },
-  { value: "copilot", label: "Copilot" },
-  { value: "airplane", label: "Airplane" },
-  { value: "offline", label: "Offline" },
+const MODES: { value: DetectionMode; label: string; description: string }[] = [
+  {
+    value: "auto",
+    label: "Auto",
+    description: "Engine approves and pushes high-confidence matches automatically",
+  },
+  {
+    value: "copilot",
+    label: "Copilot",
+    description: "Engine queues candidates; you manually approve each one",
+  },
+  {
+    value: "airplane",
+    label: "Airplane",
+    description: "Detection disabled; push content manually",
+  },
+  {
+    value: "offline",
+    label: "Offline",
+    description: "Full offline mode — no STT or semantic matching",
+  },
 ];
 
 export function TopBar({
@@ -98,17 +119,23 @@ export function TopBar({
       <div className="flex items-center justify-center gap-4">
         <div className="flex overflow-hidden rounded border border-line-strong bg-bg-2">
           {MODES.map((m) => (
-            <button
-              key={m.value}
-              className={`cursor-pointer border-r border-line px-3.5 py-1.5 font-mono text-[10px] tracking-[0.12em] uppercase transition-all last:border-r-0 ${
-                mode === m.value
-                  ? "bg-accent font-semibold text-accent-foreground"
-                  : "text-ink-3 hover:bg-bg-3 hover:text-ink"
-              }`}
-              onClick={() => handleModeChange(m.value)}
-            >
-              {m.label}
-            </button>
+            <Tooltip key={m.value}>
+              <TooltipTrigger asChild>
+                <button
+                  className={`cursor-pointer border-r border-line px-3.5 py-1.5 font-mono text-[10px] tracking-[0.12em] uppercase transition-all last:border-r-0 ${
+                    mode === m.value
+                      ? "bg-accent font-semibold text-accent-foreground"
+                      : "text-ink-3 hover:bg-bg-3 hover:text-ink"
+                  }`}
+                  onClick={() => handleModeChange(m.value)}
+                >
+                  {m.label}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={6}>
+                {m.description}
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
 
