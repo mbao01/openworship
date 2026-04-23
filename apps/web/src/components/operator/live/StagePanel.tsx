@@ -324,7 +324,11 @@ export function StagePanel({ mode, visible = true }: { mode: DetectionMode; visi
               toggleBlackout().catch(toastError("Failed to toggle live"))
             }
             aria-pressed={!blackout}
-            aria-label={blackout ? "Display is off air. Press to go live." : "Display is live. Press to go off air."}
+            aria-label={
+              blackout
+                ? "Display is off air. Press to go live."
+                : "Display is live. Press to go off air."
+            }
             title={blackout ? "Turn live on (B)" : "Turn live off (B)"}
           >
             <span
