@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { CircleIcon, MonitorIcon, PaperclipIcon } from "lucide-react";
 import { useQueue } from "../../hooks/use-queue";
 import { useDisplayWindow } from "../../hooks/use-display-window";
@@ -22,27 +21,9 @@ function AssetPreview({
   const isVideo = VID_EXTS.has(ext);
 
   useEffect(() => {
-    // Videos: use owmedia:// streaming protocol (no blob, no blocking)
-    if (isVideo) {
-      setSrc(`owmedia://localhost/${artifactId}`);
-      return;
-    }
-    // Images: read bytes and create blob URL
-    let revoked = false;
-    let url: string | null = null;
-    invoke<number[]>("read_artifact_bytes", { id: artifactId })
-      .then((bytes) => {
-        if (revoked) return;
-        const blob = new Blob([new Uint8Array(bytes)]);
-        url = URL.createObjectURL(blob);
-        setSrc(url);
-      })
-      .catch(() => setSrc(null));
-    return () => {
-      revoked = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [artifactId, isVideo]);
+    // Use owmedia:// for all artifact types — no IPC round-trip, no blob allocation.
+    setSrc(`owmedia://localhost/${artifactId}`);
+  }, [artifactId]);
 
   if (!src) return <PaperclipIcon className="h-10 w-10 text-ink-3" />;
   if (IMG_EXTS.has(ext))
