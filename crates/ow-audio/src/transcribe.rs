@@ -3,6 +3,15 @@ use anyhow::Result;
 /// Synchronously transcribes a chunk of 16 kHz mono f32 audio to text.
 pub trait Transcriber: Send + 'static {
     fn transcribe(&mut self, samples: &[f32]) -> Result<String>;
+
+    /// Returns `Some(reason)` when this transcriber has fallen back from its
+    /// primary backend to a local fallback.  The reason is a human-readable
+    /// string suitable for display (e.g. `"network unreachable"`).
+    ///
+    /// Default: always `None` — primary backend is in use.
+    fn fallback_reason(&self) -> Option<&str> {
+        None
+    }
 }
 
 // ---------------------------------------------------------------------------

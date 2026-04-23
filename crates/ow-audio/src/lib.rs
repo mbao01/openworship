@@ -14,6 +14,7 @@ mod deepgram;
 mod deepgram_provider;
 mod engine;
 pub mod event;
+mod fallback;
 pub mod provider;
 mod registry;
 pub(crate) mod transcribe;
@@ -36,6 +37,8 @@ pub use transcribe::{
 pub use deepgram::DeepgramTranscriber;
 #[cfg(feature = "deepgram")]
 pub use event::DeepgramConnectionEvent;
+#[cfg(all(feature = "deepgram", feature = "whisper"))]
+pub use fallback::FallbackTranscriber;
 
 #[cfg(test)]
 mod tests {

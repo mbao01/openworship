@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { MicIcon, MicOffIcon, SearchIcon } from "lucide-react";
-import { startStt, stopStt, getSttStatus } from "../../../lib/commands/audio";
+import {
+  startStt,
+  stopStt,
+  getSttStatus,
+  isSttActive,
+  sttFallbackReason,
+} from "../../../lib/commands/audio";
 import { useQueue } from "../../../hooks/use-queue";
 import { toastError } from "../../../lib/toast";
 import { QueueItemCard } from "./QueueItemCard";
@@ -11,17 +17,19 @@ export function QueueTranscriptPanel({ visible: isVisible = true }: { visible?: 
   const { queue, live, approve, skip } = useQueue();
   const visibleItems = [...(live ? [live] : []), ...queue].slice(0, 10);
   const [micActive, setMicActive] = useState(false);
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isVisible) return;
-    getSttStatus()
-      .then((s) => setMicActive(s === "running"))
-      .catch(() => {});
-    const id = setInterval(() => {
+    const update = () =>
       getSttStatus()
-        .then((s) => setMicActive(s === "running"))
+        .then((s) => {
+          setMicActive(isSttActive(s));
+          setFallbackReason(sttFallbackReason(s));
+        })
         .catch(() => {});
-    }, 2000);
+    update();
+    const id = setInterval(update, 2000);
     return () => clearInterval(id);
   }, [isVisible]);
 
@@ -85,6 +93,14 @@ export function QueueTranscriptPanel({ visible: isVisible = true }: { visible?: 
           <span className="font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase">
             Transcript ·{" "}
             <strong className="font-medium text-ink-2">live</strong>
+            {fallbackReason && (
+              <span
+                className="ml-1.5 rounded bg-yellow-500/15 px-1 py-0.5 font-mono text-[8px] font-bold tracking-[0.1em] text-yellow-600 uppercase"
+                title={`Fallback to Whisper: ${fallbackReason}`}
+              >
+                whisper ↓
+              </span>
+            )}
           </span>
           <div className="flex items-center gap-2">
             <button

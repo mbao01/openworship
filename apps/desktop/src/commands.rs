@@ -281,11 +281,59 @@ fn start_stt_with_settings(
             });
             match DeepgramTranscriber::new_with_events(
                 &settings.deepgram_api_key,
-                Some(conn_tx),
+                Some(conn_tx.clone()),
             ) {
-                Ok(t) => {
-                    eprintln!("[stt] starting Deepgram online transcriber");
-                    return engine.start(Box::new(t), config);
+                Ok(dg) => {
+                    // When both Deepgram and Whisper are available, wrap in
+                    // FallbackTranscriber so the session automatically recovers if
+                    // the network goes down mid-service.
+                    #[cfg(feature = "whisper")]
+                    {
+                        use ow_audio::{FallbackTranscriber, WhisperTranscriber};
+                        let preferred = settings.whisper_model.filename().to_owned();
+                        let whisper_model = ow_audio::resolve_model_path_for(Some(&preferred));
+                        match whisper_model.and_then(|p| WhisperTranscriber::new(&p)) {
+                            Ok(whisper) => {
+                                let api_key = settings.deepgram_api_key.clone();
+                                let make_primary: Box<
+                                    dyn Fn() -> anyhow::Result<Box<dyn ow_audio::Transcriber>>
+                                        + Send
+                                        + 'static,
+                                > = Box::new(move || {
+                                    // Re-use the connection event channel so
+                                    // reconnection attempts are visible in the UI.
+                                    let t = DeepgramTranscriber::new_with_events(
+                                        &api_key,
+                                        Some(conn_tx.clone()),
+                                    )?;
+                                    Ok(Box::new(t) as Box<dyn ow_audio::Transcriber>)
+                                });
+                                let ft = FallbackTranscriber::new(
+                                    Box::new(dg),
+                                    make_primary,
+                                    Box::new(whisper),
+                                );
+                                eprintln!(
+                                    "[stt] starting Deepgram with auto-fallback to Whisper"
+                                );
+                                return engine.start(Box::new(ft), config);
+                            }
+                            Err(e) => {
+                                // Whisper not available — run Deepgram alone (no fallback).
+                                eprintln!(
+                                    "[stt] Whisper unavailable ({e}); starting Deepgram without fallback"
+                                );
+                                return engine.start(Box::new(dg), config);
+                            }
+                        }
+                    }
+
+                    // Whisper feature not compiled in — use Deepgram alone.
+                    #[cfg(not(feature = "whisper"))]
+                    {
+                        eprintln!("[stt] starting Deepgram online transcriber (no fallback)");
+                        return engine.start(Box::new(dg), config);
+                    }
                 }
                 Err(e) => {
                     eprintln!("[stt] Deepgram init failed ({e}), falling back to Whisper");

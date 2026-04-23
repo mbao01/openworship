@@ -4,6 +4,7 @@ import {
   getAudioLevel,
   listAudioInputDevices,
   getSttStatus,
+  isSttActive,
 } from "@/lib/commands/audio";
 import {
   getDisplayWindowOpen,
@@ -129,7 +130,7 @@ export function PreviewScreen({ onGoLive }: PreviewScreenProps) {
 
     getSttStatus()
       .then((s) => {
-        if (s === "running") autoToggle("internet");
+        if (isSttActive(s)) autoToggle("internet");
       })
       .catch(() => {});
   }, []);

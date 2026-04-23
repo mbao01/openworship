@@ -8,8 +8,35 @@
 import { invoke } from "../tauri";
 import type { AudioInputDevice } from "../types";
 
-/** Current STT pipeline state. */
-export type SttStatus = "running" | "stopped" | "error";
+/**
+ * Current STT pipeline state.
+ *
+ * - `"running"`           — active, using the configured backend (Deepgram or Whisper).
+ * - `"stopped"`           — not capturing.
+ * - `{ fallback: string}` — active, but the primary backend (Deepgram) is
+ *                           unavailable; transcribing via the local Whisper
+ *                           fallback. The string is a short reason
+ *                           (e.g. `"network unreachable"`, `"connection lost"`).
+ * - `{ error: string }`   — start failed (model missing, device error, etc.).
+ */
+export type SttStatus =
+  | "running"
+  | "stopped"
+  | { fallback: string }
+  | { error: string };
+
+/** Returns `true` when the STT engine is active (either primary or fallback). */
+export function isSttActive(status: SttStatus): boolean {
+  return status === "running" || (typeof status === "object" && "fallback" in status);
+}
+
+/** Returns the fallback reason if the engine is in fallback mode, or `null`. */
+export function sttFallbackReason(status: SttStatus): string | null {
+  if (typeof status === "object" && "fallback" in status) {
+    return status.fallback;
+  }
+  return null;
+}
 
 /**
  * Starts the STT capture pipeline using the currently configured backend.

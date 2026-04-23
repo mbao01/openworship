@@ -64,6 +64,10 @@ fn diff_new_words(prev: &str, current: &str) -> String {
 pub enum SttStatus {
     Stopped,
     Running,
+    /// Running on the local Whisper fallback because the primary (Deepgram)
+    /// backend is unavailable. Contains a short human-readable reason such as
+    /// `"network unreachable"` or `"connection lost"`.
+    Fallback(String),
     /// Model not found or audio device error.
     Error(String),
 }
@@ -208,6 +212,28 @@ impl SttEngine {
                                 }
                             }
                             Err(e) => eprintln!("[stt] transcription error: {e}"),
+                        }
+
+                        // Sync SttStatus with the transcriber's fallback state.
+                        // FallbackTranscriber updates its own state during transcribe();
+                        // we mirror it here so callers of engine.status() see the change.
+                        {
+                            let fb = transcriber.fallback_reason().map(|r| r.to_owned());
+                            let mut s = status.lock().unwrap_or_else(|e| e.into_inner());
+                            match fb {
+                                Some(reason) => {
+                                    if !matches!(*s, SttStatus::Fallback(_)) {
+                                        eprintln!("[stt] engine entering fallback: {reason}");
+                                        *s = SttStatus::Fallback(reason);
+                                    }
+                                }
+                                None => {
+                                    if matches!(*s, SttStatus::Fallback(_)) {
+                                        eprintln!("[stt] engine leaving fallback — back on primary");
+                                        *s = SttStatus::Running;
+                                    }
+                                }
+                            }
                         }
                     }
                     Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
