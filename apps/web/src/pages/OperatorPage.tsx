@@ -58,6 +58,13 @@ export function OperatorPage({ identity }: OperatorPageProps) {
       data-qa="operator-root"
       className="flex h-screen flex-col overflow-hidden bg-bg font-sans text-ink"
     >
+      {/* Skip link — visible on focus, hidden otherwise (WCAG 2.4.1) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[500] focus:rounded focus:bg-accent focus:px-3 focus:py-1.5 focus:text-sm focus:font-medium focus:text-accent-foreground"
+      >
+        Skip to main content
+      </a>
       <TopBar
         mode={mode}
         onModeChange={setMode}
@@ -69,7 +76,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
           screen={settingsOpen ? "settings" : screen}
           onScreenChange={handleScreenChange}
         />
-        <main className="relative flex flex-1 overflow-hidden bg-bg">
+        <main id="main-content" className="relative flex flex-1 overflow-hidden bg-bg" tabIndex={-1}>
           {/* Live screen stays mounted (hidden via CSS) so background video keeps playing */}
           <div className={`flex flex-1 overflow-hidden ${screen !== "live" ? "invisible absolute inset-0" : ""}`}>
             <ErrorBoundary panelName="Live panel">

@@ -20,6 +20,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
         <button
           key={item.id}
           aria-label={`Open ${item.label}`}
+          aria-current={screen === item.id ? "page" : undefined}
           className={`relative mx-2 flex cursor-pointer flex-col items-center gap-1 rounded py-2.5 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
             screen === item.id
               ? "bg-bg-3 text-ink"
@@ -46,6 +47,7 @@ export function Rail({ screen, onScreenChange }: RailProps) {
         }`}
         onClick={() => onScreenChange("settings")}
         aria-label="Open settings"
+        aria-current={screen === "settings" ? "page" : undefined}
       >
         {screen === "settings" && (
           <span className="absolute top-2.5 bottom-2.5 left-[-8px] w-[3px] bg-accent" />
@@ -70,6 +72,8 @@ function PlanIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
+      aria-hidden="true"
+      focusable="false"
     >
       <rect x="4" y="4" width="16" height="16" rx="1" />
       <path d="M4 9h16M9 4v16" />
@@ -86,6 +90,8 @@ function PreviewIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
+      aria-hidden="true"
+      focusable="false"
     >
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
       <circle cx="12" cy="12" r="3" />
@@ -102,6 +108,8 @@ function LiveIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
+      aria-hidden="true"
+      focusable="false"
     >
       <circle cx="12" cy="12" r="3" />
       <circle cx="12" cy="12" r="9" />
@@ -118,6 +126,8 @@ function AssetsIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
+      aria-hidden="true"
+      focusable="false"
     >
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
@@ -133,6 +143,8 @@ function LibraryIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
+      aria-hidden="true"
+      focusable="false"
     >
       <path d="M4 4h4v16H4zM10 4h4v16h-4zM16 6l3-1 3 15-3 1z" />
     </svg>
@@ -148,6 +160,8 @@ function LogsIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
+      aria-hidden="true"
+      focusable="false"
     >
       <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
       <path d="M14 3v6h6M8 13h8M8 17h5" />
@@ -164,6 +178,8 @@ function DisplayIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
+      aria-hidden="true"
+      focusable="false"
     >
       <rect x="3" y="5" width="18" height="12" rx="1" />
       <path d="M8 21h8M12 17v4" />
@@ -180,6 +196,8 @@ function SettingsIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"
+      aria-hidden="true"
+      focusable="false"
     >
       <circle cx="12" cy="12" r="3" />
       <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
