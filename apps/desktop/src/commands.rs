@@ -1,5 +1,5 @@
 use crate::service::{ContentBankEntry, ProjectItem, ServiceProject, ServiceTask, TaskStatus, new_id, now_ms};
-use crate::settings::{AudioSettings, SttBackend, TutorialSettings, TutorialState};
+use crate::settings::{AudioSettings, SttBackend};
 use crate::slides::{AnnouncementItem, SermonNote};
 use crate::slides::{save_announcements, save_sermon_notes};
 use crate::songs::Song;
@@ -3987,20 +3987,6 @@ pub fn get_storage_usage(state: State<'_, AppState>) -> Result<crate::cloud_sync
         .map_err(|e| e.to_string())?
         .get_storage_usage()
         .map_err(|e| e.to_string())
-}
-
-// ── Tutorial state commands ───────────────────────────────────────────────────
-
-/// Return the persisted tutorial onboarding state.
-#[tauri::command]
-pub fn get_tutorial_state() -> TutorialState {
-    TutorialSettings::load().state
-}
-
-/// Persist a new tutorial state.
-#[tauri::command]
-pub fn set_tutorial_state(state: TutorialState) -> Result<(), String> {
-    TutorialSettings { state }.save().map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

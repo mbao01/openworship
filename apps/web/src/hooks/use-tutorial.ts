@@ -6,7 +6,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getTutorialState, setTutorialState, type TutorialState } from "@/lib/commands/tutorial";
+import { getTutorialState, setTutorialState } from "@/lib/commands/tutorial";
+import type { TutorialState } from "@/lib/types";
 
 export type TourStep = 1 | 2 | 3 | 4 | 5;
 
