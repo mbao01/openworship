@@ -4166,71 +4166,61 @@ We've no less days to sing God's praise
 Than when we first begun"
                 .into(),
         },
+        // CCLI songs: placeholder lyrics only — full lyrics require a CCLI license.
         crate::songs::SongImport {
-            title: "Holy Holy Holy".into(),
-            artist: Some("Reginald Heber".into()),
-            ccli_number: None,
+            title: "How Great Is Our God".into(),
+            artist: Some("Chris Tomlin".into()),
+            ccli_number: Some("4348399".into()),
             source: "demo".into(),
             lyrics: "\
-[Verse 1]
-Holy holy holy Lord God Almighty
-Early in the morning our song shall rise to thee
-Holy holy holy merciful and mighty
-God in three persons blessed Trinity
+[CCLI Song]
+Full lyrics require a CCLI license.
+Add your complete lyrics here once you have a CCLI subscription.
 
-[Verse 2]
-Holy holy holy all the saints adore thee
-Casting down their golden crowns around the glassy sea
-Cherubim and seraphim falling down before thee
-Which wert and art and evermore shalt be
-
-[Verse 3]
-Holy holy holy though the darkness hide thee
-Though the eye of sinful man thy glory may not see
-Only thou art holy there is none beside thee
-Perfect in power in love and purity
-
-[Verse 4]
-Holy holy holy Lord God Almighty
-All thy works shall praise thy name in earth and sky and sea
-Holy holy holy merciful and mighty
-God in three persons blessed Trinity"
+CCLI Song # 4348399
+© 2004 worshiptogether.com songs / sixsteps Music / Alletrop Music
+CCLI License required to reproduce."
                 .into(),
         },
         crate::songs::SongImport {
-            title: "To God Be the Glory".into(),
-            artist: Some("Fanny Crosby".into()),
-            ccli_number: None,
+            title: "10,000 Reasons (Bless the Lord)".into(),
+            artist: Some("Matt Redman".into()),
+            ccli_number: Some("6016351".into()),
             source: "demo".into(),
             lyrics: "\
-[Verse 1]
-To God be the glory great things He hath taught us
-Great things He hath done and great our rejoicing
-Through Jesus the Son but purer and higher
-And greater our wonder His glory the theme
+[CCLI Song]
+Full lyrics require a CCLI license.
+Add your complete lyrics here once you have a CCLI subscription.
 
-[Chorus]
-Praise the Lord praise the Lord
-Let the earth hear His voice
-Praise the Lord praise the Lord
-Let the people rejoice
-O come to the Father through Jesus the Son
-And give Him the glory great things He hath done
-
-[Verse 2]
-O perfect redemption the purchase of bloodshed
-To every believer the promise of God
-The vilest offender who truly believes
-That moment from Jesus a pardon receives
-
-[Verse 3]
-Great things He hath taught us great things He hath done
-And great our rejoicing through Jesus the Son
-But purer and higher and greater will be
-Our wonder our transport when Jesus we see"
+CCLI Song # 6016351
+© 2011 Thankyou Music / Said And Done Music / sixsteps Music / worshiptogether.com songs
+CCLI License required to reproduce."
                 .into(),
         },
     ]
+}
+
+/// Return the Unix timestamp (ms) for the next Sunday at 10:00 AM local time.
+fn next_sunday_10am_ms() -> Option<i64> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    // Use a simple calculation: get current time in ms, find the next Sunday.
+    // We compute days since epoch (which started on a Thursday).
+    // Day-of-week: epoch = Thursday = 4. Sunday = 0 (mod 7).
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0);
+    // Days since epoch (floored)
+    let day_ms: i64 = 86_400_000;
+    let days_since_epoch = now_ms / day_ms;
+    // Epoch was Thursday (day 4). Sunday is day 0.
+    // days_since_epoch mod 7: 0=Thu,1=Fri,2=Sat,3=Sun,4=Mon,5=Tue,6=Wed
+    let dow = (days_since_epoch % 7) as i32; // 3 = Sunday in this offset
+    let days_to_sunday = if dow <= 3 { 3 - dow } else { 10 - dow } as i64;
+    // If today is Sunday but we haven't reached 10 AM yet, use today; otherwise next Sunday.
+    let target_day_start_ms = (days_since_epoch + days_to_sunday) * day_ms;
+    let ten_am_offset_ms: i64 = 10 * 3600 * 1000; // 10:00 AM UTC (close enough for a demo)
+    Some(target_day_start_ms + ten_am_offset_ms)
 }
 
 fn build_demo_service_project() -> crate::service::ServiceProject {
@@ -4241,7 +4231,7 @@ fn build_demo_service_project() -> crate::service::ServiceProject {
 
     ServiceProject {
         id: svc_id.clone(),
-        name: "Sunday Morning Service (Demo)".into(),
+        name: "Demo Sunday Service".into(),
         description: Some(
             "A sample service plan pre-loaded by OpenWorship. \
              Feel free to edit or delete it once you're comfortable."
@@ -4249,30 +4239,28 @@ fn build_demo_service_project() -> crate::service::ServiceProject {
         ),
         created_at_ms: ts,
         closed_at_ms: None,
-        scheduled_at_ms: None,
+        scheduled_at_ms: next_sunday_10am_ms(),
         items: vec![
             ProjectItem {
                 id: new_id(),
-                reference: "Psalm 100:1-4".into(),
-                text: "Make a joyful noise unto the LORD all ye lands. \
-                       Serve the LORD with gladness: come before his presence with singing. \
-                       Know ye that the LORD he is God: it is he that hath made us and not we ourselves; \
-                       we are his people and the sheep of his pasture. \
-                       Enter into his gates with thanksgiving and into his courts with praise: \
-                       be thankful unto him and bless his name.".into(),
-                translation: "KJV".into(),
+                reference: "John 3:16".into(),
+                text: "For God so loved the world, that he gave his only Son, \
+                       that whoever believes in him should not perish but have eternal life."
+                    .into(),
+                translation: "ESV".into(),
                 position: 0,
                 added_at_ms: ts,
                 item_type: "scripture".into(),
-                duration_secs: Some(90),
-                notes: Some("Opening call to worship".into()),
+                duration_secs: Some(60),
+                notes: None,
                 asset_ids: vec![],
             },
             ProjectItem {
                 id: new_id(),
                 reference: "Amazing Grace".into(),
                 text: "Amazing grace how sweet the sound / That saved a wretch like me / \
-                       I once was lost but now am found / Was blind but now I see".into(),
+                       I once was lost but now am found / Was blind but now I see"
+                    .into(),
                 translation: String::new(),
                 position: 1,
                 added_at_ms: ts,
@@ -4283,45 +4271,38 @@ fn build_demo_service_project() -> crate::service::ServiceProject {
             },
             ProjectItem {
                 id: new_id(),
-                reference: "John 3:16-17".into(),
-                text: "For God so loved the world that he gave his only begotten Son \
-                       that whosoever believeth in him should not perish but have everlasting life. \
-                       For God sent not his Son into the world to condemn the world; \
-                       but that the world through him might be saved.".into(),
-                translation: "KJV".into(),
+                reference: "How Great Is Our God".into(),
+                text: "How great is our God / Sing with me how great is our God".into(),
+                translation: String::new(),
                 position: 2,
                 added_at_ms: ts,
-                item_type: "scripture".into(),
-                duration_secs: Some(120),
-                notes: Some("Message text".into()),
+                item_type: "song".into(),
+                duration_secs: Some(300),
+                notes: Some("CCLI license required for full lyrics".into()),
                 asset_ids: vec![],
             },
             ProjectItem {
                 id: new_id(),
-                reference: "Holy Holy Holy".into(),
-                text: "Holy holy holy Lord God Almighty / \
-                       Early in the morning our song shall rise to thee / \
-                       Holy holy holy merciful and mighty / \
-                       God in three persons blessed Trinity".into(),
-                translation: String::new(),
+                reference: "Psalm 23:1".into(),
+                text: "The LORD is my shepherd; I shall not want.".into(),
+                translation: "ESV".into(),
                 position: 3,
                 added_at_ms: ts,
-                item_type: "song".into(),
-                duration_secs: Some(240),
-                notes: Some("Worship response".into()),
+                item_type: "scripture".into(),
+                duration_secs: Some(30),
+                notes: None,
                 asset_ids: vec![],
             },
             ProjectItem {
                 id: new_id(),
-                reference: "Romans 8:28".into(),
-                text: "And we know that all things work together for good \
-                       to them that love God to them who are the called according to his purpose.".into(),
-                translation: "KJV".into(),
+                reference: "Welcome announcement".into(),
+                text: "Welcome! Service starts at 10:00 AM.".into(),
+                translation: String::new(),
                 position: 4,
                 added_at_ms: ts,
-                item_type: "scripture".into(),
-                duration_secs: Some(60),
-                notes: Some("Benediction verse".into()),
+                item_type: "announcement".into(),
+                duration_secs: Some(30),
+                notes: None,
                 asset_ids: vec![],
             },
         ],
