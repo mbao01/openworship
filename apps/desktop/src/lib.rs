@@ -254,8 +254,11 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .register_uri_scheme_protocol("owmedia", move |_ctx, request| {
-            // Custom protocol: owmedia://artifact/{id}
-            // Streams artifact files from disk — supports video, images, etc.
+            // Custom protocol handler for local media and thumbnails.
+            //
+            // Routes:
+            //   owmedia://localhost/{id}            → serve the artifact file
+            //   owmedia://localhost/thumbnail/{id}  → serve the artifact's thumbnail
             let uri = request.uri();
             let path = uri.path().trim_start_matches('/');
 
@@ -267,6 +270,40 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap(),
             };
 
+            // thumbnail/{id} route
+            if let Some(artifact_id) = path.strip_prefix("thumbnail/") {
+                let entry = match db.get_by_id(artifact_id) {
+                    Ok(Some(e)) => e,
+                    _ => return tauri::http::Response::builder()
+                        .status(404)
+                        .body(Vec::new())
+                        .unwrap(),
+                };
+                let thumb_rel = match entry.thumbnail_path.as_ref() {
+                    Some(p) => p.clone(),
+                    None => return tauri::http::Response::builder()
+                        .status(404)
+                        .body(Vec::new())
+                        .unwrap(),
+                };
+                let abs = db.abs_path(&thumb_rel);
+                let bytes = match std::fs::read(&abs) {
+                    Ok(b) => b,
+                    Err(_) => return tauri::http::Response::builder()
+                        .status(404)
+                        .body(Vec::new())
+                        .unwrap(),
+                };
+                return tauri::http::Response::builder()
+                    .status(200)
+                    .header("Content-Type", "image/jpeg")
+                    .header("Access-Control-Allow-Origin", "*")
+                    .body(bytes)
+                    .unwrap();
+            }
+
+            // Default: serve artifact by ID — supports RFC 7233 Range requests
+            // so the browser can stream and seek video without full reloads.
             let entry = match db.get_by_id(path) {
                 Ok(Some(e)) => e,
                 _ => return tauri::http::Response::builder()
@@ -276,6 +313,70 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             let abs = db.abs_path(&entry.path);
+            let mime = entry.mime_type.unwrap_or_else(|| "application/octet-stream".into());
+            // Release the lock before file I/O so other requests are not blocked.
+            drop(db);
+
+            let file_len = match std::fs::metadata(&abs) {
+                Ok(m) => m.len(),
+                Err(_) => return tauri::http::Response::builder()
+                    .status(404)
+                    .body(Vec::new())
+                    .unwrap(),
+            };
+
+            // Parse Range header: "bytes=start-end" or "bytes=start-"
+            let range_str = request
+                .headers()
+                .get("Range")
+                .or_else(|| request.headers().get("range"))
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_owned());
+
+            if let Some(range) = range_str {
+                let val = range.strip_prefix("bytes=").unwrap_or(&range);
+                let mut parts = val.splitn(2, '-');
+                let start: u64 = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0);
+                let end: u64 = parts
+                    .next()
+                    .filter(|s| !s.is_empty())
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(file_len.saturating_sub(1))
+                    .min(file_len.saturating_sub(1));
+
+                if start > end || start >= file_len {
+                    return tauri::http::Response::builder()
+                        .status(416)
+                        .header("Content-Range", format!("bytes */{file_len}"))
+                        .body(Vec::new())
+                        .unwrap();
+                }
+
+                let length = end - start + 1;
+                let mut buf = vec![0u8; length as usize];
+                use std::io::{Read, Seek, SeekFrom};
+                return match std::fs::File::open(&abs).and_then(|mut f| {
+                    f.seek(SeekFrom::Start(start))?;
+                    f.read_exact(&mut buf)?;
+                    Ok(buf)
+                }) {
+                    Ok(bytes) => tauri::http::Response::builder()
+                        .status(206)
+                        .header("Content-Type", &mime)
+                        .header("Content-Range", format!("bytes {start}-{end}/{file_len}"))
+                        .header("Content-Length", length.to_string())
+                        .header("Accept-Ranges", "bytes")
+                        .header("Access-Control-Allow-Origin", "*")
+                        .body(bytes)
+                        .unwrap(),
+                    Err(_) => tauri::http::Response::builder()
+                        .status(500)
+                        .body(Vec::new())
+                        .unwrap(),
+                };
+            }
+
+            // No Range header — return full file, advertising Range support.
             let bytes = match std::fs::read(&abs) {
                 Ok(b) => b,
                 Err(_) => return tauri::http::Response::builder()
@@ -284,11 +385,11 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap(),
             };
 
-            let mime = entry.mime_type.as_deref().unwrap_or("application/octet-stream");
-
             tauri::http::Response::builder()
                 .status(200)
-                .header("Content-Type", mime)
+                .header("Content-Type", &mime)
+                .header("Content-Length", bytes.len().to_string())
+                .header("Accept-Ranges", "bytes")
                 .header("Access-Control-Allow-Origin", "*")
                 .body(bytes)
                 .unwrap()
