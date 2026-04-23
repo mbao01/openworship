@@ -751,8 +751,12 @@ pub fn get_audio_level(state: State<'_, AppState>) -> f32 {
 
 /// Start a lightweight audio capture purely for VU meter / mic check.
 /// Does NOT start transcription — just opens the mic and reads levels.
+///
+/// After starting the capture, spawns a background task that emits
+/// `audio://level-updated` (payload: `f32` in `[0.0, 1.0]`) at ~20 Hz whenever
+/// the RMS level changes, replacing the 200 ms frontend `setInterval` poll.
 #[tauri::command]
-pub fn start_audio_monitor(state: State<'_, AppState>) -> Result<(), String> {
+pub fn start_audio_monitor(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     let device_name = state
         .audio_settings
         .read()
@@ -769,6 +773,23 @@ pub fn start_audio_monitor(state: State<'_, AppState>) -> Result<(), String> {
         });
     if result.is_ok() {
         eprintln!("[audio-monitor] started successfully, is_running={}", state.audio_monitor.is_running());
+        // Clone the monitor handle (cheap — shares Arc<AtomicU32/Bool>) and
+        // push level events from Rust instead of polling from the frontend.
+        let monitor = state.audio_monitor.clone();
+        tauri::async_runtime::spawn(async move {
+            let mut prev_bits = u32::MAX; // force first emit regardless of level
+            while monitor.is_running() {
+                tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                let lvl = monitor.level_rms();
+                let bits = lvl.to_bits();
+                if bits != prev_bits {
+                    let _ = app.emit("audio://level-updated", lvl);
+                    prev_bits = bits;
+                }
+            }
+            // Emit 0.0 when the monitor stops so the VU meter clears immediately.
+            let _ = app.emit("audio://level-updated", 0.0f32);
+        });
     }
     result
 }

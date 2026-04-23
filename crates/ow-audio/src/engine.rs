@@ -2,6 +2,7 @@ use crate::capture::{AudioCapturer, AudioConfig};
 use crate::event::TranscriptEvent;
 use crate::transcribe::Transcriber;
 use anyhow::Result;
+use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -144,7 +145,7 @@ impl SttEngine {
             // 5s sliding window — gives Whisper full sentence context
             let window_samples = (sample_rate as usize * 5000) / 1000; // 80,000
             let min_samples: usize = 32_000; // 2s minimum before transcribing
-            let mut ring: Vec<f32> = Vec::with_capacity(window_samples);
+            let mut ring: VecDeque<f32> = VecDeque::with_capacity(window_samples + 1);
             let mut prev_text = String::new();
             let mut consecutive_empty: u32 = 0;
             let mut last_transcribe = Instant::now() - std::time::Duration::from_secs(10);
@@ -156,11 +157,10 @@ impl SttEngine {
                 match capturer.rx.recv_timeout(std::time::Duration::from_millis(500)) {
                     Ok(samples) => {
                         // Append new micro-chunk to ring buffer
-                        ring.extend_from_slice(&samples);
-                        // Trim to last 5s
-                        if ring.len() > window_samples {
-                            let excess = ring.len() - window_samples;
-                            ring.drain(..excess);
+                        ring.extend(samples.iter().copied());
+                        // Trim oldest samples to maintain the 5s window — O(1) per pop
+                        while ring.len() > window_samples {
+                            ring.pop_front();
                         }
                         // Wait until we have enough audio for Whisper
                         if ring.len() < min_samples {
@@ -186,7 +186,8 @@ impl SttEngine {
 
                         last_transcribe = Instant::now();
                         let offset_ms = start.elapsed().as_millis() as u64;
-                        match transcriber.transcribe(&ring) {
+                        let samples_slice = ring.make_contiguous();
+                        match transcriber.transcribe(samples_slice) {
                             Ok(text) if !text.is_empty() => {
                                 // Diff: emit only new words
                                 let new_text = diff_new_words(&prev_text, &text);
@@ -269,6 +270,9 @@ impl Default for SttEngine {
 /// Opens the mic directly via cpal and computes RMS on every callback,
 /// without running any transcription or chunk buffering. Updates ~20×
 /// per second for smooth VU meter rendering.
+///
+/// `Clone` is cheap — it shares the same Arc atomics.
+#[derive(Clone)]
 pub struct AudioMonitor {
     level: Arc<AtomicU32>,
     running: Arc<AtomicBool>,
