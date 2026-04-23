@@ -37,3 +37,4 @@ apps/desktop/gen/
 # Pre-built embedding indices (generated build artifacts — not committed)
 apps/desktop/resources/scripture_index_*.bin
 apps/desktop/resources/scripture_index_*.sha256
+.gstack/

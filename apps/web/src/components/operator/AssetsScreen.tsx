@@ -7,7 +7,7 @@ import {
   updateUpload,
   removeUpload,
 } from "../../stores/upload-store";
-import { importArtifactFile } from "../../lib/commands/artifacts";
+import { importArtifactFile, regenerateThumbnails } from "../../lib/commands/artifacts";
 import type {
   ArtifactCategory,
   ArtifactEntry,
@@ -95,6 +95,7 @@ export function AssetsScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   // ── Cloud sync state ────────────────────────────────────────────────────────
   const [syncInfoMap, setSyncInfoMap] = useState<Map<string, CloudSyncInfo>>(
@@ -220,21 +221,34 @@ export function AssetsScreen() {
   }, [nav, parentPath, debouncedQuery]);
 
   const loadSyncInfo = (list: ArtifactEntry[]) => {
-    for (const e of list) {
-      invoke<CloudSyncInfo | null>("get_cloud_sync_info", {
-        artifactId: e.id,
+    if (list.length === 0) return;
+    const ids = list.map((e) => e.id);
+    invoke<CloudSyncInfo[]>("get_cloud_sync_infos", { artifactIds: ids })
+      .then((infos) => {
+        const next = new Map<string, CloudSyncInfo>();
+        for (const info of infos) {
+          next.set(info.artifact_id, info);
+        }
+        setSyncInfoMap(next);
       })
-        .then((info) => {
-          if (info) {
-            setSyncInfoMap((prev) => new Map(prev).set(e.id, info));
-          }
-        })
-        .catch(() => {});
-    }
+      .catch(() => {});
   };
 
   useEffect(() => {
     loadEntries();
+  }, [loadEntries]);
+
+  // Refresh entries when a background thumbnail becomes ready
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    import("@tauri-apps/api/event").then(({ listen }) => {
+      listen("artifacts://thumbnail-ready", () => {
+        loadEntries();
+      }).then((fn) => {
+        unlisten = fn;
+      });
+    });
+    return () => unlisten?.();
   }, [loadEntries]);
 
   const handleNav = (n: Nav) => {
@@ -390,6 +404,18 @@ export function AssetsScreen() {
       setError(String(err));
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleRegenerateThumbnails = async () => {
+    setRegenerating(true);
+    try {
+      await regenerateThumbnails();
+      // Results stream in via artifacts://thumbnail-ready → loadEntries()
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -557,6 +583,22 @@ export function AssetsScreen() {
                 <RefreshCwIcon className={iconCls} />
               </span>
               Sync
+            </button>
+            <button
+              className={[
+                "flex cursor-pointer items-center gap-[5px] rounded border px-[10px] py-[5px] font-sans text-[11px] transition-colors disabled:cursor-not-allowed",
+                regenerating
+                  ? "border-accent/40 bg-accent-soft text-accent"
+                  : "border-line text-ink-3 hover:border-line-strong hover:text-ink",
+              ].join(" ")}
+              onClick={handleRegenerateThumbnails}
+              disabled={regenerating}
+              title="Generate missing thumbnails"
+            >
+              <span className={regenerating ? "animate-spin" : ""}>
+                <RefreshCwIcon className={iconCls} />
+              </span>
+              Thumbnails
             </button>
             <div className="flex gap-[3px]">
               <button

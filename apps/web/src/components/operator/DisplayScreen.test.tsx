@@ -11,7 +11,7 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 
 vi.mock("../../hooks/use-queue", () => ({
-  useQueue: () => ({ queue: [], live: null }),
+  useQueue: vi.fn(() => ({ queue: [], live: null })),
 }));
 
 vi.mock("../../hooks/use-display-window", () => ({
@@ -55,5 +55,68 @@ describe("DisplayScreen", () => {
   it("shows 'no content on screen' when nothing is live", () => {
     render(<DisplayScreen />);
     expect(screen.getByText(/no content on screen/)).toBeInTheDocument();
+  });
+});
+
+describe("AssetPreview (video streaming)", () => {
+  it("uses owmedia:// protocol for video artifacts instead of blob", async () => {
+    const { invoke: mockInvoke } = await import("@tauri-apps/api/core");
+
+    vi.mocked(mockInvoke).mockResolvedValue(undefined);
+
+    // Mock useQueue to return a live item with a video artifact
+    const { useQueue } = await import("../../hooks/use-queue");
+    vi.mocked(useQueue).mockReturnValue({
+      queue: [],
+      live: {
+        id: "q1",
+        text: "",
+        reference: "worship.mp4",
+        translation: "",
+        image_url: "artifact:abc123",
+      },
+    } as unknown as ReturnType<typeof useQueue>);
+
+    render(<DisplayScreen />);
+
+    // Video should use owmedia:// protocol, NOT invoke read_artifact_bytes
+    await vi.waitFor(() => {
+      const video = document.querySelector("video");
+      expect(video).toBeTruthy();
+      expect(video!.src).toContain("owmedia://localhost/abc123");
+    });
+
+    // read_artifact_bytes should NOT have been called for the video
+    expect(mockInvoke).not.toHaveBeenCalledWith(
+      "read_artifact_bytes",
+      expect.anything(),
+    );
+  });
+
+  it("still uses blob URL for image artifacts", async () => {
+    const { invoke: mockInvoke } = await import("@tauri-apps/api/core");
+
+    vi.mocked(mockInvoke).mockResolvedValue([0, 0, 0, 0]);
+
+    const { useQueue } = await import("../../hooks/use-queue");
+    vi.mocked(useQueue).mockReturnValue({
+      queue: [],
+      live: {
+        id: "q2",
+        text: "",
+        reference: "slide.png",
+        translation: "",
+        image_url: "artifact:img456",
+      },
+    } as unknown as ReturnType<typeof useQueue>);
+
+    render(<DisplayScreen />);
+
+    // Image should invoke read_artifact_bytes (blob path)
+    await vi.waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith("read_artifact_bytes", {
+        id: "img456",
+      });
+    });
   });
 });

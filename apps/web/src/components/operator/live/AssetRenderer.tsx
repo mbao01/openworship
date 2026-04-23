@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { MusicIcon, PaperclipIcon } from "lucide-react";
 
 export const IMAGE_EXTS = new Set([
@@ -21,28 +19,9 @@ export function AssetRenderer({
   artifactRef: string;
   filename?: string;
 }) {
-  const [src, setSrc] = useState<string | null>(null);
   const artifactId = artifactRef.replace("artifact:", "");
   const ext = (filename || artifactId).split(".").pop()?.toLowerCase() || "";
-
-  useEffect(() => {
-    let revoked = false;
-    let url: string | null = null;
-    invoke<number[]>("read_artifact_bytes", { id: artifactId })
-      .then((bytes) => {
-        if (revoked) return;
-        const blob = new Blob([new Uint8Array(bytes)]);
-        url = URL.createObjectURL(blob);
-        setSrc(url);
-      })
-      .catch(() => setSrc(null));
-    return () => {
-      revoked = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [artifactId]);
-
-  if (!src) return null;
+  const src = `owmedia://localhost/${artifactId}`;
 
   if (IMAGE_EXTS.has(ext)) {
     return (

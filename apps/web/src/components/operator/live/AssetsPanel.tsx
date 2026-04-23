@@ -1,12 +1,10 @@
-import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useCallback, useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { PaperclipIcon, PlayIcon, SearchIcon } from "lucide-react";
-import {
-  listRecentArtifacts,
-  readThumbnail,
-} from "../../../lib/commands/artifacts";
+import { listRecentArtifacts } from "../../../lib/commands/artifacts";
 import type { ArtifactEntry } from "../../../lib/types";
 import { toastError } from "../../../lib/toast";
+import { useQueue } from "../../../hooks/use-queue";
 
 function ThumbnailImage({
   artifactId,
@@ -17,32 +15,12 @@ function ThumbnailImage({
   thumbnailPath: string | null;
   className?: string;
 }) {
-  const [src, setSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!thumbnailPath) return;
-    let revoked = false;
-    let url: string | null = null;
-    readThumbnail(artifactId)
-      .then((bytes) => {
-        if (revoked) return;
-        const blob = new Blob([new Uint8Array(bytes)], { type: "image/jpeg" });
-        url = URL.createObjectURL(blob);
-        setSrc(url);
-      })
-      .catch(() => setSrc(null));
-    return () => {
-      revoked = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [artifactId, thumbnailPath]);
-
-  if (!thumbnailPath || !src) {
+  if (!thumbnailPath) {
     return null;
   }
   return (
     <img
-      src={src}
+      src={`owmedia://localhost/thumbnail/${artifactId}`}
       alt=""
       className={className || "h-full w-full rounded object-cover"}
     />
@@ -53,12 +31,28 @@ export function AssetsPanel() {
   const [assets, setAssets] = useState<ArtifactEntry[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [assetQuery, setAssetQuery] = useState("");
+  const { pushAsset } = useQueue();
 
-  useEffect(() => {
+  const loadAssets = useCallback(() => {
     listRecentArtifacts(50)
       .then(setAssets)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadAssets();
+  }, [loadAssets]);
+
+  // Refresh asset list when a thumbnail becomes ready (generated in background)
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen("artifacts://thumbnail-ready", () => {
+      loadAssets();
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => unlisten?.();
+  }, [loadAssets]);
 
   const filtered = (
     assetQuery.trim()
@@ -72,7 +66,7 @@ export function AssetsPanel() {
 
   const handlePushAsset = async (asset: ArtifactEntry) => {
     try {
-      await invoke("push_artifact_to_display", { artifactId: asset.id });
+      await pushAsset(asset);
     } catch (e) {
       toastError("Failed to push asset")(e);
     }

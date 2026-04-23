@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   getQueue,
@@ -13,6 +14,7 @@ import {
   toggleBlackout,
   getBlackout,
 } from "@/lib/commands/detection";
+import type { ArtifactEntry } from "@/lib/types";
 import type { QueueItem } from "@/lib/types";
 
 export interface UseQueueReturn {
@@ -30,6 +32,8 @@ export interface UseQueueReturn {
   prev: () => Promise<void>;
   clearLive: () => Promise<void>;
   clearQueue: () => Promise<void>;
+  /** Push an asset to the display with optimistic UI update. */
+  pushAsset: (asset: ArtifactEntry) => Promise<void>;
   /** Toggle blackout on/off. Returns the new blackout state. */
   toggleBlackout: () => Promise<boolean>;
 }
@@ -50,6 +54,11 @@ export function useQueue(): UseQueueReturn {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadQueue = useCallback(async () => {
+    // Flush any pending debounce to prevent double-reload
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     try {
       const items = await getQueue();
       setQueue(items.filter((i) => i.status === "pending"));
@@ -125,6 +134,24 @@ export function useQueue(): UseQueueReturn {
       await clearQueue();
       await loadQueue();
     }, [loadQueue]),
+    pushAsset: useCallback(
+      async (asset: ArtifactEntry) => {
+        await invoke("push_artifact_to_display", { artifactId: asset.id });
+        // Optimistic update: set live immediately without waiting for
+        // event → debounce → IPC round trip
+        setLive({
+          id: `manual-${Date.now()}`,
+          kind: "custom_slide",
+          text: "",
+          reference: asset.name,
+          translation: "",
+          image_url: `artifact:${asset.id}`,
+          status: "live",
+          detected_at_ms: Date.now(),
+        });
+      },
+      [],
+    ),
     toggleBlackout: useCallback(async () => {
       const val = await toggleBlackout();
       setBlackout(val);

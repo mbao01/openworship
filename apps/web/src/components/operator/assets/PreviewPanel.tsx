@@ -48,7 +48,10 @@ export function PreviewPanel({
     let revoked = false;
     let blobUrl: string | null = null;
 
-    if ((isImage || isVideo || isAudio || isPdf) && entry.id) {
+    if (isVideo && entry.id) {
+      // Videos: use owmedia:// streaming protocol (no blob, no blocking)
+      setFileSrc(`owmedia://localhost/${entry.id}`);
+    } else if ((isImage || isAudio || isPdf) && entry.id) {
       invoke<number[]>("read_artifact_bytes", { id: entry.id })
         .then((bytes) => {
           if (revoked) return;
