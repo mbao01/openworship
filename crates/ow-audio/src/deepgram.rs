@@ -73,7 +73,7 @@ impl Transcriber for DeepgramTranscriber {
         // try_send is sync and non-blocking; drop the chunk if the channel is full.
         let _ = self.audio_tx.try_send(samples.to_vec());
 
-        let mut buf = self.transcript_buf.lock().unwrap();
+        let mut buf = self.transcript_buf.lock().unwrap_or_else(|e| e.into_inner());
         if buf.is_empty() {
             Ok(String::new())
         } else {
@@ -106,7 +106,7 @@ async fn run_session(
                 Ok(Message::Text(text)) => {
                     if let Some(t) = parse_transcript(&text) {
                         if !t.is_empty() {
-                            let mut buf = buf_clone.lock().unwrap();
+                            let mut buf = buf_clone.lock().unwrap_or_else(|e| e.into_inner());
                             if !buf.is_empty() {
                                 buf.push(' ');
                             }

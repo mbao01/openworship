@@ -103,7 +103,7 @@ impl SttEngine {
     }
 
     pub fn status(&self) -> SttStatus {
-        self.status.lock().unwrap().clone()
+        self.status.lock().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     /// Start capturing and transcribing.
@@ -113,7 +113,7 @@ impl SttEngine {
     /// - A separate worker thread reads from the internal channel and calls the
     ///   transcriber, keeping the transcription latency independent of capture.
     pub fn start(&mut self, transcriber: Box<dyn Transcriber>, config: AudioConfig) -> Result<()> {
-        if *self.status.lock().unwrap() == SttStatus::Running {
+        if *self.status.lock().unwrap_or_else(|e| e.into_inner()) == SttStatus::Running {
             return Ok(());
         }
 
@@ -125,7 +125,7 @@ impl SttEngine {
         let status = self.status.clone();
         let running_worker = self.running.clone();
         running_worker.store(true, Ordering::Release);
-        *self.status.lock().unwrap() = SttStatus::Running;
+        *self.status.lock().unwrap_or_else(|e| e.into_inner()) = SttStatus::Running;
 
         let mut transcriber = transcriber;
         let start = Instant::now();
@@ -215,7 +215,7 @@ impl SttEngine {
                 }
             }
             drop(capturer); // stops the audio stream
-            *status.lock().unwrap() = SttStatus::Stopped;
+            *status.lock().unwrap_or_else(|e| e.into_inner()) = SttStatus::Stopped;
         });
 
         Ok(())

@@ -127,7 +127,7 @@ impl AudioCapturer {
                     } else {
                         data.to_vec()
                     };
-                    let mut buf = acc_cb.lock().unwrap();
+                    let mut buf = acc_cb.lock().unwrap_or_else(|e| e.into_inner());
                     buf.extend_from_slice(&resampled);
                     // Flush complete chunks.
                     while buf.len() >= chunk_samples {
