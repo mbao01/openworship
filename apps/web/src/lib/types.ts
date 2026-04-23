@@ -169,6 +169,8 @@ export interface AudioSettings {
   whisper_model: WhisperModel;
   /** Per-provider configuration blobs. */
   provider_config: Record<string, Record<string, unknown>>;
+  /** Whether the operator has opted in to Sentry crash reporting. */
+  send_crash_reports: boolean;
 }
 
 /** Matches Rust `BranchRole` enum. */

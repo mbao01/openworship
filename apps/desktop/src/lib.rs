@@ -5,6 +5,7 @@ mod branch_sync;
 mod claude_api;
 mod cloud_sync;
 mod commands;
+mod crash_reporting;
 mod detection;
 mod display_window;
 mod email;
@@ -58,6 +59,11 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
 
     let queue = Arc::new(Mutex::new(VecDeque::<QueueItem>::new()));
     let audio_settings = Arc::new(RwLock::new(AudioSettings::load()));
+
+    // Initialise Sentry crash reporting if the operator opted in previously.
+    if audio_settings.read().map(|s| s.send_crash_reports).unwrap_or(false) {
+        crash_reporting::enable();
+    }
     // Load persisted detection mode from settings (defaults to Copilot)
     let detection_mode = Arc::new(RwLock::new(
         audio_settings.read().map(|s| s.detection_mode).unwrap_or_default()
