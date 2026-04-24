@@ -252,11 +252,9 @@ fn extract_pdf_page_text(doc: &lopdf::Document, page_id: lopdf::ObjectId) -> Opt
             "Tj" | "TJ" | "'" | "\"" if in_text => {
                 extract_text_operands(&op.operands, &mut text);
             }
-            "Td" | "TD" | "T*" if in_text => {
+            "Td" | "TD" | "T*" if in_text && !text.ends_with('\n') => {
                 // Line advance — insert newline
-                if !text.ends_with('\n') {
-                    text.push('\n');
-                }
+                text.push('\n');
             }
             _ => {}
         }
