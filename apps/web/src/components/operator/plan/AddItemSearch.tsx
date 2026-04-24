@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { toastError } from "@/lib/toast";
 import type { VerseResult } from "@/lib/types";
 import { searchScriptures } from "@/lib/commands/content";
@@ -12,30 +13,36 @@ export function AddItemSearch({
   const [results, setResults] = useState<VerseResult[]>([]);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  const handleSearch = (q: string) => {
-    setQuery(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+  const runSearch = async (q: string) => {
     if (!q.trim()) {
       setResults([]);
       return;
     }
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await searchScriptures(q);
-        setResults(res);
-      } catch {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
+    setLoading(true);
+    try {
+      const res = await searchScriptures(q);
+      setResults(res);
+    } catch {
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const debouncedSearch = useDebounce(runSearch, 300);
+
+  const handleSearch = (q: string) => {
+    setQuery(q);
+    if (!q.trim()) {
+      setResults([]);
+      return;
+    }
+    debouncedSearch(q);
   };
 
   return (

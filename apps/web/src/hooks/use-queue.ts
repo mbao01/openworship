@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useDebounce } from "./use-debounce";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -51,14 +52,8 @@ export function useQueue(): UseQueueReturn {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [live, setLive] = useState<QueueItem | null>(null);
   const [blackout, setBlackout] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadQueue = useCallback(async () => {
-    // Flush any pending debounce to prevent double-reload
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = null;
-    }
     try {
       const items = await getQueue();
       setQueue(items.filter((i) => i.status === "pending"));
@@ -68,6 +63,9 @@ export function useQueue(): UseQueueReturn {
     }
   }, []);
 
+  // Debounce: coalesce rapid-fire detection events into one reload
+  const debouncedLoadQueue = useDebounce(loadQueue, 300);
+
   useEffect(() => {
     loadQueue();
     getBlackout()
@@ -75,19 +73,12 @@ export function useQueue(): UseQueueReturn {
       .catch((err) => console.error(err));
 
     let unlisten: (() => void) | undefined;
-    listen("detection://queue-updated", () => {
-      // Debounce: coalesce rapid-fire events into one reload
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(loadQueue, 300);
-    }).then((fn) => {
+    listen("detection://queue-updated", debouncedLoadQueue).then((fn) => {
       unlisten = fn;
     });
 
-    return () => {
-      unlisten?.();
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [loadQueue]);
+    return () => { unlisten?.(); };
+  }, [loadQueue, debouncedLoadQueue]);
 
   return {
     queue,

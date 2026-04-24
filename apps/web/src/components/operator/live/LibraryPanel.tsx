@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useDebounce } from "../../../hooks/use-debounce";
 import { invoke } from "@tauri-apps/api/core";
 import {
   CornerDownLeftIcon,
@@ -22,7 +23,6 @@ export function LibraryPanel() {
   const [songResults, setSongResults] = useState<Song[]>([]);
   const [slides, setSlides] = useState<AnnouncementItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (tab === "slides") {
@@ -55,11 +55,12 @@ export function LibraryPanel() {
     [tab],
   );
 
+  const debouncedSearch = useDebounce(runSearch, 220);
+
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(val), 220);
+    debouncedSearch(val);
   };
 
   const handlePush = async (

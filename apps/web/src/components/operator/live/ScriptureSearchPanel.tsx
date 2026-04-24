@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useDebounce } from "../../../hooks/use-debounce";
 import {
   BookOpenIcon,
   CornerDownLeftIcon,
@@ -25,7 +26,6 @@ export function ScriptureSearchPanel({ onPush }: ScriptureSearchPanelProps) {
 
   // Text mode state
   const [query, setQuery] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Select mode state
   const [book, setBook] = useState("");
@@ -57,11 +57,12 @@ export function ScriptureSearchPanel({ onPush }: ScriptureSearchPanelProps) {
     }
   }, []);
 
+  const debouncedTextSearch = useDebounce(runTextSearch, 220);
+
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runTextSearch(val), 220);
+    debouncedTextSearch(val);
   };
 
   // ── Select mode cascading ─────────────────────────────────────────────────
