@@ -15,6 +15,17 @@ import {
   copyArtifactLink,
 } from "./cloud";
 
+const mockSyncInfo = {
+  artifact_id: "art-1",
+  sync_enabled: true,
+  status: "synced" as const,
+  cloud_key: null,
+  last_etag: null,
+  last_synced_ms: 0,
+  sync_error: null,
+  progress: null,
+};
+
 describe("commands/cloud", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -22,11 +33,10 @@ describe("commands/cloud", () => {
   });
 
   it("getCloudSyncInfo passes artifactId", async () => {
-    const syncInfo = { synced: true, last_sync_ms: 0, error: null };
-    mockInvoke.mockResolvedValue(syncInfo);
+    mockInvoke.mockResolvedValue(mockSyncInfo);
     const result = await getCloudSyncInfo("art-1");
     expect(mockInvoke).toHaveBeenCalledWith("get_cloud_sync_info", { artifactId: "art-1" });
-    expect(result).toEqual(syncInfo);
+    expect(result).toEqual(mockSyncInfo);
   });
 
   it("getCloudSyncInfo returns null when not synced", async () => {
@@ -57,13 +67,12 @@ describe("commands/cloud", () => {
   });
 
   it("downloadArtifactFromCloud passes artifactId", async () => {
-    const syncInfo = { synced: true, last_sync_ms: 0, error: null };
-    mockInvoke.mockResolvedValue(syncInfo);
+    mockInvoke.mockResolvedValue(mockSyncInfo);
     const result = await downloadArtifactFromCloud("art-1");
     expect(mockInvoke).toHaveBeenCalledWith("download_artifact_from_cloud", {
       artifactId: "art-1",
     });
-    expect(result).toEqual(syncInfo);
+    expect(result).toEqual(mockSyncInfo);
   });
 
   it("syncAllArtifacts invokes sync_all_artifacts", async () => {

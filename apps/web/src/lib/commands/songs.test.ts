@@ -18,9 +18,11 @@ import {
 
 const mockSong = {
   id: 1,
-  title: "Amazing Grace",
-  artist: "John Newton",
-  lyrics: "Amazing grace, how sweet the sound",
+  title: "Sample Song",
+  artist: "Sample Artist",
+  source: null,
+  ccli_number: null,
+  lyrics: "Sample lyrics line",
   created_at_ms: 0,
 };
 
@@ -59,11 +61,11 @@ describe("commands/songs", () => {
 
   it("addSong passes title, artist, lyrics", async () => {
     mockInvoke.mockResolvedValue(mockSong);
-    const result = await addSong("Amazing Grace", "John Newton", "Amazing grace...");
+    const result = await addSong("Sample Song", "Sample Artist", "Sample lyrics...");
     expect(mockInvoke).toHaveBeenCalledWith("add_song", {
-      title: "Amazing Grace",
-      artist: "John Newton",
-      lyrics: "Amazing grace...",
+      title: "Sample Song",
+      artist: "Sample Artist",
+      lyrics: "Sample lyrics...",
     });
     expect(result).toEqual(mockSong);
   });
@@ -79,11 +81,11 @@ describe("commands/songs", () => {
   });
 
   it("updateSong passes id, title, artist, lyrics", async () => {
-    await updateSong(1, "Amazing Grace (Updated)", "John Newton", "Updated lyrics...");
+    await updateSong(1, "Sample Song (Updated)", "Sample Artist", "Updated lyrics...");
     expect(mockInvoke).toHaveBeenCalledWith("update_song", {
       id: 1,
-      title: "Amazing Grace (Updated)",
-      artist: "John Newton",
+      title: "Sample Song (Updated)",
+      artist: "Sample Artist",
       lyrics: "Updated lyrics...",
     });
   });
@@ -113,9 +115,10 @@ describe("commands/songs", () => {
   });
 
   it("getSongSemanticStatus invokes get_song_semantic_status", async () => {
-    mockInvoke.mockResolvedValue({ ready: true });
+    const status = { ready: true, song_count: 42 };
+    mockInvoke.mockResolvedValue(status);
     const result = await getSongSemanticStatus();
     expect(mockInvoke).toHaveBeenCalledWith("get_song_semantic_status");
-    expect(result).toEqual({ ready: true });
+    expect(result).toEqual(status);
   });
 });

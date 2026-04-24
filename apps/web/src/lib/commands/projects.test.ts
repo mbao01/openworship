@@ -120,18 +120,18 @@ describe("commands/projects", () => {
   });
 
   it("createServiceTask passes serviceId, title, description", async () => {
-    const mockTask = { id: "task-1", service_id: "proj-1", title: "Prepare slides" };
-    mockInvoke.mockResolvedValue(mockTask);
+    mockInvoke.mockResolvedValue(mockProject);
     const result = await createServiceTask("proj-1", "Prepare slides", "Get slides ready");
     expect(mockInvoke).toHaveBeenCalledWith("create_service_task", {
       serviceId: "proj-1",
       title: "Prepare slides",
       description: "Get slides ready",
     });
-    expect(result).toEqual(mockTask);
+    expect(result).toEqual(mockProject);
   });
 
   it("updateServiceTask passes taskId and updates", async () => {
+    mockInvoke.mockResolvedValue(mockProject);
     await updateServiceTask("task-1", { title: "Updated title", status: "done" });
     expect(mockInvoke).toHaveBeenCalledWith("update_service_task", {
       taskId: "task-1",
@@ -142,6 +142,7 @@ describe("commands/projects", () => {
   });
 
   it("deleteServiceTask passes taskId", async () => {
+    mockInvoke.mockResolvedValue(mockProject);
     await deleteServiceTask("task-1");
     expect(mockInvoke).toHaveBeenCalledWith("delete_service_task", {
       taskId: "task-1",

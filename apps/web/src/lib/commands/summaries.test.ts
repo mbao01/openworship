@@ -14,6 +14,14 @@ import {
   sendTestEmail,
 } from "./summaries";
 
+const mockSubscriber = {
+  id: "sub-1",
+  church_id: "church-1",
+  email: "pastor@church.org",
+  name: "Pastor",
+  subscribed_at_ms: 0,
+};
+
 describe("commands/summaries", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -56,18 +64,17 @@ describe("commands/summaries", () => {
   });
 
   it("addEmailSubscriber passes email and name", async () => {
-    const sub = { id: "sub-1", email: "pastor@church.org", name: "Pastor" };
-    mockInvoke.mockResolvedValue(sub);
+    mockInvoke.mockResolvedValue(mockSubscriber);
     const result = await addEmailSubscriber("pastor@church.org", "Pastor");
     expect(mockInvoke).toHaveBeenCalledWith("add_email_subscriber", {
       email: "pastor@church.org",
       name: "Pastor",
     });
-    expect(result).toEqual(sub);
+    expect(result).toEqual(mockSubscriber);
   });
 
   it("addEmailSubscriber works without name", async () => {
-    const sub = { id: "sub-2", email: "member@church.org", name: undefined };
+    const sub = { ...mockSubscriber, id: "sub-2", email: "member@church.org", name: null };
     mockInvoke.mockResolvedValue(sub);
     await addEmailSubscriber("member@church.org");
     expect(mockInvoke).toHaveBeenCalledWith("add_email_subscriber", {

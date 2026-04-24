@@ -8,6 +8,8 @@
  */
 
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import { BackupInfoSchema } from "../schemas";
 
 export interface BackupInfo {
   /** Absolute path where the backup file was written. */
@@ -22,7 +24,7 @@ export interface BackupInfo {
  * Create a backup archive and write it to `destPath`.
  */
 export async function createBackup(destPath: string): Promise<BackupInfo> {
-  return invoke<BackupInfo>("create_backup", { destPath });
+  return invokeValidated("create_backup", BackupInfoSchema, { destPath });
 }
 
 /**

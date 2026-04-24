@@ -8,6 +8,8 @@
  */
 
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import { TutorialStateSchema, SeedResultSchema } from "../schemas";
 import type { TutorialState } from "../types";
 
 const LS_KEY = "ow_tutorial_state";
@@ -27,7 +29,7 @@ export async function getTutorialState(): Promise<TutorialState> {
     return (v as TutorialState | null) ?? "not_started";
   }
   try {
-    return await invoke<TutorialState>("get_tutorial_state");
+    return await invokeValidated("get_tutorial_state", TutorialStateSchema);
   } catch {
     return "not_started";
   }
@@ -63,7 +65,7 @@ export async function seedDemoData(): Promise<SeedResult> {
     return { songs_seeded: 0, project_seeded: false };
   }
   try {
-    return await invoke<SeedResult>("seed_demo_data");
+    return await invokeValidated("seed_demo_data", SeedResultSchema);
   } catch {
     return { songs_seeded: 0, project_seeded: false };
   }

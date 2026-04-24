@@ -7,6 +7,14 @@
  */
 
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import {
+  AudioSettingsSchema,
+  ArtifactsSettingsSchema,
+  DisplaySettingsSchema,
+  EmailSettingsSchema,
+  S3ConfigSchema,
+} from "../schemas";
 import type {
   AudioSettings,
   ArtifactsSettings,
@@ -22,7 +30,7 @@ import type {
  * Called on app init and whenever the settings panel is opened.
  */
 export async function getAudioSettings(): Promise<AudioSettings> {
-  return invoke<AudioSettings>("get_audio_settings");
+  return invokeValidated("get_audio_settings", AudioSettingsSchema);
 }
 
 /**
@@ -39,7 +47,7 @@ export async function setAudioSettings(settings: AudioSettings): Promise<void> {
  * Loads the display output settings (monitor selection, multi-output flag).
  */
 export async function getDisplaySettings(): Promise<DisplaySettings> {
-  return invoke<DisplaySettings>("get_display_settings");
+  return invokeValidated("get_display_settings", DisplaySettingsSchema);
 }
 
 /**
@@ -58,7 +66,7 @@ export async function setDisplaySettings(
  * it is never returned from the backend (always empty string).
  */
 export async function getEmailSettings(): Promise<EmailSettings> {
-  return invoke<EmailSettings>("get_email_settings");
+  return invokeValidated("get_email_settings", EmailSettingsSchema);
 }
 
 /**
@@ -94,7 +102,7 @@ export async function getAnthropicApiKeyStatus(): Promise<boolean> {
  * secret_access_key is write-only; always returned as empty string.
  */
 export async function getCloudConfig(): Promise<S3Config> {
-  return invoke<S3Config>("get_cloud_config");
+  return invokeValidated("get_cloud_config", S3ConfigSchema);
 }
 
 /**
@@ -111,7 +119,7 @@ export async function setCloudConfig(config: S3Config): Promise<void> {
  * Loads the artifacts storage configuration (base path).
  */
 export async function getArtifactsSettings(): Promise<ArtifactsSettings> {
-  return invoke<ArtifactsSettings>("get_artifacts_settings");
+  return invokeValidated("get_artifacts_settings", ArtifactsSettingsSchema);
 }
 
 /**

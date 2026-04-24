@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { invokeValidated } from "../validated-invoke";
+import { UpdateInfoSchema } from "../schemas";
 
 export interface UpdateInfo {
   version: string;
@@ -14,7 +16,7 @@ export interface DownloadProgress {
 
 /** Check for an available update. Returns `null` when the app is up to date. */
 export async function checkForUpdates(): Promise<UpdateInfo | null> {
-  return invoke<UpdateInfo | null>("check_for_updates");
+  return invokeValidated("check_for_updates", UpdateInfoSchema.nullable());
 }
 
 /** Download and install the available update. Emits progress events while running. */

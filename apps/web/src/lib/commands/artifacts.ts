@@ -6,7 +6,10 @@
  * service-scoped directories within the configured base path.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import { ArtifactEntrySchema, StorageUsageSchema } from "../schemas";
 import type { ArtifactEntry, StorageUsage } from "../types";
 
 // ─── Listing ──────────────────────────────────────────────────────────────────
@@ -18,7 +21,10 @@ export async function listArtifacts(
   serviceId?: string,
   parentPath?: string,
 ): Promise<ArtifactEntry[]> {
-  return invoke<ArtifactEntry[]>("list_artifacts", { serviceId, parentPath });
+  return invokeValidated("list_artifacts", z.array(ArtifactEntrySchema), {
+    serviceId,
+    parentPath,
+  });
 }
 
 /**
@@ -28,14 +34,18 @@ export async function listArtifacts(
 export async function listRecentArtifacts(
   limit?: number,
 ): Promise<ArtifactEntry[]> {
-  return invoke<ArtifactEntry[]>("list_recent_artifacts", { limit });
+  return invokeValidated(
+    "list_recent_artifacts",
+    z.array(ArtifactEntrySchema),
+    { limit },
+  );
 }
 
 /**
  * Returns all starred (bookmarked) artifacts.
  */
 export async function listStarredArtifacts(): Promise<ArtifactEntry[]> {
-  return invoke<ArtifactEntry[]>("list_starred_artifacts");
+  return invokeValidated("list_starred_artifacts", z.array(ArtifactEntrySchema));
 }
 
 /**
@@ -46,7 +56,7 @@ export async function searchArtifacts(
   serviceId?: string,
   category?: string,
 ): Promise<ArtifactEntry[]> {
-  return invoke<ArtifactEntry[]>("search_artifacts", {
+  return invokeValidated("search_artifacts", z.array(ArtifactEntrySchema), {
     query,
     serviceId,
     category,
@@ -63,7 +73,7 @@ export async function createArtifactDir(
   parentPath: string,
   name: string,
 ): Promise<ArtifactEntry> {
-  return invoke<ArtifactEntry>("create_artifact_dir", {
+  return invokeValidated("create_artifact_dir", ArtifactEntrySchema, {
     serviceId,
     parentPath,
     name,
@@ -78,7 +88,7 @@ export async function importArtifactFile(
   serviceId?: string | null,
   parentPath?: string | null,
 ): Promise<ArtifactEntry> {
-  return invoke<ArtifactEntry>("import_artifact_file", {
+  return invokeValidated("import_artifact_file", ArtifactEntrySchema, {
     serviceId,
     parentPath,
     sourcePath,
@@ -175,5 +185,5 @@ export async function regenerateThumbnails(): Promise<number> {
  * Returns aggregate storage usage across local and cloud artifacts.
  */
 export async function getStorageUsage(): Promise<StorageUsage> {
-  return invoke<StorageUsage>("get_storage_usage");
+  return invokeValidated("get_storage_usage", StorageUsageSchema);
 }

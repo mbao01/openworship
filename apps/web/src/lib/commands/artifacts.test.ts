@@ -31,8 +31,9 @@ const mockArtifact = {
   mime_type: "image/jpeg",
   size_bytes: 12345,
   starred: false,
+  thumbnail_path: null,
   created_at_ms: 0,
-  last_accessed_ms: 0,
+  modified_at_ms: 0,
   is_dir: false,
 };
 
@@ -203,7 +204,12 @@ describe("commands/artifacts", () => {
     });
 
     it("getStorageUsage invokes get_storage_usage", async () => {
-      const usage = { local_bytes: 1000, cloud_bytes: 500 };
+      const usage = {
+        used_bytes: 1000,
+        quota_bytes: null,
+        synced_count: 5,
+        last_updated_ms: 0,
+      };
       mockInvoke.mockResolvedValue(usage);
       const result = await getStorageUsage();
       expect(mockInvoke).toHaveBeenCalledWith("get_storage_usage");

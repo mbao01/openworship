@@ -5,8 +5,17 @@
  * Supports Whisper.cpp (local) and Deepgram (cloud) backends.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
-import type { AudioInputDevice } from "../types";
+import { invokeValidated } from "../validated-invoke";
+import {
+  SttStatusSchema,
+  AudioInputDeviceSchema,
+  ProviderInfoSchema,
+  ProviderStatusSchema,
+  ModelInfoSchema,
+} from "../schemas";
+import type { AudioInputDevice, ProviderInfo, ProviderStatus, ModelInfo } from "../types";
 
 /**
  * Current STT pipeline state.
@@ -57,7 +66,7 @@ export async function stopStt(): Promise<void> {
  * Returns the current STT pipeline status (running, stopped, error).
  */
 export async function getSttStatus(): Promise<SttStatus> {
-  return invoke<SttStatus>("get_stt_status");
+  return invokeValidated("get_stt_status", SttStatusSchema);
 }
 
 /**
@@ -73,7 +82,10 @@ export async function getAudioLevel(): Promise<number> {
  * Used to populate the microphone selector in Audio settings.
  */
 export async function listAudioInputDevices(): Promise<AudioInputDevice[]> {
-  return invoke<AudioInputDevice[]>("list_audio_input_devices");
+  return invokeValidated(
+    "list_audio_input_devices",
+    z.array(AudioInputDeviceSchema),
+  );
 }
 
 /**
@@ -111,13 +123,11 @@ export async function downloadWhisperModel(model?: string): Promise<void> {
 
 // ─── Generic STT Provider commands ──────────────────────────────────────────
 
-import type { ProviderInfo, ProviderStatus, ModelInfo } from "../types";
-
 /**
  * List all available STT providers with their metadata and config fields.
  */
 export async function listSttProviders(): Promise<ProviderInfo[]> {
-  return invoke<ProviderInfo[]>("list_stt_providers");
+  return invokeValidated("list_stt_providers", z.array(ProviderInfoSchema));
 }
 
 /**
@@ -126,7 +136,7 @@ export async function listSttProviders(): Promise<ProviderInfo[]> {
 export async function getProviderStatus(
   providerId: string,
 ): Promise<ProviderStatus> {
-  return invoke<ProviderStatus>("get_provider_status", {
+  return invokeValidated("get_provider_status", ProviderStatusSchema, {
     providerId,
   });
 }
@@ -150,7 +160,7 @@ export async function checkProviderModel(
 export async function getProviderModels(
   providerId: string,
 ): Promise<ModelInfo[]> {
-  return invoke<ModelInfo[]>("get_provider_models", {
+  return invokeValidated("get_provider_models", z.array(ModelInfoSchema), {
     providerId,
   });
 }
