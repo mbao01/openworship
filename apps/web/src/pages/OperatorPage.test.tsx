@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
-import type { ChurchIdentity } from "@/lib/types";
+import type { ChurchIdentity } from "../lib/types";
 
 // ── Mock all hooks ──────────────────────────────────────────────────────────
 
 const mockApprove = vi.fn().mockResolvedValue(undefined);
 const mockUseQueue = vi.fn().mockReturnValue({ queue: [], approve: mockApprove });
 
-vi.mock("@/lib/commands/detection", () => ({
+vi.mock("../lib/commands/detection", () => ({
   getDetectionMode: vi.fn().mockResolvedValue("auto"),
   setDetectionMode: vi.fn().mockResolvedValue(undefined),
   getQueue: vi.fn().mockResolvedValue([]),
@@ -20,7 +20,7 @@ vi.mock("@/lib/commands/detection", () => ({
   clearLive: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@/hooks/use-queue", () => ({
+vi.mock("../hooks/use-queue", () => ({
   useQueue: (...args: unknown[]) => mockUseQueue(...args),
 }));
 
@@ -38,11 +38,11 @@ const mockUseTutorial = vi.fn().mockReturnValue({
   completeTour: mockCompleteTour,
 });
 
-vi.mock("@/hooks/use-tutorial", () => ({
+vi.mock("../hooks/use-tutorial", () => ({
   useTutorial: (...args: unknown[]) => mockUseTutorial(...args),
 }));
 
-vi.mock("@/lib/commands/tutorial", () => ({
+vi.mock("../lib/commands/tutorial", () => ({
   getTutorialState: vi.fn().mockResolvedValue("not_started"),
   setTutorialState: vi.fn().mockResolvedValue(undefined),
   seedDemoData: vi.fn().mockResolvedValue({ songs_seeded: 0, project_seeded: false }),
@@ -50,7 +50,7 @@ vi.mock("@/lib/commands/tutorial", () => ({
 
 // ── Mock all child components ────────────────────────────────────────────────
 
-vi.mock("@/components/operator/Rail", () => ({
+vi.mock("../components/operator/Rail", () => ({
   Rail: ({ onScreenChange }: { onScreenChange: (s: string) => void }) => (
     <nav data-testid="Rail">
       <button onClick={() => onScreenChange("live")}>Live</button>
@@ -65,7 +65,7 @@ vi.mock("@/components/operator/Rail", () => ({
   ),
 }));
 
-vi.mock("@/components/operator/TopBar", () => ({
+vi.mock("../components/operator/TopBar", () => ({
   TopBar: ({ onOpenCmdK }: { onOpenCmdK: () => void }) => (
     <header data-testid="TopBar">
       <button data-testid="open-cmdk" onClick={onOpenCmdK}>⌘K</button>
@@ -73,15 +73,15 @@ vi.mock("@/components/operator/TopBar", () => ({
   ),
 }));
 
-vi.mock("@/components/operator/LiveScreen", () => ({
+vi.mock("../components/operator/LiveScreen", () => ({
   LiveScreen: () => <div data-testid="LiveScreen" />,
 }));
 
-vi.mock("@/components/operator/PlanScreen", () => ({
+vi.mock("../components/operator/PlanScreen", () => ({
   PlanScreen: () => <div data-testid="PlanScreen" />,
 }));
 
-vi.mock("@/components/operator/PreviewScreen", () => ({
+vi.mock("../components/operator/PreviewScreen", () => ({
   PreviewScreen: ({ onGoLive }: { onGoLive: () => void }) => (
     <div data-testid="PreviewScreen">
       <button onClick={onGoLive}>Go Live</button>
@@ -89,24 +89,24 @@ vi.mock("@/components/operator/PreviewScreen", () => ({
   ),
 }));
 
-vi.mock("@/components/operator/LibraryScreen", () => ({
+vi.mock("../components/operator/LibraryScreen", () => ({
   LibraryScreen: () => <div data-testid="LibraryScreen" />,
 }));
 
-vi.mock("@/components/operator/LogsScreen", () => ({
+vi.mock("../components/operator/LogsScreen", () => ({
   LogsScreen: () => <div data-testid="LogsScreen" />,
 }));
 
-vi.mock("@/components/operator/DisplayScreen", () => ({
+vi.mock("../components/operator/DisplayScreen", () => ({
   DisplayScreen: () => <div data-testid="DisplayScreen" />,
 }));
 
-vi.mock("@/components/operator/SettingsScreen", () => ({
+vi.mock("../components/operator/SettingsScreen", () => ({
   SettingsScreen: ({ open }: { open: boolean; onClose: () => void }) =>
     open ? <div data-testid="SettingsScreen" /> : null,
 }));
 
-vi.mock("@/components/operator/CommandPalette", () => ({
+vi.mock("../components/operator/CommandPalette", () => ({
   CommandPalette: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="CommandPalette">
       <button onClick={onClose}>Close</button>
@@ -114,15 +114,15 @@ vi.mock("@/components/operator/CommandPalette", () => ({
   ),
 }));
 
-vi.mock("@/components/operator/AssetsScreen", () => ({
+vi.mock("../components/operator/AssetsScreen", () => ({
   AssetsScreen: () => <div data-testid="AssetsScreen" />,
 }));
 
-vi.mock("@/components/ui/error-boundary", () => ({
+vi.mock("../components/ui/error-boundary", () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock("@/components/operator/WelcomeModal", () => ({
+vi.mock("../components/operator/WelcomeModal", () => ({
   WelcomeModal: ({
     onStartTour,
     onSetUpLater,
@@ -138,7 +138,7 @@ vi.mock("@/components/operator/WelcomeModal", () => ({
   ),
 }));
 
-vi.mock("@/components/operator/ResumeBanner", () => ({
+vi.mock("../components/operator/ResumeBanner", () => ({
   ResumeBanner: ({
     onResume,
     onDismiss,
@@ -154,7 +154,7 @@ vi.mock("@/components/operator/ResumeBanner", () => ({
   ),
 }));
 
-vi.mock("@/components/operator/TourOverlay", () => ({
+vi.mock("../components/operator/TourOverlay", () => ({
   TourOverlay: ({
     onNext,
     onSkip,
