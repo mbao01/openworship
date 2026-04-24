@@ -490,31 +490,14 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                 detect_announcements,
             ));
 
-            // Device hot-plug watcher: polls the cpal device list every 2 s and
-            // emits `audio://devices-changed` when the list of input devices changes.
-            // This replaces the 3 s setInterval in AudioSection.tsx (IPC poll → push).
+            // Device hot-plug watcher: emits `audio://devices-changed` on the
+            // frontend whenever input devices are added or removed.
+            // On macOS this uses a CoreAudio property listener (zero polling).
+            // On other platforms it falls back to a 2-second cpal poll.
             {
                 let app_for_devices = app_handle.clone();
-                tauri::async_runtime::spawn(async move {
-                    use ow_audio::list_input_devices;
-                    let mut prev: Vec<String> = list_input_devices()
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(|d| d.name)
-                        .collect();
-                    loop {
-                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-                        let current: Vec<String> = list_input_devices()
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(|d| d.name)
-                            .collect();
-                        if current != prev {
-                            eprintln!("[device-watcher] device list changed, emitting audio://devices-changed");
-                            let _ = app_for_devices.emit("audio://devices-changed", ());
-                            prev = current;
-                        }
-                    }
+                ow_audio::start_device_watcher(move || {
+                    let _ = app_for_devices.emit("audio://devices-changed", ());
                 });
             }
 

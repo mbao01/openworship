@@ -12,6 +12,7 @@
 mod capture;
 mod deepgram;
 mod deepgram_provider;
+pub mod device_watcher;
 mod engine;
 pub mod event;
 mod fallback;
@@ -21,6 +22,7 @@ pub(crate) mod transcribe;
 mod whisper_provider;
 
 pub use capture::{AudioConfig, AudioInputDevice, list_input_devices};
+pub use device_watcher::start_device_watcher;
 pub use engine::{AudioMonitor, SttEngine, SttStatus};
 pub use event::TranscriptEvent;
 pub use provider::{
