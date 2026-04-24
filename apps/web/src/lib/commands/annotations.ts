@@ -66,6 +66,28 @@ export async function pushAnnouncementToDisplay(id: string): Promise<void> {
 }
 
 /**
+ * Import slides from a .pptx file path.
+ * Parses each slide into an AnnouncementItem and persists them.
+ * Returns the newly created items.
+ */
+export async function importPptxSlides(
+  path: string,
+): Promise<AnnouncementItem[]> {
+  return invoke<AnnouncementItem[]>("import_pptx_slides", { path });
+}
+
+/**
+ * Import pages from a .pdf file path.
+ * Extracts text from each page into an AnnouncementItem and persists them.
+ * Returns the newly created items.
+ */
+export async function importPdfSlides(
+  path: string,
+): Promise<AnnouncementItem[]> {
+  return invoke<AnnouncementItem[]>("import_pdf_slides", { path });
+}
+
+/**
  * Pushes an ad-hoc custom slide (title + body + optional image) to the display.
  */
 export async function pushCustomSlide(

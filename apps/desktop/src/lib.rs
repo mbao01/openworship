@@ -13,6 +13,7 @@ mod identity;
 mod keychain;
 mod service;
 mod settings;
+mod slide_import;
 mod slides;
 mod songs;
 mod state;
@@ -709,6 +710,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             commands::update_announcement,
             commands::delete_announcement,
             commands::push_announcement_to_display,
+            commands::import_pptx_slides,
+            commands::import_pdf_slides,
             commands::push_custom_slide,
             commands::push_artifact_to_display,
             commands::set_display_background,

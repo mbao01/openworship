@@ -2405,6 +2405,56 @@ pub fn push_announcement_to_display(
     Ok(())
 }
 
+// ─── Slide import (PPTX / PDF) ───────────────────────────────────────────────
+
+/// Import a PowerPoint (.pptx) file and add each slide as an announcement.
+///
+/// Returns the newly created `AnnouncementItem` list so the frontend can
+/// refresh without a separate `list_announcements` call.
+#[tauri::command]
+pub fn import_pptx_slides(
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<AnnouncementItem>, String> {
+    let parsed = crate::slide_import::import_pptx(std::path::Path::new(&path))
+        .map_err(|e| e.to_string())?;
+
+    let mut guard = state.announcements.write().map_err(|e| e.to_string())?;
+    let mut created = Vec::with_capacity(parsed.len());
+    for slide in parsed {
+        let item = AnnouncementItem::new_announcement(slide.title, slide.body, None, None);
+        guard.push(item.clone());
+        created.push(item);
+    }
+    crate::slides::save_announcements(&guard).map_err(|e| e.to_string())?;
+    Ok(created)
+}
+
+/// Import a PDF file and add each page as an announcement slide.
+///
+/// Text is extracted from each page where possible; pages with only images
+/// or non-decodable fonts fall back to a "Page N" placeholder with no body.
+///
+/// Returns the newly created `AnnouncementItem` list.
+#[tauri::command]
+pub fn import_pdf_slides(
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<AnnouncementItem>, String> {
+    let parsed = crate::slide_import::import_pdf(std::path::Path::new(&path))
+        .map_err(|e| e.to_string())?;
+
+    let mut guard = state.announcements.write().map_err(|e| e.to_string())?;
+    let mut created = Vec::with_capacity(parsed.len());
+    for slide in parsed {
+        let item = AnnouncementItem::new_announcement(slide.title, slide.body, None, None);
+        guard.push(item.clone());
+        created.push(item);
+    }
+    crate::slides::save_announcements(&guard).map_err(|e| e.to_string())?;
+    Ok(created)
+}
+
 // ─── Custom slides ────────────────────────────────────────────────────────────
 
 /// Immediately push a custom slide to the main display and queue.
