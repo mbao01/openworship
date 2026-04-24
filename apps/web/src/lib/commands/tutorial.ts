@@ -18,7 +18,8 @@ function isTauri(): boolean {
 
 /**
  * Load the persisted tutorial state.
- * Returns `"not_started"` on any error.
+ * Returns "not_started" on any error.
+ * Falls back to localStorage when running outside Tauri (browser dev mode).
  */
 export async function getTutorialState(): Promise<TutorialState> {
   if (!isTauri()) {
@@ -44,5 +45,26 @@ export async function setTutorialState(state: TutorialState): Promise<void> {
     await invoke("set_tutorial_state", { state });
   } catch {
     // best-effort
+  }
+}
+
+export interface SeedResult {
+  songs_seeded: number;
+  project_seeded: boolean;
+}
+
+/**
+ * Seed demo songs and a sample service project for the first-run tour.
+ * Safe to call multiple times — idempotent on the backend.
+ * Falls back to a no-op in browser dev mode (no Tauri).
+ */
+export async function seedDemoData(): Promise<SeedResult> {
+  if (!isTauri()) {
+    return { songs_seeded: 0, project_seeded: false };
+  }
+  try {
+    return await invoke<SeedResult>("seed_demo_data");
+  } catch {
+    return { songs_seeded: 0, project_seeded: false };
   }
 }

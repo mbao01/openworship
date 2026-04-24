@@ -17,6 +17,7 @@ mod slides;
 mod songs;
 mod state;
 mod summaries;
+mod tutorial;
 mod updater;
 
 use ow_audio::SttEngine;
@@ -797,9 +798,10 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             updater::check_for_updates,
             updater::install_update,
             updater::restart_app,
-            // ── Tutorial onboarding (OPE-170) ──────────────────────────────
-            commands::get_tutorial_state,
-            commands::set_tutorial_state,
+            // ── Tutorial / onboarding (OPE-170/172) ───────────────────────
+            tutorial::get_tutorial_state,
+            tutorial::set_tutorial_state,
+            commands::seed_demo_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

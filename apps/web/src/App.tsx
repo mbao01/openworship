@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { listen } from "@tauri-apps/api/event";
 import { useIdentity } from "./hooks/use-identity";
@@ -49,6 +49,7 @@ function AppInner() {
   const isMainWindow = location.pathname === "/";
 
   const { identity, loading: identityLoading, setIdentity } = useIdentity();
+  const [justOnboarded, setJustOnboarded] = useState(false);
 
   // Initialize theme — applies DOM attrs and CSS vars immediately.
   // Called here so theme is active for all child components.
@@ -107,10 +108,11 @@ function AppInner() {
             // Still loading identity
             <SplashScreen isReady={false} onDone={() => {}} />
           ) : identity === undefined ? (
-            <OnboardingPage onComplete={(id) => setIdentity(id)} />
+            <OnboardingPage onComplete={(id) => { setIdentity(id); setJustOnboarded(true); }} />
           ) : (
             <OperatorPage
               identity={identity}
+              justOnboarded={justOnboarded}
               onOpenArtifacts={() => navigate("/artifacts")}
             />
           )
