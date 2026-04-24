@@ -120,7 +120,7 @@ describe("commands/annotations", () => {
     });
 
     it("importPptxSlides invokes import_pptx_slides with path", async () => {
-      const slides = [{ id: "s1", title: "Slide 1", body: "" }];
+      const slides = [{ id: "s1", kind: "slide", title: "Slide 1", body: "", image_url: null, keyword_cue: null, created_at_ms: 0 }];
       mockInvoke.mockResolvedValue(slides);
       const result = await importPptxSlides("/path/to/deck.pptx");
       expect(mockInvoke).toHaveBeenCalledWith("import_pptx_slides", { path: "/path/to/deck.pptx" });
@@ -128,7 +128,7 @@ describe("commands/annotations", () => {
     });
 
     it("importPdfSlides invokes import_pdf_slides with path", async () => {
-      const slides = [{ id: "p1", title: "Page 1", body: "content" }];
+      const slides = [{ id: "p1", kind: "slide", title: "Page 1", body: "content", image_url: null, keyword_cue: null, created_at_ms: 0 }];
       mockInvoke.mockResolvedValue(slides);
       const result = await importPdfSlides("/path/to/document.pdf");
       expect(mockInvoke).toHaveBeenCalledWith("import_pdf_slides", { path: "/path/to/document.pdf" });
