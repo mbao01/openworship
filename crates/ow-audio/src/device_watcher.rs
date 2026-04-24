@@ -5,9 +5,18 @@
 //! On all other platforms it falls back to a 2-second cpal poll that only
 //! fires when the set of input device names actually differs.
 //!
-//! Usage:
+//! # Runtime contract
+//!
+//! [`start_device_watcher`] requires an explicit [`tokio::runtime::Handle`] so
+//! the caller decides which runtime executes the internal tasks.  This avoids
+//! the implicit `tokio::spawn` panic that occurred when the function was called
+//! before a Tokio runtime was active (OPE-145 regression, fixed in OPE-198).
+//!
+//! # Usage
 //! ```no_run
-//! ow_audio::start_device_watcher(|| println!("devices changed"));
+//! // Inside a Tokio context:
+//! let handle = tokio::runtime::Handle::current();
+//! ow_audio::start_device_watcher(handle, || println!("devices changed"));
 //! ```
 
 use std::sync::Arc;
@@ -16,12 +25,17 @@ type ChangedFn = Arc<dyn Fn() + Send + Sync + 'static>;
 
 /// Start the audio device hot-plug watcher.
 ///
-/// `on_changed` is invoked on the tokio runtime whenever input devices are
+/// `handle` is the Tokio runtime handle used to spawn internal tasks.
+/// Obtain it with [`tokio::runtime::Handle::current()`] from inside an async
+/// context, or via `tauri::async_runtime::handle().inner().clone()` from
+/// Tauri's setup callback.
+///
+/// `on_changed` is invoked on the Tokio runtime whenever input devices are
 /// added or removed.  It is wrapped in an `Arc` internally so the same
 /// closure can be shared across the notification path and the poll fallback.
 ///
-/// This function spawns async tasks and returns immediately.
-pub fn start_device_watcher<F>(on_changed: F)
+/// This function returns immediately; watcher tasks run in the background.
+pub fn start_device_watcher<F>(handle: tokio::runtime::Handle, on_changed: F)
 where
     F: Fn() + Send + Sync + 'static,
 {
@@ -29,13 +43,13 @@ where
 
     #[cfg(target_os = "macos")]
     {
-        if start_coreaudio(Arc::clone(&on_changed)) {
+        if start_coreaudio(handle.clone(), Arc::clone(&on_changed)) {
             return;
         }
         // CoreAudio registration failed — fall through to the poll loop below.
     }
 
-    start_poll_fallback(on_changed);
+    start_poll_fallback(handle, on_changed);
 }
 
 // ─── macOS CoreAudio implementation ──────────────────────────────────────────
@@ -70,7 +84,11 @@ mod macos_impl {
     }
 
     /// Register the CoreAudio listener.  Returns `true` on success.
-    pub(super) fn register(on_changed: super::ChangedFn) -> bool {
+    ///
+    /// The relay task is spawned on the provided `handle` so callers control
+    /// which runtime executes the task — no implicit `tokio::spawn` that
+    /// panics when there is no current runtime (OPE-198 fix).
+    pub(super) fn register(handle: tokio::runtime::Handle, on_changed: super::ChangedFn) -> bool {
         let notify = Arc::new(Notify::new());
 
         // If the global is already set (e.g. hot-reload in dev), just return
@@ -79,8 +97,8 @@ mod macos_impl {
             return true;
         }
 
-        // Spawn the relay task.
-        tokio::spawn(async move {
+        // Spawn the relay task on the provided handle — explicit, no panic risk.
+        handle.spawn(async move {
             loop {
                 notify.notified().await;
                 on_changed();
@@ -115,16 +133,19 @@ mod macos_impl {
 }
 
 #[cfg(target_os = "macos")]
-fn start_coreaudio(on_changed: ChangedFn) -> bool {
-    macos_impl::register(on_changed)
+fn start_coreaudio(handle: tokio::runtime::Handle, on_changed: ChangedFn) -> bool {
+    macos_impl::register(handle, on_changed)
 }
 
 // ─── Polling fallback (non-macOS / CoreAudio failure) ─────────────────────────
 
-fn start_poll_fallback(on_changed: Arc<dyn Fn() + Send + Sync + 'static>) {
+fn start_poll_fallback(
+    handle: tokio::runtime::Handle,
+    on_changed: Arc<dyn Fn() + Send + Sync + 'static>,
+) {
     use crate::list_input_devices;
 
-    tokio::spawn(async move {
+    handle.spawn(async move {
         let mut prev: Vec<String> = list_input_devices()
             .unwrap_or_default()
             .into_iter()

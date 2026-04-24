@@ -265,6 +265,13 @@ pub fn bind_listener() -> Option<(std::net::TcpListener, u16)> {
                         "[display] port {WS_PORT} in use — bound display server on port {port}"
                     );
                 }
+                // tokio::net::TcpListener::from_std requires the socket to be
+                // in non-blocking mode; set it here so callers don't have to
+                // remember (OPE-198 fix for the second startup panic).
+                if let Err(e) = l.set_nonblocking(true) {
+                    eprintln!("[display] set_nonblocking failed on port {port}: {e}");
+                    return None;
+                }
                 Some((l, port))
             }
             Err(_) => None,
