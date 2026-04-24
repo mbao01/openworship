@@ -76,6 +76,7 @@ export function OperatorPage({ identity }: OperatorPageProps) {
         <Rail
           screen={settingsOpen ? "settings" : screen}
           onScreenChange={handleScreenChange}
+          onOpenShortcuts={() => setSettingsOpen(true)}
         />
         <main id="main-content" className="relative flex flex-1 overflow-hidden bg-bg" tabIndex={-1}>
           {/* Live screen stays mounted (hidden via CSS) so background video keeps playing */}

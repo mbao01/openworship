@@ -11,10 +11,17 @@
  *  - Click-outside: shows "Exit tour?" confirmation tooltip
  *  - Auto-advance: Step 2 advances when first scripture result appears;
  *    Step 3 advances when a verse is pushed
+ *  - Demo queue injection: 1.5 s after Step 4 opens, a synthetic queue item
+ *    is injected via "tour:demo-queue-inject" so the operator can see how
+ *    AI detection works during a live service.
  *
  * To trigger auto-advance from other components:
  *   window.dispatchEvent(new CustomEvent("tour:scripture-result-appeared"))
  *   window.dispatchEvent(new CustomEvent("tour:scripture-pushed"))
+ *
+ * Demo queue events (dispatched by this component):
+ *   window.dispatchEvent(new CustomEvent("tour:demo-queue-inject"))
+ *   window.dispatchEvent(new CustomEvent("tour:demo-queue-clear"))
  */
 
 import {
@@ -85,6 +92,7 @@ const POPOVER_GAP = 12;
 const GHOST_TEXT = "John 3:16";
 const GHOST_IDLE_MS = 8_000;
 const GHOST_EXECUTE_DELAY_MS = 3_000;
+const DEMO_QUEUE_INJECT_DELAY_MS = 1_500;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -187,6 +195,20 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
     return () => clearGhostTimers();
   }, [currentStep, isTourActive, clearGhostTimers]);
 
+  // ── Demo queue injection (Step 4) ───────────────────────────────────────────
+
+  useEffect(() => {
+    if (currentStep !== 4 || !isTourActive) return;
+
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("tour:demo-queue-inject"));
+    }, DEMO_QUEUE_INJECT_DELAY_MS);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [currentStep, isTourActive]);
+
   // ── Auto-advance events ─────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -208,6 +230,7 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
 
   const handleNext = useCallback(() => {
     if (currentStep === 5) {
+      window.dispatchEvent(new CustomEvent("tour:demo-queue-clear"));
       void dismissTour();
       onOpenPlan?.();
     } else {
@@ -257,6 +280,7 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
   );
 
   const handleConfirmExit = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("tour:demo-queue-clear"));
     void dismissTour();
   }, []);
 
