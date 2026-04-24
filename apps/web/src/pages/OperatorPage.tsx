@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ChurchIdentity, DetectionMode } from "../lib/types";
 import { useQueue } from "../hooks/use-queue";
-import { useTutorial } from "../hooks/use-tutorial";
+import { useTour, startTour } from "../stores/tour-store";
 import { seedDemoData } from "../lib/commands/tutorial";
 import { Rail } from "../components/operator/Rail";
 import { TopBar } from "../components/operator/TopBar";
@@ -16,8 +16,7 @@ import { CommandPalette } from "../components/operator/CommandPalette";
 import { AssetsScreen } from "../components/operator/AssetsScreen";
 import { ErrorBoundary } from "../components/ui/error-boundary";
 import { WelcomeModal } from "../components/operator/WelcomeModal";
-import { ResumeBanner } from "../components/operator/ResumeBanner";
-import { TourOverlay } from "../components/operator/TourOverlay";
+import { TourOverlay } from "../components/operator/tour/TourOverlay";
 
 interface OperatorPageProps {
   identity: ChurchIdentity;
@@ -36,18 +35,8 @@ export function OperatorPage({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { queue, approve } = useQueue();
 
-  const {
-    loading: tutorialLoading,
-    tutorialState,
-    activeStep,
-    startTour,
-    nextStep,
-    dismissTour,
-    completeTour,
-  } = useTutorial();
+  const { loading: tutorialLoading, tutorialState } = useTour();
 
-  // True once the user activates the tour overlay in this session.
-  const [tourActive, setTourActive] = useState(false);
   // True once the welcome modal has been dismissed in this session.
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
 
@@ -57,14 +46,6 @@ export function OperatorPage({
     !tutorialLoading &&
     tutorialState === "not_started" &&
     !welcomeDismissed;
-
-  // Show the resume banner when a tour is in progress but not yet activated
-  // in this session (i.e. the user closed the app mid-tour).
-  const showResumeBanner =
-    !tutorialLoading &&
-    activeStep !== null &&
-    !tourActive &&
-    !showWelcomeModal;
 
   // Cmd+K / Ctrl+K keyboard shortcut
   useEffect(() => {
@@ -99,40 +80,17 @@ export function OperatorPage({
     await seedDemoData();
     await startTour();
     setScreen("live");
-    setTourActive(true);
-  }, [startTour]);
+  }, []);
 
   // Welcome modal CTA: "Set up later"
   const handleSetUpLater = useCallback(() => {
     setWelcomeDismissed(true);
   }, []);
 
-  // Resume banner: "Resume tour"
-  const handleResumeTour = useCallback(() => {
-    setTourActive(true);
+  // TourOverlay step 5 CTA: open Plan screen and dismiss tour
+  const handleOpenPlan = useCallback(() => {
+    setScreen("plan");
   }, []);
-
-  // Resume banner: "Dismiss"
-  const handleDismissResume = useCallback(async () => {
-    await dismissTour();
-  }, [dismissTour]);
-
-  // TourOverlay: advance to next step
-  const handleTourNext = useCallback(async () => {
-    await nextStep();
-  }, [nextStep]);
-
-  // TourOverlay: skip / exit tour
-  const handleTourSkip = useCallback(async () => {
-    setTourActive(false);
-    await dismissTour();
-  }, [dismissTour]);
-
-  // TourOverlay: complete tour (step 5 primary CTA)
-  const handleTourComplete = useCallback(async () => {
-    setTourActive(false);
-    await completeTour();
-  }, [completeTour]);
 
   return (
     <div
@@ -146,13 +104,6 @@ export function OperatorPage({
       >
         Skip to main content
       </a>
-      {showResumeBanner && activeStep !== null && (
-        <ResumeBanner
-          step={activeStep}
-          onResume={handleResumeTour}
-          onDismiss={handleDismissResume}
-        />
-      )}
       <TopBar
         mode={mode}
         onModeChange={setMode}
@@ -203,14 +154,8 @@ export function OperatorPage({
           onSetUpLater={handleSetUpLater}
         />
       )}
-      {tourActive && activeStep !== null && (
-        <TourOverlay
-          step={activeStep}
-          onNext={handleTourNext}
-          onSkip={handleTourSkip}
-          onComplete={handleTourComplete}
-        />
-      )}
+      {/* TourOverlay reads isTourActive from the tour-store; shows/hides itself. */}
+      <TourOverlay onOpenPlan={handleOpenPlan} />
     </div>
   );
 }
