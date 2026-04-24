@@ -46,6 +46,7 @@ export async function stubTauriIdentity(page: Page): Promise<void> {
           return Promise.resolve({ engine: "whisper", model: "base.en", deepgram_enabled: false });
         if (cmd === "get_stt_status")
           return Promise.resolve({ engine: "whisper", running: false, model_downloaded: false });
+        if (cmd === "get_tutorial_state") return Promise.resolve("dismissed");
         return Promise.resolve(null);
       },
       listen: () => Promise.resolve(() => {}),
@@ -102,13 +103,14 @@ export async function stubTauriOnboarding(page: Page): Promise<void> {
         if (cmd === "get_stt_status")
           return Promise.resolve({ engine: "whisper", running: false, model_downloaded: false });
         if (cmd === "get_active_translation") return Promise.resolve("KJV");
-        if (cmd === "get_display_settings") return Promise.resolve({});
+        if (cmd === "get_display_settings") return Promise.resolve({ selected_monitor_index: null, multi_output: false });
         if (cmd === "get_obs_display_url") return Promise.resolve("http://localhost:7411/display");
         if (cmd === "get_display_window_open") return Promise.resolve(false);
         if (cmd === "list_monitors") return Promise.resolve([]);
         if (cmd === "get_artifacts_settings") return Promise.resolve({ base_path: "/tmp" });
         if (cmd === "get_email_settings") return Promise.resolve({ auto_send: false });
         if (cmd === "get_storage_usage") return Promise.resolve({});
+        if (cmd === "get_tutorial_state") return Promise.resolve("dismissed");
         return Promise.resolve(null);
       },
       listen: () => Promise.resolve(() => {}),
