@@ -282,7 +282,7 @@ export function DisplayContent({
         ) : showEmptyState ? (
           <div
             className="w-full text-center font-mono tracking-[0.2em] text-[#968D80] uppercase"
-            style={{ fontSize: 14, textShadow: "none" }}
+            style={{ fontSize: 14, textShadow: "none", WebkitTextStroke: "0" }}
           >
             Nothing pushed · select from the library
           </div>
