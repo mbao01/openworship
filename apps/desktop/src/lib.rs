@@ -496,8 +496,10 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             // On other platforms it falls back to a 2-second cpal poll.
             {
                 let app_for_devices = app_handle.clone();
-                ow_audio::start_device_watcher(move || {
-                    let _ = app_for_devices.emit("audio://devices-changed", ());
+                tauri::async_runtime::spawn(async move {
+                    ow_audio::start_device_watcher(move || {
+                        let _ = app_for_devices.emit("audio://devices-changed", ());
+                    });
                 });
             }
 
