@@ -20,7 +20,7 @@
   /* Text */
   --color-ink:   #F2EDE2;
   --color-ink-2: #CFC7B6;
-  --color-ink-3: #8A8175;
+  --color-ink-3: #968D80; /* was #8A8175 — lightened to ≥4.5:1 on bg-4 (WCAG 1.4.3) */
   --color-muted: #857E73; /* was #5E574D — lightened to ≥4.5:1 on bg (WCAG 1.4.3) */
 
   /* Accent — default copper; overridden at runtime via CSS var */
@@ -79,7 +79,7 @@ html[data-density="compact"] {
 @theme inline {
   --color-background:         var(--color-bg);
   --color-foreground:         var(--color-ink);
-  --color-muted:              #7A7064;
+  --color-muted:              #857E73; /* aligned with @theme token — was #7A7064, missed WCAG fix */
   --color-muted-foreground:   var(--color-ink-3);
   --color-border:             var(--color-line-strong);
   --color-input:              var(--color-line-strong);

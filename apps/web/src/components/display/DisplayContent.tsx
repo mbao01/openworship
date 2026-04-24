@@ -170,7 +170,7 @@ export function DisplayContent({
           WebkitTextStroke: "0.5px rgba(0,0,0,0.3)",
         }}
       >
-        {content ? (
+        {content && (
           <>
             {content.image_url?.startsWith("artifact:") ? (
               <div
@@ -279,21 +279,30 @@ export function DisplayContent({
               </div>
             )}
           </>
-        ) : showEmptyState ? (
+        )}
+      </div>
+
+      {/* Empty state — rendered outside the text-shadow/stroke container so
+          its colour is not visually darkened by the inherited CSS effects. */}
+      {!content && showEmptyState && (
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center"
+        >
           <div
-            className="w-full text-center font-mono tracking-[0.2em] text-[#3A332C] uppercase"
+            className="w-full text-center font-mono tracking-[0.2em] text-[#968D80] uppercase"
             style={{ fontSize: 14 }}
           >
             Nothing pushed · select from the library
           </div>
-        ) : null}
-      </div>
+        </div>
+      )}
 
       {/* Watermark */}
       <span
         data-qa="display-watermark"
         className="absolute z-10 font-sans tracking-[0.2em] text-muted lowercase select-none"
         style={{ bottom: 32, left: "10%", fontSize: 12 }}
+        aria-hidden="true"
       >
         openworship
       </span>
