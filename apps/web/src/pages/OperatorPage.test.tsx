@@ -44,6 +44,7 @@ vi.mock("@/hooks/use-tutorial", () => ({
 
 vi.mock("@/lib/commands/tutorial", () => ({
   getTutorialState: vi.fn().mockResolvedValue("not_started"),
+  setTutorialState: vi.fn().mockResolvedValue(undefined),
   seedDemoData: vi.fn().mockResolvedValue({ songs_seeded: 0, project_seeded: false }),
 }));
 
