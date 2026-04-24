@@ -6,6 +6,7 @@ import { startStt, stopStt } from "../../lib/commands/audio";
 import { getAudioSettings } from "../../lib/commands/settings";
 import { toastError } from "../../lib/toast";
 import { useAudioLevel } from "@/hooks/use-audio-level";
+import { useSTTStatus } from "@/hooks/use-stt-status";
 import {
   Tooltip,
   TooltipContent,
@@ -49,6 +50,7 @@ export function TopBar({
   onPush,
 }: TopBarProps) {
   const audioLevel = useAudioLevel();
+  const { fallbackReason } = useSTTStatus();
   const [micActive, setMicActive] = useState(false);
   const [inputLabel, setInputLabel] = useState("INPUT");
 
@@ -155,6 +157,9 @@ export function TopBar({
 
       {/* Right */}
       <div className="flex items-center gap-1.5">
+        {fallbackReason !== null && (
+          <SttFallbackBadge reason={fallbackReason} />
+        )}
         <button
           className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-line bg-bg-2 px-3 py-1.5 text-xs text-ink-2 transition-all hover:border-line-strong hover:bg-bg-3 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
           onClick={onOpenCmdK}
@@ -181,6 +186,32 @@ export function TopBar({
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
+
+/**
+ * Persistent badge shown in the TopBar when the STT engine has automatically
+ * fallen back from Deepgram (cloud) to local Whisper.
+ * The full degradation reason is surfaced in a tooltip.
+ */
+function SttFallbackBadge({ reason }: { reason: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          data-qa="stt-fallback-badge"
+          className="inline-flex cursor-default items-center gap-1.5 rounded border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 font-mono text-[10px] tracking-[0.08em] uppercase text-amber-400"
+        >
+          <span className="h-1.5 w-1.5 animate-[blink_2s_infinite] rounded-full bg-amber-400" />
+          Local STT
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        <span className="font-medium">Deepgram unavailable</span>
+        <br />
+        Using local Whisper ({reason})
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 function BrandMark() {
   return (
