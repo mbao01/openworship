@@ -3842,6 +3842,7 @@ name = "ow-audio"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "coreaudio-sys",
  "cpal",
  "futures-util",
  "ringbuf",
