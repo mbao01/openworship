@@ -21,8 +21,25 @@ describe("ScriptureSearchPanel", () => {
     vi.clearAllMocks();
   });
 
-  it("renders in text mode by default with search input", () => {
+  // Helper: switch to text mode (default is now "select")
+  async function switchToTextMode(user: ReturnType<typeof userEvent.setup>) {
+    const textBtn = screen.getAllByRole("button").find(
+      (b) => b.getAttribute("title") === "Free-text search",
+    );
+    expect(textBtn).toBeTruthy();
+    await user.click(textBtn!);
+  }
+
+  it("renders in select mode by default and shows Book combobox", () => {
     render(<ScriptureSearchPanel onPush={onPush} />);
+    expect(screen.getByText("Book")).toBeInTheDocument();
+  });
+
+  it("toggles to text mode and shows search input", async () => {
+    const user = userEvent.setup();
+    render(<ScriptureSearchPanel onPush={onPush} />);
+
+    await switchToTextMode(user);
     expect(screen.getByPlaceholderText("Romans 8:38 ...")).toBeInTheDocument();
   });
 
@@ -41,6 +58,7 @@ describe("ScriptureSearchPanel", () => {
     ]);
 
     render(<ScriptureSearchPanel onPush={onPush} />);
+    await switchToTextMode(user);
     await user.type(screen.getByPlaceholderText("Romans 8:38 ..."), "John 3:16");
 
     await waitFor(() => {
@@ -56,13 +74,16 @@ describe("ScriptureSearchPanel", () => {
     const user = userEvent.setup();
     render(<ScriptureSearchPanel onPush={onPush} />);
 
+    // Already in select mode by default
+    expect(screen.getByText("Book")).toBeInTheDocument();
+
+    // Switch to text then back to select confirms toggle works
+    await switchToTextMode(user);
     const selectBtn = screen.getAllByRole("button").find(
       (b) => b.getAttribute("title") === "Browse by book/chapter/verse",
     );
     expect(selectBtn).toBeTruthy();
     await user.click(selectBtn!);
-
-    // Book combobox trigger should appear with placeholder text
     expect(screen.getByText("Book")).toBeInTheDocument();
   });
 
@@ -71,12 +92,7 @@ describe("ScriptureSearchPanel", () => {
     mockGetBookChapters.mockResolvedValue([1, 2, 3, 4, 5]);
 
     render(<ScriptureSearchPanel onPush={onPush} />);
-
-    // Switch to select mode
-    const selectBtn = screen.getAllByRole("button").find(
-      (b) => b.getAttribute("title") === "Browse by book/chapter/verse",
-    );
-    await user.click(selectBtn!);
+    // Already in select mode
 
     // Click the Book combobox to open it
     const bookTrigger = screen.getByText("Book");
@@ -112,6 +128,7 @@ describe("ScriptureSearchPanel", () => {
     ]);
 
     render(<ScriptureSearchPanel onPush={onPush} />);
+    await switchToTextMode(user);
     await user.type(screen.getByPlaceholderText("Romans 8:38 ..."), "Romans 8:28");
 
     await waitFor(() => {
@@ -141,6 +158,7 @@ describe("ScriptureSearchPanel", () => {
     ]);
 
     render(<ScriptureSearchPanel onPush={onPush} />);
+    await switchToTextMode(user);
 
     await user.type(screen.getByPlaceholderText("Romans 8:38 ..."), "John 1:1");
     await waitFor(() => expect(screen.getByText("John 1:1")).toBeInTheDocument());

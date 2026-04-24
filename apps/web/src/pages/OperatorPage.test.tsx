@@ -10,39 +10,23 @@ import type { ChurchIdentity } from "../lib/types";
 const {
   mockApprove,
   mockUseQueue,
+  mockUseTour,
   mockStartTour,
-  mockNextStep,
-  mockDismissTour,
-  mockCompleteTour,
-  mockUseTutorial,
 } = vi.hoisted(() => {
   const mockApprove = vi.fn().mockResolvedValue(undefined);
   const mockStartTour = vi.fn().mockResolvedValue(undefined);
-  const mockNextStep = vi.fn().mockResolvedValue(undefined);
-  const mockDismissTour = vi.fn().mockResolvedValue(undefined);
-  const mockCompleteTour = vi.fn().mockResolvedValue(undefined);
   const mockUseQueue = vi.fn().mockReturnValue({ queue: [], approve: mockApprove });
-  const mockUseTutorial = vi.fn().mockReturnValue({
+  const mockUseTour = vi.fn().mockReturnValue({
     loading: false,
     tutorialState: "not_started" as const,
-    activeStep: null,
-    startTour: mockStartTour,
-    nextStep: mockNextStep,
-    dismissTour: mockDismissTour,
-    completeTour: mockCompleteTour,
+    isTourActive: false,
+    currentStep: null,
+    exitConfirmVisible: false,
   });
-  return {
-    mockApprove,
-    mockUseQueue,
-    mockStartTour,
-    mockNextStep,
-    mockDismissTour,
-    mockCompleteTour,
-    mockUseTutorial,
-  };
+  return { mockApprove, mockUseQueue, mockUseTour, mockStartTour };
 });
 
-// ── Mock all hooks ────────────────────────────────────────────────────────────
+// ── Mock all hooks and stores ─────────────────────────────────────────────────
 
 vi.mock("../lib/commands/detection", () => ({
   getDetectionMode: vi.fn().mockResolvedValue("auto"),
@@ -61,8 +45,16 @@ vi.mock("../hooks/use-queue", () => ({
   useQueue: (...args: unknown[]) => mockUseQueue(...args),
 }));
 
-vi.mock("../hooks/use-tutorial", () => ({
-  useTutorial: (...args: unknown[]) => mockUseTutorial(...args),
+vi.mock("../stores/tour-store", () => ({
+  useTour: (...args: unknown[]) => mockUseTour(...args),
+  startTour: (...args: unknown[]) => mockStartTour(...args),
+  advanceStep: vi.fn().mockResolvedValue(undefined),
+  dismissTour: vi.fn().mockResolvedValue(undefined),
+  completeTour: vi.fn().mockResolvedValue(undefined),
+  isTourActive: vi.fn().mockReturnValue(false),
+  getCurrentStep: vi.fn().mockReturnValue(null),
+  showExitConfirm: vi.fn(),
+  hideExitConfirm: vi.fn(),
 }));
 
 vi.mock("../lib/commands/tutorial", () => ({
@@ -161,37 +153,10 @@ vi.mock("../components/operator/WelcomeModal", () => ({
   ),
 }));
 
-vi.mock("../components/operator/ResumeBanner", () => ({
-  ResumeBanner: ({
-    onResume,
-    onDismiss,
-  }: {
-    step: number;
-    onResume: () => void;
-    onDismiss: () => void;
-  }) => (
-    <div data-testid="ResumeBanner">
-      <button data-testid="resume-tour" onClick={onResume}>Resume</button>
-      <button data-testid="dismiss-resume" onClick={onDismiss}>Dismiss</button>
-    </div>
-  ),
-}));
-
-vi.mock("../components/operator/TourOverlay", () => ({
-  TourOverlay: ({
-    onNext,
-    onSkip,
-    onComplete,
-  }: {
-    step: number;
-    onNext: () => void;
-    onSkip: () => void;
-    onComplete: () => void;
-  }) => (
+vi.mock("../components/operator/tour/TourOverlay", () => ({
+  TourOverlay: ({ onOpenPlan }: { onOpenPlan: () => void }) => (
     <div data-testid="TourOverlay">
-      <button data-testid="tour-next" onClick={onNext}>Next</button>
-      <button data-testid="tour-skip" onClick={onSkip}>Skip</button>
-      <button data-testid="tour-complete" onClick={onComplete}>Complete</button>
+      <button data-testid="tour-open-plan" onClick={onOpenPlan}>Open Plan</button>
     </div>
   ),
 }));
@@ -213,14 +178,12 @@ describe("OperatorPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseQueue.mockReturnValue({ queue: [], approve: mockApprove });
-    mockUseTutorial.mockReturnValue({
+    mockUseTour.mockReturnValue({
       loading: false,
       tutorialState: "not_started",
-      activeStep: null,
-      startTour: mockStartTour,
-      nextStep: mockNextStep,
-      dismissTour: mockDismissTour,
-      completeTour: mockCompleteTour,
+      isTourActive: false,
+      currentStep: null,
+      exitConfirmVisible: false,
     });
   });
 
@@ -233,6 +196,11 @@ describe("OperatorPage", () => {
   it("renders LiveScreen by default", () => {
     render(<OperatorPage identity={identity} />);
     expect(screen.getByTestId("LiveScreen")).toBeInTheDocument();
+  });
+
+  it("renders TourOverlay unconditionally", () => {
+    render(<OperatorPage identity={identity} />);
+    expect(screen.getByTestId("TourOverlay")).toBeInTheDocument();
   });
 
   it("switches to PlanScreen when plan is selected", () => {
@@ -317,104 +285,38 @@ describe("OperatorPage", () => {
     expect(screen.queryByTestId("WelcomeModal")).not.toBeInTheDocument();
   });
 
+  it("does not show WelcomeModal when tutorial already started", () => {
+    mockUseTour.mockReturnValue({
+      loading: false,
+      tutorialState: "in_progress_step_1",
+      isTourActive: true,
+      currentStep: 1,
+      exitConfirmVisible: false,
+    });
+    render(<OperatorPage identity={identity} justOnboarded={true} />);
+    expect(screen.queryByTestId("WelcomeModal")).not.toBeInTheDocument();
+  });
+
   it("dismisses WelcomeModal when 'Set Up Later' is clicked", () => {
     render(<OperatorPage identity={identity} justOnboarded={true} />);
     fireEvent.click(screen.getByTestId("setup-later"));
     expect(screen.queryByTestId("WelcomeModal")).not.toBeInTheDocument();
   });
 
-  it("starts tour when 'Start Tour' is clicked in WelcomeModal", async () => {
+  it("calls startTour and seedDemoData when 'Start Tour' is clicked", async () => {
+    const { seedDemoData } = await import("../lib/commands/tutorial");
     render(<OperatorPage identity={identity} justOnboarded={true} />);
     await act(async () => {
       fireEvent.click(screen.getByTestId("start-tour"));
     });
+    expect(seedDemoData).toHaveBeenCalled();
     expect(mockStartTour).toHaveBeenCalled();
   });
 
-  it("shows ResumeBanner when tutorial is in progress but not active", () => {
-    mockUseTutorial.mockReturnValue({
-      loading: false,
-      tutorialState: "in_progress_step_2",
-      activeStep: 2,
-      startTour: mockStartTour,
-      nextStep: mockNextStep,
-      dismissTour: mockDismissTour,
-      completeTour: mockCompleteTour,
-    });
+  it("TourOverlay onOpenPlan switches to plan screen", () => {
     render(<OperatorPage identity={identity} />);
-    expect(screen.getByTestId("ResumeBanner")).toBeInTheDocument();
-  });
-
-  it("activates TourOverlay when ResumeBanner 'Resume' is clicked", () => {
-    mockUseTutorial.mockReturnValue({
-      loading: false,
-      tutorialState: "in_progress_step_3",
-      activeStep: 3,
-      startTour: mockStartTour,
-      nextStep: mockNextStep,
-      dismissTour: mockDismissTour,
-      completeTour: mockCompleteTour,
-    });
-    render(<OperatorPage identity={identity} />);
-    fireEvent.click(screen.getByTestId("resume-tour"));
-    expect(screen.getByTestId("TourOverlay")).toBeInTheDocument();
-  });
-
-  it("dismisses tour from ResumeBanner dismiss button", async () => {
-    mockUseTutorial.mockReturnValue({
-      loading: false,
-      tutorialState: "in_progress_step_2",
-      activeStep: 2,
-      startTour: mockStartTour,
-      nextStep: mockNextStep,
-      dismissTour: mockDismissTour,
-      completeTour: mockCompleteTour,
-    });
-    render(<OperatorPage identity={identity} />);
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("dismiss-resume"));
-    });
-    expect(mockDismissTour).toHaveBeenCalled();
-  });
-
-  it("TourOverlay skip calls dismissTour and hides overlay", async () => {
-    mockUseTutorial.mockReturnValue({
-      loading: false,
-      tutorialState: "in_progress_step_1",
-      activeStep: 1,
-      startTour: mockStartTour,
-      nextStep: mockNextStep,
-      dismissTour: mockDismissTour,
-      completeTour: mockCompleteTour,
-    });
-    render(<OperatorPage identity={identity} />);
-    // Activate tour via resume banner
-    fireEvent.click(screen.getByTestId("resume-tour"));
-    expect(screen.getByTestId("TourOverlay")).toBeInTheDocument();
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("tour-skip"));
-    });
-    expect(mockDismissTour).toHaveBeenCalled();
-  });
-
-  it("TourOverlay complete calls completeTour", async () => {
-    mockUseTutorial.mockReturnValue({
-      loading: false,
-      tutorialState: "in_progress_step_5",
-      activeStep: 5,
-      startTour: mockStartTour,
-      nextStep: mockNextStep,
-      dismissTour: mockDismissTour,
-      completeTour: mockCompleteTour,
-    });
-    render(<OperatorPage identity={identity} />);
-    fireEvent.click(screen.getByTestId("resume-tour"));
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("tour-complete"));
-    });
-    expect(mockCompleteTour).toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("tour-open-plan"));
+    expect(screen.getByTestId("PlanScreen")).toBeInTheDocument();
   });
 
   it("PreviewScreen 'Go Live' switches to live screen", () => {
@@ -431,8 +333,6 @@ describe("OperatorPage", () => {
     mockUseQueue.mockReturnValue({ queue: [queueItem], approve: mockApprove });
     render(<OperatorPage identity={identity} />);
 
-    // handlePush is exposed via TopBar's onPush prop — simulate it via the component internals
-    // The TopBar mock doesn't expose onPush, so we test via the rendered queue state
     await waitFor(() => {
       expect(mockUseQueue).toHaveBeenCalled();
     });
