@@ -259,6 +259,7 @@ pub fn bind_listener() -> Option<(std::net::TcpListener, u16)> {
         let addr = SocketAddr::from(([127, 0, 0, 1], port));
         match std::net::TcpListener::bind(addr) {
             Ok(l) => {
+                let _ = l.set_nonblocking(true); // required for tokio::net::TcpListener::from_std
                 if port != WS_PORT {
                     eprintln!(
                         "[display] port {WS_PORT} in use — bound display server on port {port}"
