@@ -8,7 +8,10 @@
  * ends and can be dispatched to a mailing list via configured SMTP.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import { EmailSubscriberSchema, ServiceSummarySchema } from "../schemas";
 import type { EmailSubscriber, ServiceSummary } from "../types";
 
 // ─── Service Summaries ────────────────────────────────────────────────────────
@@ -25,7 +28,10 @@ export async function generateServiceSummary(projectId: string): Promise<void> {
  * Returns all previously generated service summaries, newest first.
  */
 export async function listServiceSummaries(): Promise<ServiceSummary[]> {
-  return invoke<ServiceSummary[]>("list_service_summaries");
+  return invokeValidated(
+    "list_service_summaries",
+    z.array(ServiceSummarySchema),
+  );
 }
 
 /**
@@ -49,7 +55,10 @@ export async function sendSummaryEmail(summaryId: string): Promise<void> {
  * Returns all email newsletter subscribers for this church.
  */
 export async function listEmailSubscribers(): Promise<EmailSubscriber[]> {
-  return invoke<EmailSubscriber[]>("list_email_subscribers");
+  return invokeValidated(
+    "list_email_subscribers",
+    z.array(EmailSubscriberSchema),
+  );
 }
 
 /**
@@ -59,7 +68,10 @@ export async function addEmailSubscriber(
   email: string,
   name?: string,
 ): Promise<EmailSubscriber> {
-  return invoke<EmailSubscriber>("add_email_subscriber", { email, name });
+  return invokeValidated("add_email_subscriber", EmailSubscriberSchema, {
+    email,
+    name,
+  });
 }
 
 /**

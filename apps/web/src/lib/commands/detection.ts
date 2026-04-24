@@ -10,7 +10,14 @@
  *   - "offline"   — full offline mode; no STT or semantic matching
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import {
+  DetectionModeSchema,
+  QueueItemSchema,
+  SemanticStatusSchema,
+} from "../schemas";
 import type { DetectionMode, QueueItem, SemanticStatus } from "../types";
 
 // ─── Detection Mode ───────────────────────────────────────────────────────────
@@ -19,7 +26,7 @@ import type { DetectionMode, QueueItem, SemanticStatus } from "../types";
  * Returns the current detection mode.
  */
 export async function getDetectionMode(): Promise<DetectionMode> {
-  return invoke<DetectionMode>("get_detection_mode");
+  return invokeValidated("get_detection_mode", DetectionModeSchema);
 }
 
 /**
@@ -36,7 +43,7 @@ export async function setDetectionMode(mode: DetectionMode): Promise<void> {
  * Listen to the `detection://queue-updated` event for real-time updates.
  */
 export async function getQueue(): Promise<QueueItem[]> {
-  return invoke<QueueItem[]>("get_queue");
+  return invokeValidated("get_queue", z.array(QueueItemSchema));
 }
 
 /**
@@ -117,7 +124,9 @@ export async function getBlackout(): Promise<boolean> {
  * Useful for manual testing or clipboard-paste detection.
  */
 export async function detectInTranscript(text: string): Promise<QueueItem[]> {
-  return invoke<QueueItem[]>("detect_in_transcript", { text });
+  return invokeValidated("detect_in_transcript", z.array(QueueItemSchema), {
+    text,
+  });
 }
 
 // ─── Semantic Index ───────────────────────────────────────────────────────────
@@ -127,5 +136,5 @@ export async function detectInTranscript(text: string): Promise<QueueItem[]> {
  * `ready` indicates the index is built and available for matching.
  */
 export async function getSemanticStatus(): Promise<SemanticStatus> {
-  return invoke<SemanticStatus>("get_semantic_status");
+  return invokeValidated("get_semantic_status", SemanticStatusSchema);
 }

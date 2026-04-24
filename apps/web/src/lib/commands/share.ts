@@ -5,7 +5,8 @@
  * Branch sync keeps member branches up-to-date with HQ content changes.
  */
 
-import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import { BranchSyncStatusSchema } from "../schemas";
 import type { BranchSyncStatus } from "../types";
 
 /**
@@ -13,5 +14,5 @@ import type { BranchSyncStatus } from "../types";
  * Includes timestamps of last push/pull and any current errors.
  */
 export async function getBranchSyncStatus(): Promise<BranchSyncStatus> {
-  return invoke<BranchSyncStatus>("get_branch_sync_status");
+  return invokeValidated("get_branch_sync_status", BranchSyncStatusSchema);
 }

@@ -18,7 +18,17 @@ describe("commands/display-window", () => {
   });
 
   it("listMonitors invokes list_monitors", async () => {
-    const monitors = [{ index: 0, name: "Built-in Display", width: 1920, height: 1080 }];
+    const monitors = [
+      {
+        name: "Built-in Display",
+        width: 1920,
+        height: 1080,
+        position_x: 0,
+        position_y: 0,
+        scale_factor: 2.0,
+        is_primary: true,
+      },
+    ];
     mockInvoke.mockResolvedValue(monitors);
     const result = await listMonitors();
     expect(mockInvoke).toHaveBeenCalledWith("list_monitors");

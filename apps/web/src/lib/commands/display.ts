@@ -4,7 +4,10 @@
  * Tauri command wrappers for display background management.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import { BackgroundInfoSchema } from "../schemas";
 
 export interface BackgroundInfo {
   id: string;
@@ -33,12 +36,18 @@ export async function getDisplayBackground(): Promise<string | null> {
 
 /** List preset backgrounds (CSS gradients). */
 export async function listPresetBackgrounds(): Promise<BackgroundInfo[]> {
-  return invoke<BackgroundInfo[]>("list_preset_backgrounds");
+  return invokeValidated(
+    "list_preset_backgrounds",
+    z.array(BackgroundInfoSchema),
+  );
 }
 
 /** List uploaded custom backgrounds. */
 export async function listUploadedBackgrounds(): Promise<BackgroundInfo[]> {
-  return invoke<BackgroundInfo[]>("list_uploaded_backgrounds");
+  return invokeValidated(
+    "list_uploaded_backgrounds",
+    z.array(BackgroundInfoSchema),
+  );
 }
 
 /** Upload a background image/video. */
@@ -46,5 +55,8 @@ export async function uploadBackground(
   name: string,
   bytes: number[],
 ): Promise<BackgroundInfo> {
-  return invoke<BackgroundInfo>("upload_background", { name, bytes });
+  return invokeValidated("upload_background", BackgroundInfoSchema, {
+    name,
+    bytes,
+  });
 }

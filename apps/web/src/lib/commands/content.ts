@@ -5,7 +5,14 @@
  * and the reusable content bank.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import {
+  ContentBankEntrySchema,
+  TranslationInfoSchema,
+  VerseResultSchema,
+} from "../schemas";
 import type { ContentBankEntry, TranslationInfo, VerseResult } from "../types";
 
 // ─── Scripture Search ─────────────────────────────────────────────────────────
@@ -21,7 +28,10 @@ export async function searchScriptures(
   query: string,
   translation?: string,
 ): Promise<VerseResult[]> {
-  return invoke<VerseResult[]>("search_scriptures", { query, translation });
+  return invokeValidated("search_scriptures", z.array(VerseResultSchema), {
+    query,
+    translation,
+  });
 }
 
 // ─── Scripture Metadata ──────────────────────────────────────────────────────
@@ -30,7 +40,7 @@ export async function searchScriptures(
  * Returns the distinct chapter numbers for a Bible book.
  */
 export async function getBookChapters(book: string): Promise<number[]> {
-  return invoke<number[]>("get_book_chapters", { book });
+  return invokeValidated("get_book_chapters", z.array(z.number()), { book });
 }
 
 /**
@@ -40,7 +50,10 @@ export async function getChapterVerses(
   book: string,
   chapter: number,
 ): Promise<number[]> {
-  return invoke<number[]>("get_chapter_verses", { book, chapter });
+  return invokeValidated("get_chapter_verses", z.array(z.number()), {
+    book,
+    chapter,
+  });
 }
 
 // ─── Translations ─────────────────────────────────────────────────────────────
@@ -49,7 +62,10 @@ export async function getChapterVerses(
  * Lists all installed Bible translations available on this device.
  */
 export async function listTranslations(): Promise<TranslationInfo[]> {
-  return invoke<TranslationInfo[]>("list_translations");
+  return invokeValidated(
+    "list_translations",
+    z.array(TranslationInfoSchema),
+  );
 }
 
 /**
@@ -92,5 +108,7 @@ export async function pushToDisplay(
 export async function searchContentBank(
   query: string,
 ): Promise<ContentBankEntry[]> {
-  return invoke<ContentBankEntry[]>("search_content_bank", { query });
+  return invokeValidated("search_content_bank", z.array(ContentBankEntrySchema), {
+    query,
+  });
 }

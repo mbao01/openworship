@@ -23,8 +23,21 @@ import {
   getActiveSermonNote,
 } from "./annotations";
 
-const mockAnnouncement = { id: "a1", title: "Welcome", body: "Welcome to church!" };
-const mockSermonNote = { id: "s1", title: "Grace", slides: ["Slide 1", "Slide 2"] };
+const mockAnnouncement = {
+  id: "a1",
+  kind: "announcement",
+  title: "Welcome",
+  body: "Welcome to church!",
+  image_url: null,
+  keyword_cue: null,
+  created_at_ms: 0,
+};
+const mockSermonNote = {
+  id: "s1",
+  title: "Sample Title",
+  slides: ["Slide 1", "Slide 2"],
+  created_at_ms: 0,
+};
 
 describe("commands/annotations", () => {
   beforeEach(() => {
@@ -107,7 +120,7 @@ describe("commands/annotations", () => {
     });
 
     it("importPptxSlides invokes import_pptx_slides with path", async () => {
-      const slides = [{ id: "s1", title: "Slide 1", body: "" }];
+      const slides = [{ id: "s1", kind: "slide", title: "Slide 1", body: "", image_url: null, keyword_cue: null, created_at_ms: 0 }];
       mockInvoke.mockResolvedValue(slides);
       const result = await importPptxSlides("/path/to/deck.pptx");
       expect(mockInvoke).toHaveBeenCalledWith("import_pptx_slides", { path: "/path/to/deck.pptx" });
@@ -115,7 +128,7 @@ describe("commands/annotations", () => {
     });
 
     it("importPdfSlides invokes import_pdf_slides with path", async () => {
-      const slides = [{ id: "p1", title: "Page 1", body: "content" }];
+      const slides = [{ id: "p1", kind: "slide", title: "Page 1", body: "content", image_url: null, keyword_cue: null, created_at_ms: 0 }];
       mockInvoke.mockResolvedValue(slides);
       const result = await importPdfSlides("/path/to/document.pdf");
       expect(mockInvoke).toHaveBeenCalledWith("import_pdf_slides", { path: "/path/to/document.pdf" });
@@ -133,19 +146,19 @@ describe("commands/annotations", () => {
 
     it("createSermonNote passes title and slides", async () => {
       mockInvoke.mockResolvedValue(mockSermonNote);
-      const result = await createSermonNote("Grace", ["Slide 1", "Slide 2"]);
+      const result = await createSermonNote("Sample Title", ["Slide 1", "Slide 2"]);
       expect(mockInvoke).toHaveBeenCalledWith("create_sermon_note", {
-        title: "Grace",
+        title: "Sample Title",
         slides: ["Slide 1", "Slide 2"],
       });
       expect(result).toEqual(mockSermonNote);
     });
 
     it("updateSermonNote passes id, title, slides", async () => {
-      await updateSermonNote("s1", "Grace (Updated)", ["New Slide 1"]);
+      await updateSermonNote("s1", "Sample Title (Updated)", ["New Slide 1"]);
       expect(mockInvoke).toHaveBeenCalledWith("update_sermon_note", {
         id: "s1",
-        title: "Grace (Updated)",
+        title: "Sample Title (Updated)",
         slides: ["New Slide 1"],
       });
     });

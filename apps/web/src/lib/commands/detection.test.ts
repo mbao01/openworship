@@ -117,9 +117,10 @@ describe("commands/detection", () => {
   });
 
   it("getSemanticStatus invokes get_semantic_status", async () => {
-    mockInvoke.mockResolvedValue({ ready: true, model: "nomic-embed-text" });
+    const status = { ready: true, verse_count: 31102, enabled: true };
+    mockInvoke.mockResolvedValue(status);
     const result = await getSemanticStatus();
     expect(mockInvoke).toHaveBeenCalledWith("get_semantic_status");
-    expect(result).toEqual({ ready: true, model: "nomic-embed-text" });
+    expect(result).toEqual(status);
   });
 });

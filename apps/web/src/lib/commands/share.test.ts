@@ -12,7 +12,12 @@ describe("commands/share", () => {
   });
 
   it("getBranchSyncStatus invokes get_branch_sync_status", async () => {
-    const status = { last_push_ms: 0, last_pull_ms: 0, error: null };
+    const status = {
+      last_pushed_ms: 0,
+      last_pulled_ms: 0,
+      hq_branch_name: null,
+      error: null,
+    };
     mockInvoke.mockResolvedValue(status);
     const result = await getBranchSyncStatus();
     expect(mockInvoke).toHaveBeenCalledWith("get_branch_sync_status");

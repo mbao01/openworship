@@ -6,7 +6,10 @@
  * (scriptures, songs, slides) used during a single worship service.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import { ServiceProjectSchema } from "../schemas";
 import type { ServiceProject, TaskStatus } from "../types";
 
 /**
@@ -23,7 +26,7 @@ export async function updateServiceProject(
   projectId: string,
   updates: { name?: string; description?: string; scheduled_at_ms?: number },
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("update_service_project", {
+  return invokeValidated("update_service_project", ServiceProjectSchema, {
     projectId,
     name: updates.name,
     description: updates.description,
@@ -37,21 +40,26 @@ export async function updateServiceProject(
 export async function createServiceProject(
   name: string,
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("create_service_project", { name });
+  return invokeValidated("create_service_project", ServiceProjectSchema, {
+    name,
+  });
 }
 
 /**
  * Returns all service projects, ordered by creation date (newest first).
  */
 export async function listServiceProjects(): Promise<ServiceProject[]> {
-  return invoke<ServiceProject[]>("list_service_projects");
+  return invokeValidated("list_service_projects", z.array(ServiceProjectSchema));
 }
 
 /**
  * Returns the currently active (open) service project, or null if none.
  */
 export async function getActiveProject(): Promise<ServiceProject | null> {
-  return invoke<ServiceProject | null>("get_active_project");
+  return invokeValidated(
+    "get_active_project",
+    ServiceProjectSchema.nullable(),
+  );
 }
 
 /**
@@ -110,7 +118,7 @@ export async function updateProjectItem(
     item_type?: string;
   },
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("update_project_item", {
+  return invokeValidated("update_project_item", ServiceProjectSchema, {
     itemId,
     durationSecs: updates.duration_secs,
     notes: updates.notes,
@@ -125,7 +133,7 @@ export async function createServiceTask(
   title: string,
   description?: string,
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("create_service_task", {
+  return invokeValidated("create_service_task", ServiceProjectSchema, {
     serviceId,
     title,
     description,
@@ -136,7 +144,7 @@ export async function updateServiceTask(
   taskId: string,
   updates: { title?: string; description?: string | null; status?: TaskStatus },
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("update_service_task", {
+  return invokeValidated("update_service_task", ServiceProjectSchema, {
     taskId,
     title: updates.title,
     description: updates.description,
@@ -147,7 +155,9 @@ export async function updateServiceTask(
 export async function deleteServiceTask(
   taskId: string,
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("delete_service_task", { taskId });
+  return invokeValidated("delete_service_task", ServiceProjectSchema, {
+    taskId,
+  });
 }
 
 // ─── Asset linking ───────────────────────────────────────────────────────────
@@ -156,14 +166,17 @@ export async function linkAssetToItem(
   itemId: string,
   artifactId: string,
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("link_asset_to_item", { itemId, artifactId });
+  return invokeValidated("link_asset_to_item", ServiceProjectSchema, {
+    itemId,
+    artifactId,
+  });
 }
 
 export async function unlinkAssetFromItem(
   itemId: string,
   artifactId: string,
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("unlink_asset_from_item", {
+  return invokeValidated("unlink_asset_from_item", ServiceProjectSchema, {
     itemId,
     artifactId,
   });
@@ -174,7 +187,7 @@ export async function uploadAndLinkAsset(
   fileName: string,
   data: number[],
 ): Promise<ServiceProject> {
-  return invoke<ServiceProject>("upload_and_link_asset", {
+  return invokeValidated("upload_and_link_asset", ServiceProjectSchema, {
     itemId,
     fileName,
     data,

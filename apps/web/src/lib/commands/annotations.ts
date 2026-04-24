@@ -5,7 +5,10 @@
  * announcements, custom slides, sermon notes, and countdowns.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import { AnnouncementItemSchema, SermonNoteSchema } from "../schemas";
 import type { AnnouncementItem, SermonNote } from "../types";
 
 // ─── Announcements & Custom Slides ────────────────────────────────────────────
@@ -14,7 +17,7 @@ import type { AnnouncementItem, SermonNote } from "../types";
  * Returns all stored announcements and custom slides.
  */
 export async function listAnnouncements(): Promise<AnnouncementItem[]> {
-  return invoke<AnnouncementItem[]>("list_announcements");
+  return invokeValidated("list_announcements", z.array(AnnouncementItemSchema));
 }
 
 /**
@@ -31,12 +34,16 @@ export async function createAnnouncement(
   imageUrl?: string | null,
   keywordCue?: string | null,
 ): Promise<AnnouncementItem> {
-  return invoke<AnnouncementItem>("create_announcement", {
-    title,
-    body,
-    imageUrl,
-    keywordCue,
-  });
+  return invokeValidated(
+    "create_announcement",
+    AnnouncementItemSchema,
+    {
+      title,
+      body,
+      imageUrl,
+      keywordCue,
+    },
+  );
 }
 
 /**
@@ -73,7 +80,9 @@ export async function pushAnnouncementToDisplay(id: string): Promise<void> {
 export async function importPptxSlides(
   path: string,
 ): Promise<AnnouncementItem[]> {
-  return invoke<AnnouncementItem[]>("import_pptx_slides", { path });
+  return invokeValidated("import_pptx_slides", z.array(AnnouncementItemSchema), {
+    path,
+  });
 }
 
 /**
@@ -84,7 +93,9 @@ export async function importPptxSlides(
 export async function importPdfSlides(
   path: string,
 ): Promise<AnnouncementItem[]> {
-  return invoke<AnnouncementItem[]>("import_pdf_slides", { path });
+  return invokeValidated("import_pdf_slides", z.array(AnnouncementItemSchema), {
+    path,
+  });
 }
 
 /**
@@ -112,7 +123,7 @@ export async function startCountdown(durationSecs: number): Promise<void> {
  * Returns all stored sermon note decks.
  */
 export async function listSermonNotes(): Promise<SermonNote[]> {
-  return invoke<SermonNote[]>("list_sermon_notes");
+  return invokeValidated("list_sermon_notes", z.array(SermonNoteSchema));
 }
 
 /**
@@ -122,7 +133,10 @@ export async function createSermonNote(
   title: string,
   slides: string[],
 ): Promise<SermonNote> {
-  return invoke<SermonNote>("create_sermon_note", { title, slides });
+  return invokeValidated("create_sermon_note", SermonNoteSchema, {
+    title,
+    slides,
+  });
 }
 
 /**
@@ -168,5 +182,8 @@ export async function rewindSermonNote(): Promise<void> {
  * Returns the currently active sermon note, or null if none is displayed.
  */
 export async function getActiveSermonNote(): Promise<SermonNote | null> {
-  return invoke<SermonNote | null>("get_active_sermon_note");
+  return invokeValidated(
+    "get_active_sermon_note",
+    SermonNoteSchema.nullable(),
+  );
 }

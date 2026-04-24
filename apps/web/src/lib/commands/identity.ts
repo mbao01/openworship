@@ -6,7 +6,9 @@
  * and is persisted to ~/.openworship/identity.json.
  */
 
+import { invokeValidated } from "../validated-invoke";
 import { invoke } from "../tauri";
+import { ChurchIdentitySchema } from "../schemas";
 import type { ChurchIdentity } from "../types";
 
 /**
@@ -16,7 +18,7 @@ import type { ChurchIdentity } from "../types";
  */
 export async function getIdentity(): Promise<ChurchIdentity | null> {
   try {
-    return await invoke<ChurchIdentity | null>("get_identity");
+    return await invokeValidated("get_identity", ChurchIdentitySchema.nullable());
   } catch {
     // Dev browser fallback: allow localStorage mock for UX review
     const mock = localStorage.getItem("__dev_identity__");

@@ -6,7 +6,10 @@
  * facing output. It can be targeted to a specific monitor.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import { MonitorInfoSchema } from "../schemas";
 import type { MonitorInfo } from "../types";
 
 /**
@@ -14,7 +17,7 @@ import type { MonitorInfo } from "../types";
  * Used to populate the monitor picker in Display settings.
  */
 export async function listMonitors(): Promise<MonitorInfo[]> {
-  return invoke<MonitorInfo[]>("list_monitors");
+  return invokeValidated("list_monitors", z.array(MonitorInfoSchema));
 }
 
 /**

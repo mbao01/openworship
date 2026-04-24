@@ -108,11 +108,19 @@ describe("commands/audio", () => {
     expect(result).toEqual([]);
   });
 
-  it("getProviderStatus passes providerId", async () => {
-    mockInvoke.mockResolvedValue({ ready: true });
+  it("getProviderStatus returns ready status", async () => {
+    const status = { status: "ready" as const };
+    mockInvoke.mockResolvedValue(status);
     const result = await getProviderStatus("whisper");
     expect(mockInvoke).toHaveBeenCalledWith("get_provider_status", { providerId: "whisper" });
-    expect(result).toEqual({ ready: true });
+    expect(result).toEqual(status);
+  });
+
+  it("getProviderStatus returns needs_model status", async () => {
+    const status = { status: "needs_model" as const, models: [] };
+    mockInvoke.mockResolvedValue(status);
+    const result = await getProviderStatus("whisper");
+    expect(result).toEqual(status);
   });
 
   it("checkProviderModel passes providerId and modelId", async () => {

@@ -5,7 +5,14 @@
  * multi-branch artifact sharing via ACL.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
+import { invokeValidated } from "../validated-invoke";
+import {
+  AclEntrySchema,
+  ArtifactEntrySchema,
+  CloudSyncInfoSchema,
+} from "../schemas";
 import type { AclEntry, ArtifactEntry, CloudSyncInfo } from "../types";
 
 // ─── Sync State ───────────────────────────────────────────────────────────────
@@ -17,7 +24,11 @@ import type { AclEntry, ArtifactEntry, CloudSyncInfo } from "../types";
 export async function getCloudSyncInfo(
   artifactId: string,
 ): Promise<CloudSyncInfo | null> {
-  return invoke<CloudSyncInfo | null>("get_cloud_sync_info", { artifactId });
+  return invokeValidated(
+    "get_cloud_sync_info",
+    CloudSyncInfoSchema.nullable(),
+    { artifactId },
+  );
 }
 
 /**
@@ -45,7 +56,9 @@ export async function syncArtifactNow(artifactId: string): Promise<void> {
 export async function downloadArtifactFromCloud(
   artifactId: string,
 ): Promise<CloudSyncInfo> {
-  return invoke<CloudSyncInfo>("download_artifact_from_cloud", { artifactId });
+  return invokeValidated("download_artifact_from_cloud", CloudSyncInfoSchema, {
+    artifactId,
+  });
 }
 
 /**
@@ -63,7 +76,10 @@ export async function syncAllArtifacts(): Promise<void> {
  * May include items not yet downloaded locally.
  */
 export async function listCloudArtifacts(): Promise<ArtifactEntry[]> {
-  return invoke<ArtifactEntry[]>("list_cloud_artifacts");
+  return invokeValidated(
+    "list_cloud_artifacts",
+    z.array(ArtifactEntrySchema),
+  );
 }
 
 // ─── Access Control ───────────────────────────────────────────────────────────
@@ -72,7 +88,9 @@ export async function listCloudArtifacts(): Promise<ArtifactEntry[]> {
  * Returns the ACL (per-branch permission list) for an artifact.
  */
 export async function getArtifactAcl(artifactId: string): Promise<AclEntry[]> {
-  return invoke<AclEntry[]>("get_artifact_acl", { artifactId });
+  return invokeValidated("get_artifact_acl", z.array(AclEntrySchema), {
+    artifactId,
+  });
 }
 
 /**
