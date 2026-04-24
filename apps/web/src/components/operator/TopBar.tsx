@@ -170,7 +170,7 @@ export function TopBar({
           onClick={onPush}
         >
           Push
-          <kbd className="rounded-sm bg-black/25 px-1 py-px font-mono text-[10px] text-black/80">
+          <kbd className="rounded-sm bg-black/25 px-1 py-px font-mono text-[10px] text-black/85">
             Space
           </kbd>
         </button>
