@@ -9,6 +9,8 @@ import {
   updateAnnouncement,
   deleteAnnouncement,
   pushAnnouncementToDisplay,
+  importPptxSlides,
+  importPdfSlides,
   pushCustomSlide,
   startCountdown,
   listSermonNotes,
@@ -102,6 +104,22 @@ describe("commands/annotations", () => {
     it("startCountdown passes durationSecs", async () => {
       await startCountdown(300);
       expect(mockInvoke).toHaveBeenCalledWith("start_countdown", { durationSecs: 300 });
+    });
+
+    it("importPptxSlides invokes import_pptx_slides with path", async () => {
+      const slides = [{ id: "s1", title: "Slide 1", body: "" }];
+      mockInvoke.mockResolvedValue(slides);
+      const result = await importPptxSlides("/path/to/deck.pptx");
+      expect(mockInvoke).toHaveBeenCalledWith("import_pptx_slides", { path: "/path/to/deck.pptx" });
+      expect(result).toEqual(slides);
+    });
+
+    it("importPdfSlides invokes import_pdf_slides with path", async () => {
+      const slides = [{ id: "p1", title: "Page 1", body: "content" }];
+      mockInvoke.mockResolvedValue(slides);
+      const result = await importPdfSlides("/path/to/document.pdf");
+      expect(mockInvoke).toHaveBeenCalledWith("import_pdf_slides", { path: "/path/to/document.pdf" });
+      expect(result).toEqual(slides);
     });
   });
 

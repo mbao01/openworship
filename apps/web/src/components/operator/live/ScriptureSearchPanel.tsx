@@ -20,7 +20,7 @@ interface ScriptureSearchPanelProps {
 }
 
 export function ScriptureSearchPanel({ onPush }: ScriptureSearchPanelProps) {
-  const [mode, setMode] = useState<"text" | "select">("text");
+  const [mode, setMode] = useState<"text" | "select">("select");
   const [results, setResults] = useState<VerseResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 

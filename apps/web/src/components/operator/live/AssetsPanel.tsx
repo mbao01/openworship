@@ -114,7 +114,7 @@ export function AssetsPanel() {
         {filtered.map((asset) => (
           <div
             key={asset.id}
-            className="group relative aspect-square overflow-hidden rounded border border-line bg-bg-2"
+            className="group relative aspect-square h-[86px] w-[86px] overflow-hidden rounded border border-line bg-bg-2"
           >
             {/* Thumbnail or icon */}
             {asset.thumbnail_path ? (

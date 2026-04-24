@@ -45,7 +45,7 @@ export function Combobox({
       <Popover.Trigger asChild disabled={disabled}>
         <button
           type="button"
-          className={`flex h-[26px] w-full cursor-pointer items-center justify-between rounded border border-line bg-bg-2 px-1.5 text-left text-[10px] outline-0 transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`flex h-[26px] w-full cursor-pointer items-center justify-between rounded border border-line bg-bg-2 px-1.5 text-left text-xs outline-0 transition-colors hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-50 ${
             value ? "text-ink" : "text-ink-3"
           } ${className}`}
         >
@@ -67,7 +67,7 @@ export function Combobox({
           <div className="border-b border-line px-2 py-1.5">
             <input
               ref={inputRef}
-              className="w-full bg-transparent text-[10px] text-ink placeholder:text-ink-3 outline-0"
+              className="w-full bg-transparent text-xs text-ink outline-0 placeholder:text-ink-3"
               placeholder="Type to filter..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -85,7 +85,7 @@ export function Combobox({
           {/* Options list */}
           <div className="max-h-[160px] overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="px-2 py-3 text-center text-[10px] text-ink-3">
+              <div className="px-2 py-3 text-center text-xs text-ink-3">
                 No matches
               </div>
             ) : (
@@ -93,10 +93,8 @@ export function Combobox({
                 <button
                   key={o.value}
                   type="button"
-                  className={`flex w-full cursor-pointer items-center px-2 py-1.5 text-left text-[10px] transition-colors hover:bg-bg-2 ${
-                    o.value === value
-                      ? "font-medium text-accent"
-                      : "text-ink"
+                  className={`flex w-full cursor-pointer items-center px-2 py-1.5 text-left text-xs transition-colors hover:bg-bg-2 ${
+                    o.value === value ? "font-medium text-accent" : "text-ink"
                   }`}
                   onClick={() => {
                     onChange(o.value);
