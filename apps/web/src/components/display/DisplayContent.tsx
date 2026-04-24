@@ -170,7 +170,7 @@ export function DisplayContent({
           WebkitTextStroke: "0.5px rgba(0,0,0,0.3)",
         }}
       >
-        {content ? (
+        {content && (
           <>
             {content.image_url?.startsWith("artifact:") ? (
               <div
@@ -279,15 +279,23 @@ export function DisplayContent({
               </div>
             )}
           </>
-        ) : showEmptyState ? (
+        )}
+      </div>
+
+      {/* Empty state — rendered outside the text-shadow/stroke container so
+          its colour is not visually darkened by the inherited CSS effects. */}
+      {!content && showEmptyState && (
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center"
+        >
           <div
             className="w-full text-center font-mono tracking-[0.2em] text-[#968D80] uppercase"
-            style={{ fontSize: 14, textShadow: "none", WebkitTextStroke: "0" }}
+            style={{ fontSize: 14 }}
           >
             Nothing pushed · select from the library
           </div>
-        ) : null}
-      </div>
+        </div>
+      )}
 
       {/* Watermark */}
       <span
