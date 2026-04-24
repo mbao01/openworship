@@ -2,10 +2,47 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import type { ChurchIdentity } from "../lib/types";
 
-// ── Mock all hooks ──────────────────────────────────────────────────────────
+// ── Hoist mock variables so they are available inside vi.mock factories ────────
+// vi.mock calls are hoisted to the top of the file by vitest's transform.
+// Any variable referenced inside a vi.mock factory must also be hoisted via
+// vi.hoisted() — otherwise the variable is in the TDZ when the factory runs.
 
-const mockApprove = vi.fn().mockResolvedValue(undefined);
-const mockUseQueue = vi.fn().mockReturnValue({ queue: [], approve: mockApprove });
+const {
+  mockApprove,
+  mockUseQueue,
+  mockStartTour,
+  mockNextStep,
+  mockDismissTour,
+  mockCompleteTour,
+  mockUseTutorial,
+} = vi.hoisted(() => {
+  const mockApprove = vi.fn().mockResolvedValue(undefined);
+  const mockStartTour = vi.fn().mockResolvedValue(undefined);
+  const mockNextStep = vi.fn().mockResolvedValue(undefined);
+  const mockDismissTour = vi.fn().mockResolvedValue(undefined);
+  const mockCompleteTour = vi.fn().mockResolvedValue(undefined);
+  const mockUseQueue = vi.fn().mockReturnValue({ queue: [], approve: mockApprove });
+  const mockUseTutorial = vi.fn().mockReturnValue({
+    loading: false,
+    tutorialState: "not_started" as const,
+    activeStep: null,
+    startTour: mockStartTour,
+    nextStep: mockNextStep,
+    dismissTour: mockDismissTour,
+    completeTour: mockCompleteTour,
+  });
+  return {
+    mockApprove,
+    mockUseQueue,
+    mockStartTour,
+    mockNextStep,
+    mockDismissTour,
+    mockCompleteTour,
+    mockUseTutorial,
+  };
+});
+
+// ── Mock all hooks ────────────────────────────────────────────────────────────
 
 vi.mock("../lib/commands/detection", () => ({
   getDetectionMode: vi.fn().mockResolvedValue("auto"),
@@ -24,20 +61,6 @@ vi.mock("../hooks/use-queue", () => ({
   useQueue: (...args: unknown[]) => mockUseQueue(...args),
 }));
 
-const mockStartTour = vi.fn().mockResolvedValue(undefined);
-const mockNextStep = vi.fn().mockResolvedValue(undefined);
-const mockDismissTour = vi.fn().mockResolvedValue(undefined);
-const mockCompleteTour = vi.fn().mockResolvedValue(undefined);
-const mockUseTutorial = vi.fn().mockReturnValue({
-  loading: false,
-  tutorialState: "not_started",
-  activeStep: null,
-  startTour: mockStartTour,
-  nextStep: mockNextStep,
-  dismissTour: mockDismissTour,
-  completeTour: mockCompleteTour,
-});
-
 vi.mock("../hooks/use-tutorial", () => ({
   useTutorial: (...args: unknown[]) => mockUseTutorial(...args),
 }));
@@ -48,7 +71,7 @@ vi.mock("../lib/commands/tutorial", () => ({
   seedDemoData: vi.fn().mockResolvedValue({ songs_seeded: 0, project_seeded: false }),
 }));
 
-// ── Mock all child components ────────────────────────────────────────────────
+// ── Mock all child components ─────────────────────────────────────────────────
 
 vi.mock("../components/operator/Rail", () => ({
   Rail: ({ onScreenChange }: { onScreenChange: (s: string) => void }) => (
@@ -173,7 +196,7 @@ vi.mock("../components/operator/TourOverlay", () => ({
   ),
 }));
 
-// ── Import component under test ──────────────────────────────────────────────
+// ── Import component under test ───────────────────────────────────────────────
 
 import { OperatorPage } from "./OperatorPage";
 
