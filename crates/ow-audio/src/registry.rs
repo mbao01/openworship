@@ -14,6 +14,9 @@ pub struct ProviderRegistry {
 impl ProviderRegistry {
     /// Create a new registry pre-populated with all compiled-in providers.
     pub fn new() -> Self {
+        // `mut` is required when whisper/deepgram features are enabled;
+        // without any provider features the variable appears unused.
+        #[allow(unused_mut)]
         let mut reg = Self {
             providers: HashMap::new(),
         };
