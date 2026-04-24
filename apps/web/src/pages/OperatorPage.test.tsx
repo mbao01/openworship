@@ -7,6 +7,19 @@ import type { ChurchIdentity } from "@/lib/types";
 const mockApprove = vi.fn().mockResolvedValue(undefined);
 const mockUseQueue = vi.fn().mockReturnValue({ queue: [], approve: mockApprove });
 
+vi.mock("@/lib/commands/detection", () => ({
+  getDetectionMode: vi.fn().mockResolvedValue("auto"),
+  setDetectionMode: vi.fn().mockResolvedValue(undefined),
+  getQueue: vi.fn().mockResolvedValue([]),
+  approveItem: vi.fn().mockResolvedValue(undefined),
+  dismissItem: vi.fn().mockResolvedValue(undefined),
+  skipItem: vi.fn().mockResolvedValue(undefined),
+  rejectLiveItem: vi.fn().mockResolvedValue(undefined),
+  nextItem: vi.fn().mockResolvedValue(undefined),
+  prevItem: vi.fn().mockResolvedValue(undefined),
+  clearLive: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/hooks/use-queue", () => ({
   useQueue: (...args: unknown[]) => mockUseQueue(...args),
 }));
@@ -30,6 +43,7 @@ vi.mock("@/hooks/use-tutorial", () => ({
 }));
 
 vi.mock("@/lib/commands/tutorial", () => ({
+  getTutorialState: vi.fn().mockResolvedValue("not_started"),
   seedDemoData: vi.fn().mockResolvedValue({ songs_seeded: 0, project_seeded: false }),
 }));
 
