@@ -5,12 +5,15 @@ import {
   CornerDownLeftIcon,
   MusicIcon,
   PresentationIcon,
+  UploadIcon,
 } from "lucide-react";
 import type { Song, AnnouncementItem } from "../../../lib/types";
 import { toastError } from "../../../lib/toast";
 import {
   listAnnouncements,
   pushAnnouncementToDisplay,
+  importPptxSlides,
+  importPdfSlides,
 } from "../../../lib/commands/annotations";
 import { AssetsPanel } from "./AssetsPanel";
 import { ScriptureSearchPanel } from "./ScriptureSearchPanel";
@@ -83,6 +86,36 @@ export function LibraryPanel() {
     }
   };
 
+  const [importing, setImporting] = useState(false);
+
+  const handleImportSlides = async () => {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "Slides", extensions: ["pptx", "pdf"] }],
+    });
+    if (!selected) return;
+    const filePath = typeof selected === "string" ? selected : selected[0];
+    setImporting(true);
+    try {
+      const ext = filePath.split(".").pop()?.toLowerCase();
+      let created: AnnouncementItem[];
+      if (ext === "pptx") {
+        created = await importPptxSlides(filePath);
+      } else if (ext === "pdf") {
+        created = await importPdfSlides(filePath);
+      } else {
+        return;
+      }
+      setSlides((prev) => [...prev, ...created]);
+      setTab("slides");
+    } catch (e) {
+      toastError("Failed to import slides")(e);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const tabs = [
     { id: "scripture" as const, label: "Scripture", count: "31k" },
     { id: "lyrics" as const, label: "Lyrics", count: "" },
@@ -106,6 +139,17 @@ export function LibraryPanel() {
           >
             Library
           </span>
+          {tab === "slides" && (
+            <button
+              className="inline-flex cursor-pointer items-center gap-1 rounded border border-line bg-bg-2 px-2 py-1 font-mono text-[9px] tracking-[0.1em] text-ink-2 uppercase transition-colors hover:bg-bg-3 hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+              onClick={handleImportSlides}
+              disabled={importing}
+              title="Import slides from PPTX or PDF"
+            >
+              <UploadIcon className="h-2.5 w-2.5" />
+              {importing ? "Importing…" : "Import"}
+            </button>
+          )}
         </div>
 
         {/* Tabs */}
@@ -205,9 +249,17 @@ export function LibraryPanel() {
             ))}
 
           {tab === "slides" && slides.length === 0 && (
-            <div className="flex flex-col items-center justify-center gap-2 px-3.5 py-6 text-xs text-muted">
+            <div className="flex flex-col items-center justify-center gap-3 px-3.5 py-8 text-center text-xs text-muted">
               <PresentationIcon className="h-5 w-5" />
-              No slides loaded
+              <span>No slides yet</span>
+              <button
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded border border-line bg-bg-2 px-3 py-1.5 font-mono text-[9px] tracking-[0.1em] text-ink-2 uppercase transition-colors hover:bg-bg-3 hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+                onClick={handleImportSlides}
+                disabled={importing}
+              >
+                <UploadIcon className="h-3 w-3" />
+                Import PPTX or PDF
+              </button>
             </div>
           )}
 

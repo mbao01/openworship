@@ -46,6 +46,9 @@ tauri-plugin-dialog = "2.7.0"
 
 flate2 = "1"
 tar = "0.4"
+zip = "0.6"
+quick-xml = "0.36"
+lopdf = "0.34"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 sentry = { version = "0.34", default-features = false, features = ["backtrace", "panic", "reqwest", "rustls"] }
