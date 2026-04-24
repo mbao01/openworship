@@ -14,10 +14,11 @@ import {
   listServiceProjects,
 } from "@/lib/commands/projects";
 import { getAudioSettings, getEmailSettings } from "@/lib/commands/settings";
-import { ListIcon } from "lucide-react";
+import { ListIcon, XIcon } from "lucide-react";
 import { ConfirmDialog } from "../ui/confirm-dialog";
 import { ServiceList } from "./plan/ServiceList";
 import { ServiceDetail } from "./plan/ServiceDetail";
+import { useTour } from "../../stores/tour-store";
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
@@ -26,6 +27,11 @@ export function PlanScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ServiceProject | null>(null);
+
+  // Tour completion banner
+  const { tutorialState } = useTour();
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const showTourBanner = tutorialState === "completed" && !bannerDismissed;
 
   // Settings state
   const [translations, setTranslations] = useState<TranslationInfo[]>([]);
@@ -136,7 +142,27 @@ export function PlanScreen() {
       />
 
       {/* Right Panel: Service Detail */}
-      <div className="flex-1 overflow-y-auto bg-bg">
+      <div className="flex flex-1 flex-col overflow-hidden bg-bg">
+        {/* Tour completion banner */}
+        {showTourBanner && (
+          <div
+            role="status"
+            className="flex shrink-0 items-center justify-between border-b border-accent/20 bg-accent/10 px-4 py-2.5"
+          >
+            <span className="text-[12.5px] font-medium text-accent">
+              Tour complete! Your demo service is ready to explore.
+            </span>
+            <button
+              type="button"
+              aria-label="Dismiss tour completion banner"
+              onClick={() => setBannerDismissed(true)}
+              className="ml-3 rounded p-0.5 text-accent/60 transition-colors hover:bg-accent/10 hover:text-accent"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto">
         {selectedProject ? (
           <ServiceDetail
             project={selectedProject}
@@ -158,6 +184,7 @@ export function PlanScreen() {
               : "Select a service from the list."}
           </div>
         )}
+        </div>
       </div>
 
       <ConfirmDialog
