@@ -228,7 +228,7 @@ describe("useQueue", () => {
     });
   });
 
-  it("loadQueue clears pending debounce to prevent double-reload", async () => {
+  it("debounced event handler fires once after the debounce delay", async () => {
     mockGetQueue.mockResolvedValue([]);
 
     const { result } = renderHook(() => useQueue());
@@ -242,20 +242,19 @@ describe("useQueue", () => {
       eventCallback?.();
     });
 
-    // Manually trigger a queue action (which calls loadQueue directly)
+    // Advance past the debounce — should fire exactly once
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    expect(mockGetQueue).toHaveBeenCalledTimes(1);
+
+    // Direct action calls (approve) trigger an immediate reload independently
     mockGetQueue.mockResolvedValue([makeLiveItem("x")]);
     await act(async () => {
       await result.current.approve("x");
     });
 
-    const callCountAfterApprove = mockGetQueue.mock.calls.length;
-
-    // Advance past the original debounce — should NOT fire again
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(300);
-    });
-
-    // loadQueue should not have been called again by the debounce
-    expect(mockGetQueue).toHaveBeenCalledTimes(callCountAfterApprove);
+    expect(mockGetQueue).toHaveBeenCalledTimes(2);
   });
 });

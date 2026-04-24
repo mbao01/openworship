@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDebounce } from "../hooks/use-debounce";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "../lib/tauri";
 import { toastError } from "../lib/toast";
@@ -169,7 +170,6 @@ function ContentBankSection({
   const [translations, setTranslations] = useState<TranslationInfo[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [pushed, setPushed] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     invoke<TranslationInfo[]>("list_translations")
@@ -218,11 +218,12 @@ function ContentBankSection({
     }
   }, []);
 
+  const debouncedSearch = useDebounce(runSearch, 220);
+
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(val, translation), 220);
+    debouncedSearch(val, translation);
   };
 
   const handlePush = async (reference: string, text: string, tr: string) => {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDebounce } from "../hooks/use-debounce";
 import { invoke } from "../lib/tauri";
 import type { TranslationInfo, VerseResult } from "../lib/types";
 import { BIBLE_BOOKS } from "../lib/bible-books";
@@ -40,7 +41,6 @@ export function ScriptureSearch() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -69,13 +69,7 @@ export function ScriptureSearch() {
     }
   }, []);
 
-  const scheduleSearch = useCallback(
-    (q: string, t: string) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => runSearch(q, t), 220);
-    },
-    [runSearch],
-  );
+  const scheduleSearch = useDebounce(runSearch, 220);
 
   // Derive suggestions from current input
   const prefix = bookPrefix(query);

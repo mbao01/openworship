@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDebounce } from "../../hooks/use-debounce";
 import {
   BookOpenIcon,
   CornerDownLeftIcon,
@@ -44,7 +45,6 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   const [songResults, setSongResults] = useState<Song[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Remember element that opened the palette so we can restore focus on close
   const returnFocusRef = useRef<Element | null>(null);
 
@@ -116,11 +116,12 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     }
   }, []);
 
+  const debouncedSearch = useDebounce(runSearch, 180);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(val), 180);
+    debouncedSearch(val);
   };
 
   const handlePushScripture = async (v: VerseResult) => {
