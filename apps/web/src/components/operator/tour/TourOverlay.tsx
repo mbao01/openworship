@@ -91,6 +91,7 @@ const SPOTLIGHT_PADDING = 8;
 const POPOVER_GAP = 12;
 const GHOST_TEXT = "John 3:16";
 const GHOST_IDLE_MS = 8_000;
+const GHOST_CHAR_MS = 80;
 const GHOST_EXECUTE_DELAY_MS = 3_000;
 const DEMO_QUEUE_INJECT_DELAY_MS = 1_500;
 
@@ -123,6 +124,7 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const ghostIdleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ghostCharRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ghostExecuteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const config = currentStep !== null ? STEPS[currentStep - 1] : null;
@@ -155,6 +157,10 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
       clearTimeout(ghostIdleRef.current);
       ghostIdleRef.current = null;
     }
+    if (ghostCharRef.current !== null) {
+      clearTimeout(ghostCharRef.current);
+      ghostCharRef.current = null;
+    }
     if (ghostExecuteRef.current !== null) {
       clearTimeout(ghostExecuteRef.current);
       ghostExecuteRef.current = null;
@@ -167,32 +173,92 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
       return;
     }
 
-    ghostIdleRef.current = setTimeout(() => {
-      // Ghost-type the placeholder text
-      const input = document.querySelector<HTMLInputElement>(
-        '[data-qa="scripture-search-input"]',
-      );
-      if (input) {
-        const nativeSetter = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
-          "value",
-        )?.set;
-        nativeSetter?.call(input, GHOST_TEXT);
-        input.dispatchEvent(new Event("input", { bubbles: true }));
+    const input = document.querySelector<HTMLInputElement>(
+      '[data-qa="scripture-search-input"]',
+    );
+    if (!input) return;
+
+    const originalPlaceholder = input.placeholder;
+
+    const cancelAndRestore = () => {
+      clearGhostTimers();
+      input.placeholder = originalPlaceholder;
+    };
+
+    // Cancel the ghost animation immediately if the user starts typing
+    const handleUserInput = () => cancelAndRestore();
+    input.addEventListener("input", handleUserInput);
+    input.addEventListener("keydown", handleUserInput);
+
+    // Schedule (or re-schedule) the 8s idle countdown
+    const scheduleIdleTimer = () => {
+      // If the char-by-char animation or execute delay has already started, leave it running
+      if (ghostCharRef.current !== null || ghostExecuteRef.current !== null) return;
+      if (ghostIdleRef.current !== null) clearTimeout(ghostIdleRef.current);
+
+      ghostIdleRef.current = setTimeout(() => {
+        ghostIdleRef.current = null;
+        // Guard: user may have typed while we waited
+        if (input.value.trim()) return;
+
+        // Animate placeholder character by character at GHOST_CHAR_MS per char
+        let charIndex = 0;
+        input.placeholder = "";
+
+        const typeNextChar = () => {
+          if (charIndex < GHOST_TEXT.length) {
+            input.placeholder = GHOST_TEXT.slice(0, charIndex + 1);
+            charIndex++;
+            ghostCharRef.current = setTimeout(typeNextChar, GHOST_CHAR_MS);
+          } else {
+            // Full ghost text displayed — wait GHOST_EXECUTE_DELAY_MS then run the search
+            ghostCharRef.current = null;
+            ghostExecuteRef.current = setTimeout(() => {
+              ghostExecuteRef.current = null;
+              if (input.value.trim()) {
+                // User typed during the execute delay — restore and abort
+                input.placeholder = originalPlaceholder;
+                return;
+              }
+              // Intentionally execute the search after the visual hint has played out.
+              // Uses the native setter so React's controlled state picks it up via the
+              // synthetic "input" event without the mid-animation blocking concern.
+              const nativeSetter = Object.getOwnPropertyDescriptor(
+                HTMLInputElement.prototype,
+                "value",
+              )?.set;
+              nativeSetter?.call(input, GHOST_TEXT);
+              input.dispatchEvent(new Event("input", { bubbles: true }));
+              input.placeholder = originalPlaceholder;
+            }, GHOST_EXECUTE_DELAY_MS);
+          }
+        };
+
+        typeNextChar();
+      }, GHOST_IDLE_MS);
+    };
+
+    // Reset idle timer when the user focuses away and back without having typed
+    const handleBlur = () => {
+      if (ghostIdleRef.current !== null) {
+        clearTimeout(ghostIdleRef.current);
+        ghostIdleRef.current = null;
       }
+    };
+    const handleFocus = () => scheduleIdleTimer();
+    input.addEventListener("blur", handleBlur);
+    input.addEventListener("focus", handleFocus);
 
-      // After additional delay, fire the search
-      ghostExecuteRef.current = setTimeout(() => {
-        const searchInput = document.querySelector<HTMLInputElement>(
-          '[data-qa="scripture-search-input"]',
-        );
-        if (searchInput) {
-          searchInput.dispatchEvent(new Event("input", { bubbles: true }));
-        }
-      }, GHOST_EXECUTE_DELAY_MS);
-    }, GHOST_IDLE_MS);
+    // Kick off the initial 8-second idle countdown
+    scheduleIdleTimer();
 
-    return () => clearGhostTimers();
+    return () => {
+      cancelAndRestore();
+      input.removeEventListener("input", handleUserInput);
+      input.removeEventListener("keydown", handleUserInput);
+      input.removeEventListener("blur", handleBlur);
+      input.removeEventListener("focus", handleFocus);
+    };
   }, [currentStep, isTourActive, clearGhostTimers]);
 
   // ── Demo queue injection (Step 4) ───────────────────────────────────────────
