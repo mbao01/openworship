@@ -90,6 +90,7 @@ export function AssetsPanel() {
         <button
           className="cursor-pointer text-ink-3 transition-colors hover:text-ink"
           onClick={() => setSearchOpen((v) => !v)}
+          aria-label="Search assets"
         >
           <SearchIcon className="h-3.5 w-3.5" />
         </button>
