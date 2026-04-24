@@ -2162,6 +2162,7 @@ pub fn push_song_to_display(
         }
     }
 
+    crate::crash_reporting::breadcrumb_display_push("song");
     Ok(())
 }
 
@@ -2400,6 +2401,7 @@ pub fn push_announcement_to_display(
         q.push_back(item);
     }
     let _ = app.emit("detection://queue-updated", ());
+    crate::crash_reporting::breadcrumb_display_push("announcement");
     Ok(())
 }
 
@@ -2434,6 +2436,7 @@ pub fn push_custom_slide(
         drop(q);
         let _ = app.emit("detection://queue-updated", snapshot);
     }
+    crate::crash_reporting::breadcrumb_display_push("slide");
     Ok(())
 }
 
@@ -2480,6 +2483,7 @@ pub fn push_artifact_to_display(
         let _ = app.emit("detection://queue-updated", snapshot);
     }
 
+    crate::crash_reporting::breadcrumb_display_push("media");
     Ok(())
 }
 
@@ -2828,6 +2832,7 @@ pub fn push_sermon_note(
     }
     let _ = app.emit("detection://queue-updated", ());
     let _ = app.emit("speaker://note-changed", ());
+    crate::crash_reporting::breadcrumb_display_push("sermon_note");
     Ok(())
 }
 
