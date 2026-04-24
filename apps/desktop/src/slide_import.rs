@@ -91,7 +91,6 @@ fn parse_slide_xml(xml: &str, slide_num: usize) -> ParsedSlide {
     //   - Whether we're inside a title placeholder (<p:ph type="title"|"ctrTitle">)
     //   - Whether we're inside a text run (<a:t>)
     let mut in_title_ph = false;
-    let mut in_body_ph = false;
     let mut in_text_run = false;
     let mut title_parts: Vec<String> = Vec::new();
     let mut body_parts: Vec<String> = Vec::new();
@@ -111,7 +110,6 @@ fn parse_slide_xml(xml: &str, slide_num: usize) -> ParsedSlide {
                         sp_depth += 1;
                         current_is_title = false;
                         in_title_ph = false;
-                        in_body_ph = false;
                     }
                     b"ph" if in_sp => {
                         // Check type attribute for title indicators
@@ -121,14 +119,8 @@ fn parse_slide_xml(xml: &str, slide_num: usize) -> ParsedSlide {
                                 if val == b"title" || val == b"ctrTitle" || val == b"subTitle" {
                                     current_is_title = true;
                                     in_title_ph = true;
-                                } else {
-                                    in_body_ph = true;
                                 }
                             }
-                        }
-                        // No type attribute → body content
-                        if !in_title_ph {
-                            in_body_ph = true;
                         }
                     }
                     b"t" => {
@@ -147,19 +139,16 @@ fn parse_slide_xml(xml: &str, slide_num: usize) -> ParsedSlide {
                             in_sp = false;
                             current_is_title = false;
                             in_title_ph = false;
-                            in_body_ph = false;
                         }
                     }
                     b"t" => {
                         in_text_run = false;
                     }
+                    b"p" if in_title_ph || current_is_title => {
+                        title_parts.push("\n".into());
+                    }
                     b"p" => {
-                        // Paragraph break: add newline separator
-                        if in_title_ph || current_is_title {
-                            title_parts.push("\n".into());
-                        } else {
-                            body_parts.push("\n".into());
-                        }
+                        body_parts.push("\n".into());
                     }
                     _ => {}
                 }
@@ -291,8 +280,7 @@ fn extract_text_operands(operands: &[lopdf::Object], out: &mut String) {
                     // UTF-16 BE
                     let chars: String = bytes[2..]
                         .chunks_exact(2)
-                        .map(|c| char::from_u32(u32::from(c[0]) << 8 | u32::from(c[1])))
-                        .flatten()
+                        .flat_map(|c| char::from_u32(u32::from(c[0]) << 8 | u32::from(c[1])))
                         .collect();
                     out.push_str(&chars);
                 } else {
