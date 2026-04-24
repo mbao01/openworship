@@ -19,6 +19,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@radix-ui/react-collapsible": "^1.1.12",
+    "@sentry/react": "^10.50.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-shell": "^2",
@@ -32,6 +33,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.2",
     "@eslint/js": "^9",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/vite": "^4.2.2",
@@ -53,6 +55,7 @@
     "typescript": "^5.6.2",
     "typescript-eslint": "^8",
     "vite": "^6",
-    "vitest": "^2"
+    "vitest": "^2",
+    "vitest-axe": "^0.1.0"
   }
 }

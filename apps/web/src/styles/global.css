@@ -20,8 +20,8 @@
   /* Text */
   --color-ink:   #F2EDE2;
   --color-ink-2: #CFC7B6;
-  --color-ink-3: #8A8175;
-  --color-muted: #5E574D;
+  --color-ink-3: #968D80; /* was #8A8175 — lightened to ≥4.5:1 on bg-4 (WCAG 1.4.3) */
+  --color-muted: #857E73; /* was #5E574D — lightened to ≥4.5:1 on bg (WCAG 1.4.3) */
 
   /* Accent — default copper; overridden at runtime via CSS var */
   --color-accent:            #C9A76A;
@@ -58,7 +58,7 @@ html[data-app-theme="light"] {
   --color-ink:         #1A1714;
   --color-ink-2:       #3A332C;
   --color-ink-3:       #6B6259;
-  --color-muted:       #7A7064;
+  --color-muted:       #645950; /* was #7A7064 — darkened to ≥4.5:1 on bg (WCAG 1.4.3) */
   --color-accent:      #6B4423;
   --color-accent-soft: rgba(107,68,35,0.10);
   --color-accent-hover: #8A5A32;
@@ -79,7 +79,7 @@ html[data-density="compact"] {
 @theme inline {
   --color-background:         var(--color-bg);
   --color-foreground:         var(--color-ink);
-  --color-muted:              #7A7064;
+  --color-muted:              #857E73; /* aligned with @theme token — was #7A7064, missed WCAG fix */
   --color-muted-foreground:   var(--color-ink-3);
   --color-border:             var(--color-line-strong);
   --color-input:              var(--color-line-strong);
@@ -205,7 +205,7 @@ html[data-app-theme="light"] {
     color: inherit;
   }
 
-  input:focus {
+  input:focus-visible {
     outline: none;
   }
 
@@ -237,4 +237,17 @@ html[data-app-theme="light"] {
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(2px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── prefers-reduced-motion (WCAG 2.3.3) ────────────────────────────────── */
+/* Disable decorative animations for users who prefer reduced motion.        */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

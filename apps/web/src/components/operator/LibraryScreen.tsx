@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useDebounce } from "../../hooks/use-debounce";
 import { BookOpenIcon, CircleIcon, MusicIcon } from "lucide-react";
 import { invoke } from "../../lib/tauri";
 import { toastError } from "../../lib/toast";
@@ -16,7 +17,6 @@ export function LibraryScreen() {
   const [query, setQuery] = useState("");
   const [, setIsSearching] = useState(false);
   const [copied, setCopied] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load some default results
   useEffect(() => {
@@ -53,11 +53,12 @@ export function LibraryScreen() {
     [tab],
   );
 
+  const debouncedSearch = useDebounce(runSearch, 220);
+
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(val), 220);
+    debouncedSearch(val);
   };
 
   const handleTabChange = (t: LibraryTab) => {

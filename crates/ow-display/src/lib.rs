@@ -306,6 +306,142 @@ pub async fn start_server(tx: broadcast::Sender<ContentEvent>) {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scripture_event_has_correct_kind_and_fields() {
+        let ev = ContentEvent::scripture("John 3:16", "For God so loved the world", "KJV");
+        assert_eq!(ev.kind, "scripture");
+        assert_eq!(ev.reference, "John 3:16");
+        assert_eq!(ev.text, "For God so loved the world");
+        assert_eq!(ev.translation, "KJV");
+        assert!(ev.line_index.is_none());
+        assert!(ev.image_url.is_none());
+    }
+
+    #[test]
+    fn song_event_has_correct_kind_and_starts_at_line_0() {
+        let ev = ContentEvent::song("Amazing Grace", "Amazing grace, how sweet", "John Newton");
+        assert_eq!(ev.kind, "song");
+        assert_eq!(ev.reference, "Amazing Grace");
+        assert_eq!(ev.text, "Amazing grace, how sweet");
+        assert_eq!(ev.translation, "John Newton");
+        assert_eq!(ev.line_index, Some(0));
+    }
+
+    #[test]
+    fn song_advance_event_has_correct_index() {
+        let ev = ContentEvent::song_advance("Amazing Grace", 3);
+        assert_eq!(ev.kind, "song_advance");
+        assert_eq!(ev.reference, "Amazing Grace");
+        assert_eq!(ev.line_index, Some(3));
+        assert!(ev.text.is_empty());
+    }
+
+    #[test]
+    fn announcement_event_has_correct_kind() {
+        let ev = ContentEvent::announcement(
+            "Sunday Service",
+            "Welcome everyone!",
+            Some("http://example.com/img.jpg".to_string()),
+        );
+        assert_eq!(ev.kind, "announcement");
+        assert_eq!(ev.reference, "Sunday Service");
+        assert_eq!(ev.text, "Welcome everyone!");
+        assert_eq!(ev.image_url.as_deref(), Some("http://example.com/img.jpg"));
+    }
+
+    #[test]
+    fn announcement_event_without_image() {
+        let ev = ContentEvent::announcement("Notice", "No image here", None);
+        assert_eq!(ev.kind, "announcement");
+        assert!(ev.image_url.is_none());
+    }
+
+    #[test]
+    fn custom_slide_event_has_correct_kind() {
+        let ev = ContentEvent::custom_slide("My Slide", "Slide body text", None);
+        assert_eq!(ev.kind, "custom_slide");
+        assert_eq!(ev.reference, "My Slide");
+        assert_eq!(ev.text, "Slide body text");
+    }
+
+    #[test]
+    fn countdown_event_has_correct_duration() {
+        let ev = ContentEvent::countdown("Pre-service", 300);
+        assert_eq!(ev.kind, "countdown");
+        assert_eq!(ev.reference, "Pre-service");
+        assert_eq!(ev.duration_secs, Some(300));
+        assert!(ev.text.is_empty());
+    }
+
+    #[test]
+    fn sermon_note_event_has_slide_info() {
+        let ev = ContentEvent::sermon_note("Grace and Truth", "Slide content", 1, 5);
+        assert_eq!(ev.kind, "sermon_note");
+        assert_eq!(ev.reference, "Grace and Truth");
+        assert_eq!(ev.text, "Slide content");
+        assert_eq!(ev.slide_index, Some(1));
+        assert_eq!(ev.total_slides, Some(5));
+    }
+
+    #[test]
+    fn sermon_note_advance_event_has_slide_index() {
+        let ev = ContentEvent::sermon_note_advance("Grace and Truth", 2);
+        assert_eq!(ev.kind, "sermon_note_advance");
+        assert_eq!(ev.slide_index, Some(2));
+        assert!(ev.total_slides.is_none());
+    }
+
+    #[test]
+    fn clear_event_has_empty_fields() {
+        let ev = ContentEvent::clear();
+        assert_eq!(ev.kind, "clear");
+        assert!(ev.reference.is_empty());
+        assert!(ev.text.is_empty());
+        assert!(ev.translation.is_empty());
+        assert!(ev.line_index.is_none());
+    }
+
+    #[test]
+    fn set_background_event_sets_url_and_type() {
+        let ev = ContentEvent::set_background("preset:dark_gradient", Some("gradient"));
+        assert_eq!(ev.kind, "set_background");
+        assert_eq!(ev.background_url.as_deref(), Some("preset:dark_gradient"));
+        assert_eq!(ev.background_type.as_deref(), Some("gradient"));
+    }
+
+    #[test]
+    fn set_background_without_type() {
+        let ev = ContentEvent::set_background("artifact:abc123", None);
+        assert_eq!(ev.background_url.as_deref(), Some("artifact:abc123"));
+        assert!(ev.background_type.is_none());
+    }
+
+    #[test]
+    fn clear_background_has_none_url() {
+        let ev = ContentEvent::clear_background();
+        assert_eq!(ev.kind, "set_background");
+        assert!(ev.background_url.is_none());
+        assert!(ev.background_type.is_none());
+    }
+
+    #[test]
+    fn content_event_is_cloneable() {
+        let ev = ContentEvent::scripture("John 1:1", "In the beginning was the Word", "ESV");
+        let cloned = ev.clone();
+        assert_eq!(ev.kind, cloned.kind);
+        assert_eq!(ev.reference, cloned.reference);
+    }
+
+    #[test]
+    fn ws_port_constant_is_9000() {
+        assert_eq!(WS_PORT, 9000);
+    }
+}
+
 async fn handle_client(stream: TcpStream, mut rx: broadcast::Receiver<ContentEvent>) {
     let ws_stream = match accept_async(stream).await {
         Ok(ws) => ws,

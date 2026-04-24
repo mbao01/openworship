@@ -1,34 +1,33 @@
-import { useEffect, useRef, useState } from "react";
-import { getAudioLevel } from "@/lib/commands/audio";
-
-const DEFAULT_INTERVAL_MS = 200;
+import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 
 /**
- * Polls `get_audio_level` at a regular interval and returns the current level
- * as a normalized float [0–1].
+ * Subscribes to the `audio://level-updated` Tauri event emitted by the Rust
+ * audio monitor at ~20 Hz and returns the current RMS level as a normalized
+ * float [0\u20131].
+ *
+ * Replaces the previous 200 ms `setInterval` IPC poll \u2014 the Rust backend now
+ * pushes level updates only when the value changes, eliminating 5 IPC
+ * round-trips per second while the VU meter is visible.
  *
  * Used by the VU meter in the TopBar and AudioSection.
- *
- * @param interval  Poll interval in milliseconds (default: 100ms)
  */
-export function useAudioLevel(interval = DEFAULT_INTERVAL_MS): number {
+export function useAudioLevel(): number {
   const [level, setLevel] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    timerRef.current = setInterval(async () => {
-      try {
-        const l = await getAudioLevel();
-        setLevel(l);
-      } catch {
-        setLevel(0);
-      }
-    }, interval);
+    let unlisten: (() => void) | undefined;
+
+    listen<number>("audio://level-updated", (event) => {
+      setLevel(event.payload ?? 0);
+    }).then((fn) => {
+      unlisten = fn;
+    });
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      unlisten?.();
     };
-  }, [interval]);
+  }, []);
 
   return level;
 }

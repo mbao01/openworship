@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { XIcon, Music2Icon } from "lucide-react";
 import { invoke } from "../../../lib/tauri";
 import type { ArtifactEntry, CloudSyncInfo } from "../../../lib/types";
-import { formatBytes, formatDate, guessMimeFromExt } from "./helpers";
+import { formatBytes, formatDate } from "./helpers";
 
 export function PreviewPanel({
   entry,
@@ -45,36 +45,14 @@ export function PreviewPanel({
   const [textLoading, setTextLoading] = useState(false);
 
   useEffect(() => {
-    let revoked = false;
-    let blobUrl: string | null = null;
-
-    if (isVideo && entry.id) {
-      // Videos: use owmedia:// streaming protocol (no blob, no blocking)
+    if ((isVideo || isImage || isAudio || isPdf) && entry.id) {
+      // Use owmedia:// for all media types — no IPC round-trip, no blob allocation.
       setFileSrc(`owmedia://localhost/${entry.id}`);
-    } else if ((isImage || isAudio || isPdf) && entry.id) {
-      invoke<number[]>("read_artifact_bytes", { id: entry.id })
-        .then((bytes) => {
-          if (revoked) return;
-          const arr = new Uint8Array(bytes);
-          const mime = entry.mime_type || guessMimeFromExt(fileExt);
-          const blob = new Blob([arr], { type: mime });
-          blobUrl = URL.createObjectURL(blob);
-          setFileSrc(blobUrl);
-        })
-        .catch(() => {
-          setFileSrc(null);
-        });
     } else {
       setFileSrc(null);
     }
     setTextContent(null);
     setTextTruncated(false);
-
-    return () => {
-      revoked = true;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mime_type is derived from entry, recalculated on id change
   }, [entry.id, fileExt, isImage, isVideo, isAudio, isPdf]);
 
   useEffect(() => {

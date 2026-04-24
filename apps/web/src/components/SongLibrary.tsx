@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDebounce } from "../hooks/use-debounce";
 import { invoke } from "../lib/tauri";
 import type { Song, SongSemanticStatus } from "../lib/types";
 
@@ -362,7 +363,6 @@ export function SongLibrary() {
   const [pushed, setPushed] = useState<number | null>(null);
   const [semanticStatus, setSemanticStatus] =
     useState<SongSemanticStatus | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Poll semantic index status until it is ready, then stop.
@@ -407,11 +407,12 @@ export function SongLibrary() {
     loadSongs();
   }, [loadSongs]);
 
+  const debouncedLoadSongs = useDebounce(loadSongs, 220);
+
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => loadSongs(val), 220);
+    debouncedLoadSongs(val);
   };
 
   const handlePush = async (song: Song) => {

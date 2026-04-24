@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDebounce } from "../../hooks/use-debounce";
 import {
   BookOpenIcon,
   CornerDownLeftIcon,
@@ -27,16 +28,61 @@ interface ResultItem {
   onSelect: () => void;
 }
 
+// Selectors for focusable elements within the dialog
+const FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
 export function CommandPalette({ onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const [scriptureResults, setScriptureResults] = useState<VerseResult[]>([]);
   const [songResults, setSongResults] = useState<Song[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // Remember element that opened the palette so we can restore focus on close
+  const returnFocusRef = useRef<Element | null>(null);
 
   useEffect(() => {
+    returnFocusRef.current = document.activeElement;
     inputRef.current?.focus();
+    return () => {
+      // Restore focus to trigger element when palette unmounts
+      if (returnFocusRef.current instanceof HTMLElement) {
+        returnFocusRef.current.focus();
+      }
+    };
+  }, []);
+
+  // Focus trap: keep Tab/Shift+Tab inside the dialog
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const trapFocus = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    dialog.addEventListener("keydown", trapFocus);
+    return () => dialog.removeEventListener("keydown", trapFocus);
   }, []);
 
   // Close on Escape
@@ -70,11 +116,12 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     }
   }, []);
 
+  const debouncedSearch = useDebounce(runSearch, 180);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(val), 180);
+    debouncedSearch(val);
   };
 
   const handlePushScripture = async (v: VerseResult) => {
@@ -105,8 +152,8 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     groups.push({
       group: "Scripture",
       items: scriptureResults.map((v) => ({
-        glyph: <BookOpenIcon className="h-3.5 w-3.5 shrink-0" />,
-        main: `${v.reference} · “${v.text.slice(0, 50)}…”`,
+        glyph: <BookOpenIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />,
+        main: `${v.reference} · "${v.text.slice(0, 50)}…"`,
         sub: `${v.translation} · library`,
         onSelect: () => handlePushScripture(v),
       })),
@@ -116,7 +163,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     groups.push({
       group: "Lyrics",
       items: songResults.map((s) => ({
-        glyph: <MusicIcon className="h-3.5 w-3.5 shrink-0" />,
+        glyph: <MusicIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />,
         main: s.title,
         sub: `${s.artist || "Hymn"} · in library`,
         onSelect: () => handlePushSong(s),
@@ -128,7 +175,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       group: "Actions",
       items: [
         {
-          glyph: <SquareIcon className="h-3.5 w-3.5 shrink-0" />,
+          glyph: <SquareIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />,
           main: "Black display",
           sub: "Action",
           onSelect: () => {
@@ -150,6 +197,12 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelected((s) => Math.max(s - 1, 0));
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setSelected(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      setSelected(Math.max(0, totalCount - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
       flatItems[selected]?.onSelect();
@@ -159,38 +212,72 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   let flatIdx = 0;
 
   return (
+    // Backdrop — click-outside to close; aria-hidden so AT skips directly to dialog
     <div
       className="fixed inset-0 z-[300] flex items-start justify-center bg-black/50 pt-[14vh] backdrop-blur-sm"
       onClick={onClose}
+      aria-hidden="true"
     >
+      {/* Dialog — WCAG 4.1.2: role=dialog, aria-modal, aria-labelledby */}
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cmdk-label"
         className="w-[640px] max-w-[92vw] overflow-hidden rounded-lg border border-line-strong bg-bg-1"
         style={{ boxShadow: "0 40px 100px -20px rgba(0,0,0,0.6)" }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
+        // Remove aria-hidden from the backdrop that wraps this dialog
+        aria-hidden={undefined}
       >
+        {/* Live region: announces result count changes to screen readers */}
+        <span
+          id="cmdk-result-count"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        >
+          {totalCount > 0 ? `${totalCount} ${totalCount === 1 ? "result" : "results"}` : query.trim() ? "No results" : ""}
+        </span>
+
         {/* Input */}
         <div className="flex items-center gap-3 border-b border-line px-[22px] py-[18px]">
-          <span className="flex items-center text-accent">
+          <span className="flex items-center text-accent" aria-hidden="true">
             <SearchIcon className="h-5 w-5 shrink-0" />
           </span>
           <input
+            id="cmdk-label"
             ref={inputRef}
+            role="combobox"
+            aria-expanded={totalCount > 0}
+            aria-controls="cmdk-listbox"
+            aria-autocomplete="list"
+            aria-activedescendant={totalCount > 0 ? `cmdk-option-${selected}` : undefined}
             className="flex-1 border-0 bg-transparent font-serif text-[22px] tracking-[-0.01em] text-ink outline-none placeholder:text-ink-3 placeholder:italic focus:ring-0"
             placeholder="Search scripture, lyrics, slides, or commands ..."
             value={query}
             onChange={handleChange}
           />
-          <span className="font-mono text-[10px] tracking-[0.1em] text-ink-3 uppercase">
+          <span className="font-mono text-[10px] tracking-[0.1em] text-ink-3 uppercase" aria-hidden="true">
             {totalCount} results
           </span>
         </div>
 
-        {/* Results */}
-        <div className="max-h-[50vh] overflow-y-auto py-2">
+        {/* Results — listbox semantics for keyboard navigation announcement */}
+        <div
+          id="cmdk-listbox"
+          role="listbox"
+          aria-label="Search results"
+          className="max-h-[50vh] overflow-y-auto py-2"
+        >
           {groups.map((g) => (
-            <div key={g.group}>
-              <div className="px-[22px] pt-2 pb-1 font-mono text-[9.5px] tracking-[0.14em] text-ink-3 uppercase">
+            <div key={g.group} role="group" aria-label={g.group}>
+              <div
+                className="px-[22px] pt-2 pb-1 font-mono text-[9.5px] tracking-[0.14em] text-ink-3 uppercase"
+                aria-hidden="true"
+              >
                 {g.group}
               </div>
               {g.items.map((item) => {
@@ -198,6 +285,9 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                 return (
                   <div
                     key={`${g.group}-${idx}`}
+                    id={`cmdk-option-${idx}`}
+                    role="option"
+                    aria-selected={idx === selected}
                     className={`grid cursor-pointer grid-cols-[28px_1fr_auto] items-center gap-3.5 px-[22px] py-2.5 transition-colors ${
                       idx === selected
                         ? "bg-accent-soft"
@@ -205,7 +295,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                     }`}
                     onClick={item.onSelect}
                   >
-                    <span className="flex items-center text-accent">
+                    <span className="flex items-center text-accent" aria-hidden="true">
                       {item.glyph}
                     </span>
                     <div>
@@ -216,7 +306,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                         {item.sub}
                       </div>
                     </div>
-                    <span className="flex items-center text-ink-3">
+                    <span className="flex items-center text-ink-3" aria-hidden="true">
                       <CornerDownLeftIcon className="h-3.5 w-3.5 shrink-0" />
                     </span>
                   </div>
@@ -232,7 +322,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-4 border-t border-line px-[22px] py-2.5 font-mono text-[10px] tracking-[0.08em] text-ink-3 uppercase">
+        <div className="flex items-center gap-4 border-t border-line px-[22px] py-2.5 font-mono text-[10px] tracking-[0.08em] text-ink-3 uppercase" aria-hidden="true">
           <span>
             <kbd className="mr-1 rounded-sm bg-bg-3 px-1.5 py-0.5 text-ink-2">
               ↑↓

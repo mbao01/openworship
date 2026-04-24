@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe } from "vitest-axe";
 import { CommandPalette } from "./CommandPalette";
 
 vi.mock("../../lib/tauri", () => ({
@@ -72,5 +73,11 @@ describe("CommandPalette", () => {
     // The Actions group should appear with "Black display"
     expect(screen.getByText("Actions")).toBeInTheDocument();
     expect(screen.getByText("Black display")).toBeInTheDocument();
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = render(<CommandPalette onClose={onClose} />);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

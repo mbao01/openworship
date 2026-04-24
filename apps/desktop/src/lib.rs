@@ -5,6 +5,7 @@ mod branch_sync;
 mod claude_api;
 mod cloud_sync;
 mod commands;
+mod crash_reporting;
 mod detection;
 mod display_window;
 mod email;
@@ -17,6 +18,8 @@ mod slides;
 mod songs;
 mod state;
 mod summaries;
+mod tutorial;
+mod updater;
 
 use ow_audio::SttEngine;
 use ow_core::{QueueItem, SongRef};
@@ -58,6 +61,11 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
 
     let queue = Arc::new(Mutex::new(VecDeque::<QueueItem>::new()));
     let audio_settings = Arc::new(RwLock::new(AudioSettings::load()));
+
+    // Initialise Sentry crash reporting if the operator opted in previously.
+    if audio_settings.read().map(|s| s.send_crash_reports).unwrap_or(false) {
+        crash_reporting::enable();
+    }
     // Load persisted detection mode from settings (defaults to Copilot)
     let detection_mode = Arc::new(RwLock::new(
         audio_settings.read().map(|s| s.detection_mode).unwrap_or_default()
@@ -255,6 +263,8 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
         .manage(app_state)
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .register_uri_scheme_protocol("owmedia", move |_ctx, request| {
             // Custom protocol handler for local media and thumbnails.
             //
@@ -418,6 +428,10 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
+            // Background update check — silent, non-blocking; emits
+            // `updater://update-available` if a newer version is found.
+            updater::spawn_background_check(app.handle().clone());
+
             // Backfill thumbnails for any artifacts that are missing one.
             {
                 let state: tauri::State<'_, AppState> = app.state();
@@ -471,10 +485,38 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
                 detect_song_refs,
                 tx_for_detect,
                 detect_blackout,
-                app_handle,
+                app_handle.clone(),
                 detect_translation,
                 detect_announcements,
             ));
+
+            // Device hot-plug watcher: polls the cpal device list every 2 s and
+            // emits `audio://devices-changed` when the list of input devices changes.
+            // This replaces the 3 s setInterval in AudioSection.tsx (IPC poll → push).
+            {
+                let app_for_devices = app_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    use ow_audio::list_input_devices;
+                    let mut prev: Vec<String> = list_input_devices()
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|d| d.name)
+                        .collect();
+                    loop {
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                        let current: Vec<String> = list_input_devices()
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|d| d.name)
+                            .collect();
+                        if current != prev {
+                            eprintln!("[device-watcher] device list changed, emitting audio://devices-changed");
+                            let _ = app_for_devices.emit("audio://devices-changed", ());
+                            prev = current;
+                        }
+                    }
+                });
+            }
 
             // Resolve the pre-built index path for the active translation.
             // Indices are named scripture_index_<TRANSLATION>.bin (e.g. scripture_index_KJV.bin).
@@ -755,6 +797,14 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             // ── Backup / restore (OPE-154) ─────────────────────────────────
             backup::create_backup,
             backup::restore_backup,
+            // ── Auto-updater (OPE-161) ─────────────────────────────────────
+            updater::check_for_updates,
+            updater::install_update,
+            updater::restart_app,
+            // ── Tutorial / onboarding (OPE-170/172) ───────────────────────
+            tutorial::get_tutorial_state,
+            tutorial::set_tutorial_state,
+            commands::seed_demo_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

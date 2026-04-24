@@ -83,12 +83,6 @@ describe("useDisplayBackground", () => {
   it("eagerly resolves active artifact background on mount", async () => {
     mockGetDisplayBackground.mockResolvedValue("artifact:img1");
     mockListUploadedBackgrounds.mockResolvedValue([UPLOADED_IMAGE]);
-    mockInvoke.mockImplementation((cmd: string) => {
-      if (cmd === "read_artifact_bytes")
-        return Promise.resolve([0x89, 0x50, 0x4e, 0x47]);
-      return Promise.resolve(null);
-    });
-
     const { result } = renderHook(() => useDisplayBackground());
 
     await waitFor(() => {
@@ -104,8 +98,8 @@ describe("useDisplayBackground", () => {
       expect(result.current.uploaded).toHaveLength(1);
     });
 
-    // The uploaded entry should have a blob URL, not the raw artifact reference
-    expect(result.current.uploaded[0].value).toMatch(/^blob:/);
+    // The uploaded entry should use owmedia:// protocol, not the raw artifact reference
+    expect(result.current.uploaded[0].value).toBe("owmedia://localhost/img1");
   });
 
   it("uses owmedia:// protocol for video backgrounds instead of blob URL", async () => {

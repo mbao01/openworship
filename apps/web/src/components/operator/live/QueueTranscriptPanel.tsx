@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MicIcon, MicOffIcon, SearchIcon } from "lucide-react";
 import {
   startStt,
@@ -9,15 +9,67 @@ import {
 } from "../../../lib/commands/audio";
 import { useQueue } from "../../../hooks/use-queue";
 import { toastError } from "../../../lib/toast";
+import type { QueueItem } from "../../../lib/types";
 import { QueueItemCard } from "./QueueItemCard";
 import { ContextPanel } from "./ContextPanel";
 import { TranscriptBody } from "./TranscriptBody";
 
+// ── Demo queue item injected at tour step 4 ──────────────────────────────────
+
+const DEMO_QUEUE_ITEM: QueueItem = {
+  id: "demo-psalm-23-1",
+  reference: "Psalm 23:1",
+  text: "The Lord is my shepherd\u2026",
+  translation: "ESV",
+  status: "pending",
+  confidence: 0.91,
+  kind: "scripture",
+  is_semantic: true,
+  detected_at_ms: 0,
+};
+
+const DEMO_ITEM_IDS = new Set([DEMO_QUEUE_ITEM.id]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function QueueTranscriptPanel({ visible: isVisible = true }: { visible?: boolean }) {
   const { queue, live, approve, skip } = useQueue();
-  const visibleItems = [...(live ? [live] : []), ...queue].slice(0, 10);
   const [micActive, setMicActive] = useState(false);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
+  const [demoItems, setDemoItems] = useState<QueueItem[]>([]);
+
+  // ── Demo queue injection from tour ────────────────────────────────────────
+
+  useEffect(() => {
+    const onInject = () => {
+      setDemoItems([{ ...DEMO_QUEUE_ITEM, detected_at_ms: Date.now() }]);
+    };
+    const onClear = () => setDemoItems([]);
+    window.addEventListener("tour:demo-queue-inject", onInject);
+    window.addEventListener("tour:demo-queue-clear", onClear);
+    return () => {
+      window.removeEventListener("tour:demo-queue-inject", onInject);
+      window.removeEventListener("tour:demo-queue-clear", onClear);
+    };
+  }, []);
+
+  const handleDemoApprove = useCallback((id: string) => {
+    setDemoItems((prev) => prev.filter((d) => d.id !== id));
+  }, []);
+
+  const handleDemoReject = useCallback((id: string) => {
+    setDemoItems((prev) => prev.filter((d) => d.id !== id));
+  }, []);
+
+  // ── Merged list: live first, then demo, then pending queue ────────────────
+
+  const visibleItems = [
+    ...(live ? [live] : []),
+    ...demoItems,
+    ...queue,
+  ].slice(0, 10);
+
+  // ── STT status polling ────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!isVisible) return;
@@ -63,18 +115,30 @@ export function QueueTranscriptPanel({ visible: isVisible = true }: { visible?: 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Queue items - equal third */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {visibleItems.map((item) => (
-            <QueueItemCard
-              key={item.id}
-              item={item}
-              onApprove={() =>
-                approve(item.id).catch(toastError("Failed to approve"))
-              }
-              onReject={() =>
-                skip(item.id).catch(toastError("Failed to reject"))
-              }
-            />
-          ))}
+          {visibleItems.map((item) => {
+            const isDemo = DEMO_ITEM_IDS.has(item.id);
+            return (
+              <QueueItemCard
+                key={item.id}
+                item={item}
+                isDemo={isDemo}
+                onApprove={() => {
+                  if (isDemo) {
+                    handleDemoApprove(item.id);
+                  } else {
+                    approve(item.id).catch(toastError("Failed to approve"));
+                  }
+                }}
+                onReject={() => {
+                  if (isDemo) {
+                    handleDemoReject(item.id);
+                  } else {
+                    skip(item.id).catch(toastError("Failed to reject"));
+                  }
+                }}
+              />
+            );
+          })}
           {visibleItems.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-2 px-3.5 py-6 text-xs text-muted">
               <SearchIcon className="h-5 w-5" />

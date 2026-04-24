@@ -255,6 +255,19 @@ export function StagePanel({ mode, visible = true }: { mode: DetectionMode; visi
 
   return (
     <section className="flex flex-1 flex-col overflow-hidden bg-bg">
+      {/* Accessibility live region — announces display state changes (WCAG 4.1.3) */}
+      <span
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {blackout
+          ? "Display is off air"
+          : live
+          ? `Live: ${live.reference ?? live.text?.slice(0, 60) ?? "content on screen"}`
+          : "Display is clear"}
+      </span>
       <div className="flex h-[29px] items-center justify-between border-b border-line bg-bg-1 px-3.5 py-2 font-mono text-[9.5px] tracking-[0.12em] text-ink-3 uppercase">
         <span>
           <span className="mr-1.5 inline-block h-[5px] w-[5px] rounded-full bg-accent" />
@@ -310,6 +323,12 @@ export function StagePanel({ mode, visible = true }: { mode: DetectionMode; visi
             onClick={() =>
               toggleBlackout().catch(toastError("Failed to toggle live"))
             }
+            aria-pressed={!blackout}
+            aria-label={
+              blackout
+                ? "Display is off air. Press to go live."
+                : "Display is live. Press to go off air."
+            }
             title={blackout ? "Turn live on (B)" : "Turn live off (B)"}
           >
             <span
@@ -364,6 +383,7 @@ export function StagePanel({ mode, visible = true }: { mode: DetectionMode; visi
         <div className="flex shrink-0 items-center gap-2 rounded border border-line bg-bg-2 px-2.5 py-1.5 font-mono text-[10px] tracking-[0.1em] text-ink-2 uppercase">
           <span className="hidden xl:inline">Translation</span>
           <select
+            aria-label="Bible translation"
             className="cursor-pointer border-0 bg-transparent p-0 font-mono text-[10px] tracking-[0.1em] text-accent uppercase outline-0"
             value={activeTranslation}
             onChange={(e) =>

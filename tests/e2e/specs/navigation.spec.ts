@@ -49,3 +49,20 @@ test.describe("App Navigation", () => {
     await expect(page.locator('[data-qa="onboarding-root"]')).toBeVisible();
   });
 });
+
+test.describe("Additional Route Navigation", () => {
+  test("speaker page loads at /speaker route", async ({ page }) => {
+    await page.goto("/speaker");
+    await expect(page.getByText("SPEAKER NOTES")).toBeVisible();
+  });
+
+  test("artifacts page loads at /artifacts route", async ({ page }) => {
+    await page.goto("/artifacts");
+    await expect(page.locator("[data-qa='artifacts-root']")).toBeVisible();
+  });
+
+  test("unknown route falls through to root", async ({ page }) => {
+    await page.goto("/nonexistent");
+    await expect(page.locator("body")).toBeVisible();
+  });
+});

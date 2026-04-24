@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { listen } from "@tauri-apps/api/event";
 import { useIdentity } from "./hooks/use-identity";
@@ -9,9 +9,11 @@ import { DisplayPage } from "./pages/DisplayPage";
 import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { SpeakerPage } from "./pages/SpeakerPage";
 import { SplashScreen } from "./components/SplashScreen";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
 import { toast } from "@/lib/toast";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import "./styles/global.css";
 
 // FOUC prevention: read localStorage before React mounts, apply theme + preset tokens.
@@ -47,6 +49,7 @@ function AppInner() {
   const isMainWindow = location.pathname === "/";
 
   const { identity, loading: identityLoading, setIdentity } = useIdentity();
+  const [justOnboarded, setJustOnboarded] = useState(false);
 
   // Initialize theme — applies DOM attrs and CSS vars immediately.
   // Called here so theme is active for all child components.
@@ -78,8 +81,22 @@ function AppInner() {
 
   return (
     <Routes>
-      <Route path="/display" element={<DisplayPage />} />
-      <Route path="/speaker" element={<SpeakerPage />} />
+      <Route
+        path="/display"
+        element={
+          <ErrorBoundary panelName="Display" className="bg-[#050403] text-white">
+            <DisplayPage />
+          </ErrorBoundary>
+        }
+      />
+      <Route
+        path="/speaker"
+        element={
+          <ErrorBoundary panelName="Speaker">
+            <SpeakerPage />
+          </ErrorBoundary>
+        }
+      />
       <Route
         path="/artifacts"
         element={<ArtifactsPage onBack={() => navigate("/")} />}
@@ -91,10 +108,11 @@ function AppInner() {
             // Still loading identity
             <SplashScreen isReady={false} onDone={() => {}} />
           ) : identity === undefined ? (
-            <OnboardingPage onComplete={(id) => setIdentity(id)} />
+            <OnboardingPage onComplete={(id) => { setIdentity(id); setJustOnboarded(true); }} />
           ) : (
             <OperatorPage
               identity={identity}
+              justOnboarded={justOnboarded}
               onOpenArtifacts={() => navigate("/artifacts")}
             />
           )
@@ -109,6 +127,7 @@ function App() {
     <TooltipProvider>
       <AppInner />
       <Toaster />
+      <UpdateBanner />
     </TooltipProvider>
   );
 }

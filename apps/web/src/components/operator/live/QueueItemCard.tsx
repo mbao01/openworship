@@ -2,10 +2,12 @@ import type { QueueItem } from "../../../lib/types";
 
 export function QueueItemCard({
   item,
+  isDemo,
   onApprove,
   onReject,
 }: {
   item: QueueItem;
+  isDemo?: boolean;
   onApprove: () => void;
   onReject: () => void;
 }) {
@@ -31,13 +33,23 @@ export function QueueItemCard({
       )}
 
       <div className="mb-1.5 flex items-baseline justify-between">
-        <span
-          className={`font-mono text-[9.5px] tracking-[0.14em] uppercase ${
-            isLive ? "text-live" : isNext ? "text-accent" : "text-ink-3"
-          }`}
-        >
-          {tagLabel}
-        </span>
+        <div className="flex items-baseline gap-2">
+          <span
+            className={`font-mono text-[9.5px] tracking-[0.14em] uppercase ${
+              isLive ? "text-live" : isNext ? "text-accent" : "text-ink-3"
+            }`}
+          >
+            {tagLabel}
+          </span>
+          {isDemo && (
+            <span
+              role="status"
+              className="rounded border border-dashed border-ink-3/40 px-1 py-0.5 font-mono text-[8px] tracking-[0.1em] text-ink-3 uppercase"
+            >
+              Demo
+            </span>
+          )}
+        </div>
         {confidencePct != null && (
           <span className="font-mono text-[10px] text-ink-2">
             <strong className="font-semibold text-accent">

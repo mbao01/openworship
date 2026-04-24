@@ -163,6 +163,7 @@ pub fn push_to_display(
         }
     }
 
+    crate::crash_reporting::breadcrumb_display_push("scripture");
     Ok(())
 }
 
@@ -227,6 +228,7 @@ pub fn start_stt(app: AppHandle, state: State<'_, AppState>) -> Result<(), Strin
     let mut engine = state.stt.lock().map_err(|e| e.to_string())?;
 
     start_stt_with_settings(&mut engine, config, &settings, &app).map_err(|e| e.to_string())?;
+    crate::crash_reporting::breadcrumb_stt_start();
 
     // Subscribe to the broadcast channel and forward events to the UI only.
     // Detection is handled by the background `detection::run_loop` task.
@@ -270,8 +272,19 @@ fn start_stt_with_settings(
                 "Deepgram unavailable: API key not configured — fell back to Whisper",
             );
         } else {
-            use ow_audio::DeepgramTranscriber;
-            match DeepgramTranscriber::new(&settings.deepgram_api_key) {
+            use ow_audio::{DeepgramConnectionEvent, DeepgramTranscriber};
+            let (conn_tx, mut conn_rx) =
+                tokio::sync::mpsc::channel::<DeepgramConnectionEvent>(8);
+            let app_clone = app.clone();
+            tauri::async_runtime::spawn(async move {
+                while let Some(evt) = conn_rx.recv().await {
+                    let _ = app_clone.emit("stt://deepgram-connection", &evt);
+                }
+            });
+            match DeepgramTranscriber::new_with_events(
+                &settings.deepgram_api_key,
+                Some(conn_tx),
+            ) {
                 Ok(dg) => {
                     // When both Deepgram and Whisper are available, wrap in
                     // FallbackTranscriber so the session automatically recovers if
@@ -476,6 +489,7 @@ pub fn stop_stt(state: State<'_, AppState>) {
     } else {
         eprintln!("[stt] failed to acquire lock for stop; mutex poisoned");
     }
+    crate::crash_reporting::breadcrumb_stt_stop();
 }
 
 /// Return the current STT engine status.
@@ -718,12 +732,27 @@ pub fn set_audio_settings(
             .map_err(|e| format!("keychain error: {e}"))?;
     }
 
+    let prev_crash_reporting = state
+        .audio_settings
+        .read()
+        .map(|s| s.send_crash_reports)
+        .unwrap_or(false);
+
     let mut s = state
         .audio_settings
         .write()
         .map_err(|e| e.to_string())?;
     *s = settings.clone();
+    let new_crash_reporting = settings.send_crash_reports;
     drop(s);
+
+    // Toggle Sentry if the crash-reporting preference changed.
+    if new_crash_reporting && !prev_crash_reporting {
+        crate::crash_reporting::enable();
+    } else if !new_crash_reporting && prev_crash_reporting {
+        crate::crash_reporting::disable();
+    }
+
     settings.save().map_err(|e| e.to_string())
 }
 
@@ -751,8 +780,12 @@ pub fn get_audio_level(state: State<'_, AppState>) -> f32 {
 
 /// Start a lightweight audio capture purely for VU meter / mic check.
 /// Does NOT start transcription — just opens the mic and reads levels.
+///
+/// After starting the capture, spawns a background task that emits
+/// `audio://level-updated` (payload: `f32` in `[0.0, 1.0]`) at ~20 Hz whenever
+/// the RMS level changes, replacing the 200 ms frontend `setInterval` poll.
 #[tauri::command]
-pub fn start_audio_monitor(state: State<'_, AppState>) -> Result<(), String> {
+pub fn start_audio_monitor(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     let device_name = state
         .audio_settings
         .read()
@@ -769,6 +802,23 @@ pub fn start_audio_monitor(state: State<'_, AppState>) -> Result<(), String> {
         });
     if result.is_ok() {
         eprintln!("[audio-monitor] started successfully, is_running={}", state.audio_monitor.is_running());
+        // Clone the monitor handle (cheap — shares Arc<AtomicU32/Bool>) and
+        // push level events from Rust instead of polling from the frontend.
+        let monitor = state.audio_monitor.clone();
+        tauri::async_runtime::spawn(async move {
+            let mut prev_bits = u32::MAX; // force first emit regardless of level
+            while monitor.is_running() {
+                tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                let lvl = monitor.level_rms();
+                let bits = lvl.to_bits();
+                if bits != prev_bits {
+                    let _ = app.emit("audio://level-updated", lvl);
+                    prev_bits = bits;
+                }
+            }
+            // Emit 0.0 when the monitor stops so the VU meter clears immediately.
+            let _ = app.emit("audio://level-updated", 0.0f32);
+        });
     }
     result
 }
@@ -2001,6 +2051,7 @@ pub fn import_songs_ccli(text: String, state: State<'_, AppState>) -> Result<Vec
         .map_err(|e| e.to_string())?;
     if !inserted.is_empty() {
         refresh_song_refs(&state);
+        crate::crash_reporting::breadcrumb_song_import(inserted.len());
     }
     Ok(inserted)
 }
@@ -2019,6 +2070,7 @@ pub fn import_songs_openlp(xml: String, state: State<'_, AppState>) -> Result<Ve
         .map_err(|e| e.to_string())?;
     if !inserted.is_empty() {
         refresh_song_refs(&state);
+        crate::crash_reporting::breadcrumb_song_import(inserted.len());
     }
     Ok(inserted)
 }
@@ -2110,6 +2162,7 @@ pub fn push_song_to_display(
         }
     }
 
+    crate::crash_reporting::breadcrumb_display_push("song");
     Ok(())
 }
 
@@ -2348,6 +2401,7 @@ pub fn push_announcement_to_display(
         q.push_back(item);
     }
     let _ = app.emit("detection://queue-updated", ());
+    crate::crash_reporting::breadcrumb_display_push("announcement");
     Ok(())
 }
 
@@ -2382,6 +2436,7 @@ pub fn push_custom_slide(
         drop(q);
         let _ = app.emit("detection://queue-updated", snapshot);
     }
+    crate::crash_reporting::breadcrumb_display_push("slide");
     Ok(())
 }
 
@@ -2428,6 +2483,7 @@ pub fn push_artifact_to_display(
         let _ = app.emit("detection://queue-updated", snapshot);
     }
 
+    crate::crash_reporting::breadcrumb_display_push("media");
     Ok(())
 }
 
@@ -2776,6 +2832,7 @@ pub fn push_sermon_note(
     }
     let _ = app.emit("detection://queue-updated", ());
     let _ = app.emit("speaker://note-changed", ());
+    crate::crash_reporting::breadcrumb_display_push("sermon_note");
     Ok(())
 }
 
@@ -4032,5 +4089,277 @@ mod tests {
         item.kind = "unknown_future_kind".into();
         let ev = content_event_for_item(&item);
         assert_eq!(ev.kind, "scripture");
+    }
+}
+
+// ── Demo data seeding (OPE-172) ───────────────────────────────────────────────
+
+/// Result of a [`seed_demo_data`] call.
+#[derive(Debug, serde::Serialize)]
+pub struct SeedResult {
+    /// Number of sample songs inserted (0 if all titles already existed).
+    pub songs_seeded: usize,
+    /// `true` if a demo service project was created.
+    pub project_seeded: bool,
+}
+
+/// Seed sample songs and a demo service project for first-run onboarding.
+///
+/// Idempotent:
+/// - Songs are skipped when an exact title match already exists in the library.
+/// - The demo service project is skipped when *any* project already exists.
+///
+/// Returns counts of what was actually written so the frontend can show a
+/// "demo content loaded" confirmation.
+#[tauri::command]
+pub fn seed_demo_data(state: State<'_, AppState>) -> Result<SeedResult, String> {
+    // ── Seed sample songs ─────────────────────────────────────────────────────
+    let demo_songs = build_demo_song_imports();
+    let inserted = {
+        let db = state.songs_db.lock().map_err(|e| e.to_string())?;
+        db.import_batch(&demo_songs).map_err(|e| e.to_string())?
+    };
+
+    // Keep in-memory song refs up-to-date so the title detector picks up the
+    // new songs without requiring a restart.
+    if !inserted.is_empty() {
+        if let Ok(mut refs) = state.song_refs.write() {
+            for song in &inserted {
+                refs.push(ow_core::SongRef { id: song.id, title: song.title.clone() });
+            }
+        }
+    }
+
+    // ── Seed demo service project ─────────────────────────────────────────────
+    let already_has_project = {
+        let projects = state.projects.read().map_err(|e| e.to_string())?;
+        !projects.is_empty()
+    };
+
+    let project_seeded = if !already_has_project {
+        let demo = build_demo_service_project();
+        let project_id = demo.id.clone();
+
+        {
+            let mut projects = state.projects.write().map_err(|e| e.to_string())?;
+            projects.push(demo);
+            crate::service::save_projects(&projects).map_err(|e| e.to_string())?;
+        }
+
+        // Open the demo project so the operator can interact with it right away.
+        {
+            let mut active = state.active_project_id.write().map_err(|e| e.to_string())?;
+            *active = Some(project_id);
+        }
+
+        true
+    } else {
+        false
+    };
+
+    Ok(SeedResult { songs_seeded: inserted.len(), project_seeded })
+}
+
+// ── Demo content builders ─────────────────────────────────────────────────────
+
+fn build_demo_song_imports() -> Vec<crate::songs::SongImport> {
+    vec![
+        crate::songs::SongImport {
+            title: "Amazing Grace".into(),
+            artist: Some("John Newton".into()),
+            ccli_number: None,
+            source: "demo".into(),
+            lyrics: "\
+[Verse 1]
+Amazing grace how sweet the sound
+That saved a wretch like me
+I once was lost but now am found
+Was blind but now I see
+
+[Verse 2]
+'Twas grace that taught my heart to fear
+And grace my fears relieved
+How precious did that grace appear
+The hour I first believed
+
+[Chorus]
+My chains are gone I've been set free
+My God my Savior has ransomed me
+And like a flood His mercy rains
+Unending love amazing grace
+
+[Verse 3]
+The Lord has promised good to me
+His word my hope secures
+He will my shield and portion be
+As long as life endures
+
+[Verse 4]
+When we've been there ten thousand years
+Bright shining as the sun
+We've no less days to sing God's praise
+Than when we first begun"
+                .into(),
+        },
+        // CCLI songs: placeholder lyrics only — full lyrics require a CCLI license.
+        crate::songs::SongImport {
+            title: "How Great Is Our God".into(),
+            artist: Some("Chris Tomlin".into()),
+            ccli_number: Some("4348399".into()),
+            source: "demo".into(),
+            lyrics: "\
+[CCLI Song]
+Full lyrics require a CCLI license.
+Add your complete lyrics here once you have a CCLI subscription.
+
+CCLI Song # 4348399
+© 2004 worshiptogether.com songs / sixsteps Music / Alletrop Music
+CCLI License required to reproduce."
+                .into(),
+        },
+        crate::songs::SongImport {
+            title: "10,000 Reasons (Bless the Lord)".into(),
+            artist: Some("Matt Redman".into()),
+            ccli_number: Some("6016351".into()),
+            source: "demo".into(),
+            lyrics: "\
+[CCLI Song]
+Full lyrics require a CCLI license.
+Add your complete lyrics here once you have a CCLI subscription.
+
+CCLI Song # 6016351
+© 2011 Thankyou Music / Said And Done Music / sixsteps Music / worshiptogether.com songs
+CCLI License required to reproduce."
+                .into(),
+        },
+    ]
+}
+
+/// Return the Unix timestamp (ms) for the next Sunday at 10:00 AM local time.
+fn next_sunday_10am_ms() -> Option<i64> {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    // Use a simple calculation: get current time in ms, find the next Sunday.
+    // We compute days since epoch (which started on a Thursday).
+    // Day-of-week: epoch = Thursday = 4. Sunday = 0 (mod 7).
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0);
+    // Days since epoch (floored)
+    let day_ms: i64 = 86_400_000;
+    let days_since_epoch = now_ms / day_ms;
+    // Epoch was Thursday (day 4). Sunday is day 0.
+    // days_since_epoch mod 7: 0=Thu,1=Fri,2=Sat,3=Sun,4=Mon,5=Tue,6=Wed
+    let dow = (days_since_epoch % 7) as i32; // 3 = Sunday in this offset
+    let days_to_sunday = if dow <= 3 { 3 - dow } else { 10 - dow } as i64;
+    // If today is Sunday but we haven't reached 10 AM yet, use today; otherwise next Sunday.
+    let target_day_start_ms = (days_since_epoch + days_to_sunday) * day_ms;
+    let ten_am_offset_ms: i64 = 10 * 3600 * 1000; // 10:00 AM UTC (close enough for a demo)
+    Some(target_day_start_ms + ten_am_offset_ms)
+}
+
+fn build_demo_service_project() -> crate::service::ServiceProject {
+    use crate::service::{ProjectItem, ServiceProject, ServiceTask, TaskStatus, new_id, now_ms};
+
+    let svc_id = new_id();
+    let ts = now_ms();
+
+    ServiceProject {
+        id: svc_id.clone(),
+        name: "Demo Sunday Service".into(),
+        description: Some(
+            "A sample service plan pre-loaded by OpenWorship. \
+             Feel free to edit or delete it once you're comfortable."
+                .into(),
+        ),
+        created_at_ms: ts,
+        closed_at_ms: None,
+        scheduled_at_ms: next_sunday_10am_ms(),
+        items: vec![
+            ProjectItem {
+                id: new_id(),
+                reference: "John 3:16".into(),
+                text: "For God so loved the world, that he gave his only Son, \
+                       that whoever believes in him should not perish but have eternal life."
+                    .into(),
+                translation: "ESV".into(),
+                position: 0,
+                added_at_ms: ts,
+                item_type: "scripture".into(),
+                duration_secs: Some(60),
+                notes: None,
+                asset_ids: vec![],
+            },
+            ProjectItem {
+                id: new_id(),
+                reference: "Amazing Grace".into(),
+                text: "Amazing grace how sweet the sound / That saved a wretch like me / \
+                       I once was lost but now am found / Was blind but now I see"
+                    .into(),
+                translation: String::new(),
+                position: 1,
+                added_at_ms: ts,
+                item_type: "song".into(),
+                duration_secs: Some(240),
+                notes: Some("All 4 verses".into()),
+                asset_ids: vec![],
+            },
+            ProjectItem {
+                id: new_id(),
+                reference: "How Great Is Our God".into(),
+                text: "How great is our God / Sing with me how great is our God".into(),
+                translation: String::new(),
+                position: 2,
+                added_at_ms: ts,
+                item_type: "song".into(),
+                duration_secs: Some(300),
+                notes: Some("CCLI license required for full lyrics".into()),
+                asset_ids: vec![],
+            },
+            ProjectItem {
+                id: new_id(),
+                reference: "Psalm 23:1".into(),
+                text: "The LORD is my shepherd; I shall not want.".into(),
+                translation: "ESV".into(),
+                position: 3,
+                added_at_ms: ts,
+                item_type: "scripture".into(),
+                duration_secs: Some(30),
+                notes: None,
+                asset_ids: vec![],
+            },
+            ProjectItem {
+                id: new_id(),
+                reference: "Welcome announcement".into(),
+                text: "Welcome! Service starts at 10:00 AM.".into(),
+                translation: String::new(),
+                position: 4,
+                added_at_ms: ts,
+                item_type: "announcement".into(),
+                duration_secs: Some(30),
+                notes: None,
+                asset_ids: vec![],
+            },
+        ],
+        tasks: vec![
+            ServiceTask {
+                id: new_id(),
+                service_id: svc_id.clone(),
+                title: "Sound check".into(),
+                description: Some("Test microphone levels and monitor mix".into()),
+                status: TaskStatus::Todo,
+                created_at_ms: ts,
+                updated_at_ms: ts,
+            },
+            ServiceTask {
+                id: new_id(),
+                service_id: svc_id,
+                title: "Print order of service".into(),
+                description: None,
+                status: TaskStatus::Backlog,
+                created_at_ms: ts,
+                updated_at_ms: ts,
+            },
+        ],
     }
 }

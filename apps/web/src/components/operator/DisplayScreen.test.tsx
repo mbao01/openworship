@@ -58,8 +58,8 @@ describe("DisplayScreen", () => {
   });
 });
 
-describe("AssetPreview (video streaming)", () => {
-  it("uses owmedia:// protocol for video artifacts instead of blob", async () => {
+describe("AssetPreview (owmedia:// protocol)", () => {
+  it("uses owmedia:// protocol for video artifacts", async () => {
     const { invoke: mockInvoke } = await import("@tauri-apps/api/core");
 
     vi.mocked(mockInvoke).mockResolvedValue(undefined);
@@ -93,10 +93,10 @@ describe("AssetPreview (video streaming)", () => {
     );
   });
 
-  it("still uses blob URL for image artifacts", async () => {
+  it("uses owmedia:// protocol for image artifacts (no blob)", async () => {
     const { invoke: mockInvoke } = await import("@tauri-apps/api/core");
 
-    vi.mocked(mockInvoke).mockResolvedValue([0, 0, 0, 0]);
+    vi.mocked(mockInvoke).mockResolvedValue(undefined);
 
     const { useQueue } = await import("../../hooks/use-queue");
     vi.mocked(useQueue).mockReturnValue({
@@ -112,11 +112,16 @@ describe("AssetPreview (video streaming)", () => {
 
     render(<DisplayScreen />);
 
-    // Image should invoke read_artifact_bytes (blob path)
+    // Image should use owmedia:// protocol, NOT invoke read_artifact_bytes
     await vi.waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("read_artifact_bytes", {
-        id: "img456",
-      });
+      const img = document.querySelector("img");
+      expect(img).toBeTruthy();
+      expect(img!.src).toContain("owmedia://localhost/img456");
     });
+
+    expect(mockInvoke).not.toHaveBeenCalledWith(
+      "read_artifact_bytes",
+      expect.anything(),
+    );
   });
 });
