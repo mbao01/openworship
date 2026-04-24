@@ -364,13 +364,18 @@ export function TourOverlay({ onOpenPlan }: TourOverlayProps) {
   const spotW = rect ? rect.width + SPOTLIGHT_PADDING * 2 : 0;
   const spotH = rect ? rect.height + SPOTLIGHT_PADDING * 2 : 0;
 
-  // Popover position: try below the spotlight, keeping inside the viewport
-  const popoverTop = rect ? spotTop + spotH + POPOVER_GAP : window.innerHeight / 2;
+  // Popover position: narrow targets (e.g. Rail icons) anchor to the right;
+  // wide targets (columns) anchor below.
+  const isNarrowTarget = rect ? rect.width < 200 : false;
+  const popoverTop = rect
+    ? isNarrowTarget
+      ? spotTop  // align with top of spotlight
+      : spotTop + spotH + POPOVER_GAP  // below spotlight
+    : window.innerHeight / 2;
   const popoverLeft = rect
-    ? Math.min(
-        Math.max(spotLeft, 8),
-        window.innerWidth - 320 - 8,
-      )
+    ? isNarrowTarget
+      ? Math.min(spotLeft + spotW + POPOVER_GAP, window.innerWidth - 320 - 8)  // right of spotlight
+      : Math.min(Math.max(spotLeft, 8), window.innerWidth - 320 - 8)  // below-aligned
     : window.innerWidth / 2 - 160;
 
   return createPortal(
