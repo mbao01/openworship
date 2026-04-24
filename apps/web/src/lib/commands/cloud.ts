@@ -113,5 +113,5 @@ export async function setArtifactAcl(
  * Returns the generated link URL.
  */
 export async function copyArtifactLink(artifactId: string): Promise<string> {
-  return invoke<string>("copy_artifact_link", { artifactId });
+  return invokeValidated("copy_artifact_link", z.string(), { artifactId });
 }

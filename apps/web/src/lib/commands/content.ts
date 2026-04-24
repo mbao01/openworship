@@ -72,7 +72,7 @@ export async function listTranslations(): Promise<TranslationInfo[]> {
  * Returns the currently active translation ID (e.g. "KJV").
  */
 export async function getActiveTranslation(): Promise<string> {
-  return invoke<string>("get_active_translation");
+  return invokeValidated("get_active_translation", z.string());
 }
 
 /**

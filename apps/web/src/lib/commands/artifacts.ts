@@ -111,7 +111,7 @@ export async function writeArtifactBytes(
  * Used for text-file preview and editing.
  */
 export async function readTextFile(filePath: string): Promise<string> {
-  return invoke<string>("read_text_file", { filePath });
+  return invokeValidated("read_text_file", z.string(), { filePath });
 }
 
 // ─── Modification ─────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ export function thumbnailUrl(id: string): string {
  * Returns the number of artifacts queued.
  */
 export async function regenerateThumbnails(): Promise<number> {
-  return invoke<number>("regenerate_thumbnails");
+  return invokeValidated("regenerate_thumbnails", z.number());
 }
 
 // ─── Storage ──────────────────────────────────────────────────────────────────

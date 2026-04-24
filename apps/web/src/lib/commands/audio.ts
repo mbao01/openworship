@@ -74,7 +74,7 @@ export async function getSttStatus(): Promise<SttStatus> {
  * Poll this at ~30fps to drive the VU meter visualization.
  */
 export async function getAudioLevel(): Promise<number> {
-  return invoke<number>("get_audio_level");
+  return invokeValidated("get_audio_level", z.number());
 }
 
 /**
@@ -109,7 +109,7 @@ export async function stopAudioMonitor(): Promise<void> {
  * @deprecated Use checkProviderModel() instead.
  */
 export async function checkWhisperModel(model?: string): Promise<boolean> {
-  return invoke<boolean>("check_whisper_model", { model: model ?? null });
+  return invokeValidated("check_whisper_model", z.boolean(), { model: model ?? null });
 }
 
 /**
@@ -148,7 +148,7 @@ export async function checkProviderModel(
   providerId: string,
   modelId: string,
 ): Promise<boolean> {
-  return invoke<boolean>("check_provider_model", {
+  return invokeValidated("check_provider_model", z.boolean(), {
     providerId,
     modelId,
   });

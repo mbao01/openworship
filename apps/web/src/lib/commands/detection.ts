@@ -109,14 +109,14 @@ export async function clearQueue(): Promise<void> {
  * Blackout hides content from the display without modifying the queue.
  */
 export async function toggleBlackout(): Promise<boolean> {
-  return invoke<boolean>("toggle_blackout");
+  return invokeValidated("toggle_blackout", z.boolean());
 }
 
 /**
  * Returns the current blackout state.
  */
 export async function getBlackout(): Promise<boolean> {
-  return invoke<boolean>("get_blackout");
+  return invokeValidated("get_blackout", z.boolean());
 }
 
 /**

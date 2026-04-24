@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { invokeValidated } from "../validated-invoke";
@@ -21,7 +22,7 @@ export async function checkForUpdates(): Promise<UpdateInfo | null> {
 
 /** Download and install the available update. Emits progress events while running. */
 export async function installUpdate(): Promise<void> {
-  return invoke<void>("install_update");
+  return invokeValidated("install_update", z.void());
 }
 
 /** Restart the app to apply the installed update. */
