@@ -131,6 +131,19 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows code signing (optional — set in repo secrets to enable)
+          # Steps to provision:
+          #   1. Purchase an EV or OV code signing certificate (~$300-700/yr; EV preferred
+          #      for instant SmartScreen trust without reputation build-up).
+          #   2. Export the cert as a .pfx file, then base64-encode it:
+          #        openssl base64 -A -in certificate.pfx -out certificate.b64
+          #   3. Add the following secrets to the GitHub repo:
+          #        WINDOWS_CERTIFICATE          — the base64-encoded .pfx contents
+          #        WINDOWS_CERTIFICATE_PASSWORD — the .pfx passphrase
+          #   4. On the next tagged release, Tauri will automatically sign the
+          #      generated .msi / .exe installers using these credentials.
+          TAURI_SIGNING_WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          TAURI_SIGNING_WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
           # Tauri updater signing — generate key pair with `tauri signer generate`
           # then store private key + password in repo secrets:
           #   TAURI_PRIVATE_KEY  — base64-encoded .key file contents
