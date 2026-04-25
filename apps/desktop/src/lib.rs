@@ -494,12 +494,15 @@ fn try_run() -> Result<(), Box<dyn std::error::Error>> {
             // frontend whenever input devices are added or removed.
             // On macOS this uses a CoreAudio property listener (zero polling).
             // On other platforms it falls back to a 2-second cpal poll.
+            //
+            // We pass Tauri's Tokio handle explicitly so start_device_watcher
+            // can spawn its internal tasks without needing an implicit runtime
+            // context — fixes the startup panic from OPE-145 (OPE-198).
             {
                 let app_for_devices = app_handle.clone();
-                tauri::async_runtime::spawn(async move {
-                    ow_audio::start_device_watcher(move || {
-                        let _ = app_for_devices.emit("audio://devices-changed", ());
-                    });
+                let tokio_handle = tauri::async_runtime::handle();
+                ow_audio::start_device_watcher(tokio_handle.inner().clone(), move || {
+                    let _ = app_for_devices.emit("audio://devices-changed", ());
                 });
             }
 
