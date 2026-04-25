@@ -6,6 +6,7 @@
  * secure keychain storage for sensitive credentials.
  */
 
+import { z } from "zod";
 import { invoke } from "../tauri";
 import { invokeValidated } from "../validated-invoke";
 import {
@@ -92,7 +93,7 @@ export async function setAnthropicApiKey(key: string): Promise<void> {
  * Does NOT return the key value — check status only.
  */
 export async function getAnthropicApiKeyStatus(): Promise<boolean> {
-  return invoke<boolean>("get_anthropic_api_key_status");
+  return invokeValidated("get_anthropic_api_key_status", z.boolean());
 }
 
 // ─── Cloud / S3 Config ────────────────────────────────────────────────────────

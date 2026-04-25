@@ -38,7 +38,7 @@ export async function invokeValidated<T>(
   const result = schema.safeParse(raw);
   if (!result.success) {
     throw new Error(
-      `[OPE-150] Tauri command "${command}" returned an unexpected shape.\n` +
+      `[Tauri IPC] Command "${command}" returned an unexpected shape.\n` +
         result.error.message,
     );
   }

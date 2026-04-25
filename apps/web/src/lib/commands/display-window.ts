@@ -41,7 +41,7 @@ export async function closeDisplayWindow(): Promise<void> {
  * Returns true if the display output window is currently open.
  */
 export async function getDisplayWindowOpen(): Promise<boolean> {
-  return invoke<boolean>("get_display_window_open");
+  return invokeValidated("get_display_window_open", z.boolean());
 }
 
 /**
@@ -49,5 +49,5 @@ export async function getDisplayWindowOpen(): Promise<boolean> {
  * Used when capturing OpenWorship output into OBS as a browser source.
  */
 export async function getObsDisplayUrl(): Promise<string> {
-  return invoke<string>("get_obs_display_url");
+  return invokeValidated("get_obs_display_url", z.string());
 }

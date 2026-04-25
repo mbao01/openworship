@@ -31,7 +31,7 @@ export async function setDisplayBackground(
 
 /** Get the current display background ID. */
 export async function getDisplayBackground(): Promise<string | null> {
-  return invoke<string | null>("get_display_background");
+  return invokeValidated("get_display_background", z.string().nullable());
 }
 
 /** List preset backgrounds (CSS gradients). */

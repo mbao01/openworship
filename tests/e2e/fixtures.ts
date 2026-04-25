@@ -108,8 +108,8 @@ export async function stubTauriOnboarding(page: Page): Promise<void> {
         if (cmd === "get_display_window_open") return Promise.resolve(false);
         if (cmd === "list_monitors") return Promise.resolve([]);
         if (cmd === "get_artifacts_settings") return Promise.resolve({ base_path: "/tmp" });
-        if (cmd === "get_email_settings") return Promise.resolve({ auto_send: false });
-        if (cmd === "get_storage_usage") return Promise.resolve({});
+        if (cmd === "get_email_settings") return Promise.resolve({ smtp_host: "", smtp_port: 587, smtp_username: "", smtp_password: "", from_name: "", send_delay_hours: 0, auto_send: false });
+        if (cmd === "get_storage_usage") return Promise.resolve({ used_bytes: 0, quota_bytes: null, synced_count: 0, last_updated_ms: 0 });
         if (cmd === "get_tutorial_state") return Promise.resolve("dismissed");
         return Promise.resolve(null);
       },
