@@ -153,8 +153,8 @@ fn parse_slide_xml(xml: &str, slide_num: usize) -> ParsedSlide {
                     _ => {}
                 }
             }
-            Ok(Event::Text(ref e)) if in_text_run => {
-                let text = e.unescape().unwrap_or_default().to_string();
+            Ok(Event::Text(e)) if in_text_run => {
+                let text = e.html_content().unwrap_or_default().to_string();
                 if !text.trim().is_empty() {
                     if in_title_ph || current_is_title {
                         title_parts.push(text);
