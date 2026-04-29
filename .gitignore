@@ -38,3 +38,9 @@ apps/desktop/gen/
 apps/desktop/resources/scripture_index_*.bin
 apps/desktop/resources/scripture_index_*.sha256
 .gstack/
+
+# Test coverage output
+apps/web/coverage/
+
+# Vite dev-server temp files
+apps/web/vite.config.ts.timestamp-*.mjs
