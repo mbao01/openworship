@@ -15,18 +15,29 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # ── Pre-build the scripture embedding index ──────────────────────────────────
-  # Runs once on Linux before the platform matrix. The index is keyed on the
-  # SHA-256 of the Bible source files so it is only regenerated when content
-  # actually changes. The fastembed ONNX model is cached separately.
+  # ── Per-translation embedding jobs (run in parallel) ─────────────────────────
+  # Each matrix leg builds and caches the index for one Bible translation.
+  # Running KJV/WEB/BSB in parallel cuts cold-cache wall time from ~200 min
+  # (3 sequential runs of ~65-70 min each) to ~70 min (one per runner).
+  # Once all three caches are warm, every leg is skipped in seconds.
+  #
+  # The bottleneck is fastembed computing ~31 K verse embeddings per translation
+  # via nomic-embed-text on a 2-CPU runner. ORT linking is fast via
+  # ORT_PREFER_DYNAMIC_LINK=1 (shared library, no static archive).
   generate-embedding-index:
     runs-on: ubuntu-22.04
-    name: Build scripture embedding index
-    # ORT linking is fast via ORT_PREFER_DYNAMIC_LINK=1. The bottleneck is
-    # fastembed computing embeddings for ~93 K Bible verses (KJV + WEB + BSB)
-    # on a 2-CPU runner — about 60-90 min on a cold cache. Once the
-    # scripture-index cache is warm, this job is skipped entirely.
+    name: Build ${{ matrix.translation }} embedding index
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - translation: KJV
+            data_file: kjv.txt
+          - translation: WEB
+            data_file: web.txt
+          - translation: BSB
+            data_file: bsb.txt
 
     steps:
       - uses: actions/checkout@v4
@@ -65,14 +76,16 @@ jobs:
           path: ~/.openworship/.cache/fastembed
           key: fastembed-nomic-embed-text-v1.5
 
-      - name: Cache pre-built embedding index
+      - name: Cache ${{ matrix.translation }} embedding index
         id: index-cache
         uses: actions/cache@v4
         with:
-          path: apps/desktop/resources
-          key: scripture-index-${{ hashFiles('crates/ow-db/data/*.txt') }}
+          path: |
+            apps/desktop/resources/scripture_index_${{ matrix.translation }}.bin
+            apps/desktop/resources/scripture_index_${{ matrix.translation }}.sha256
+          key: scripture-index-${{ matrix.translation }}-${{ hashFiles(format('crates/ow-db/data/{0}', matrix.data_file)) }}
 
-      - name: Build embedding index (all translations)
+      - name: Build ${{ matrix.translation }} embedding index
         if: steps.index-cache.outputs.cache-hit != 'true'
         run: |
           # Point ort-sys at the pre-installed ORT 1.20.0 shared library so it
@@ -81,15 +94,15 @@ jobs:
           export ORT_LIB_LOCATION="$HOME/.local/lib/onnxruntime"
           export ORT_PREFER_DYNAMIC_LINK=1
           export LD_LIBRARY_PATH="$HOME/.local/lib/onnxruntime/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-          cargo run -p ow-embed-builder --release -- --translation KJV
-          cargo run -p ow-embed-builder --release -- --translation WEB
-          cargo run -p ow-embed-builder --release -- --translation BSB
+          cargo run -p ow-embed-builder --release -- --translation ${{ matrix.translation }}
 
-      - name: Upload embedding index artifact
+      - name: Upload ${{ matrix.translation }} index artifact
         uses: actions/upload-artifact@v4
         with:
-          name: scripture-index
-          path: apps/desktop/resources/
+          name: scripture-index-${{ matrix.translation }}
+          path: |
+            apps/desktop/resources/scripture_index_${{ matrix.translation }}.bin
+            apps/desktop/resources/scripture_index_${{ matrix.translation }}.sha256
           if-no-files-found: error
 
   # ── Platform release builds ───────────────────────────────────────────────────
@@ -145,11 +158,12 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Download pre-built embedding index
+      - name: Download pre-built embedding indexes
         uses: actions/download-artifact@v4
         with:
-          name: scripture-index
+          pattern: scripture-index-*
           path: apps/desktop/resources/
+          merge-multiple: true
 
       - name: Build and publish Tauri app
         uses: tauri-apps/tauri-action@v0
