@@ -22,10 +22,11 @@ jobs:
   generate-embedding-index:
     runs-on: ubuntu-22.04
     name: Build scripture embedding index
-    # ort-sys links statically against ORT 1.20.0 by default which can
-    # take 60-120 min. We pre-install the ORT shared library and use
-    # ORT_PREFER_DYNAMIC_LINK=1 so linking takes seconds instead.
-    timeout-minutes: 30
+    # ORT linking is fast via ORT_PREFER_DYNAMIC_LINK=1. The bottleneck is
+    # fastembed computing embeddings for ~93 K Bible verses (KJV + WEB + BSB)
+    # on a 2-CPU runner — about 60-90 min on a cold cache. Once the
+    # scripture-index cache is warm, this job is skipped entirely.
+    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v4
