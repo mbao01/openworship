@@ -42,15 +42,17 @@ const MODES = [
   },
 ] as const;
 
+const RELEASES_URL = "https://github.com/mbao01/openworship/releases/latest";
+
 const DOWNLOAD_BUTTONS = [
-  { label: "macOS (.dmg)" },
-  { label: "Windows (.exe)" },
-  { label: "Linux (.AppImage)" },
+  { label: "macOS (.dmg)", href: RELEASES_URL },
+  { label: "Windows (.exe)", href: RELEASES_URL },
+  { label: "Linux (.AppImage)", href: RELEASES_URL },
 ] as const;
 
 const FOOTER_LINKS = [
   { label: "GitHub", href: "https://github.com/mbao01/openworship" },
-  { label: "Documentation", href: "#" },
+  { label: "Documentation", href: "https://github.com/mbao01/openworship#readme" },
   { label: "License: MIT", href: "https://github.com/mbao01/openworship/blob/main/LICENSE" },
 ] as const;
 
@@ -485,11 +487,15 @@ export default function Home() {
               No account required. No telemetry. Your data stays on your machine.
             </p>
             <div className="flex flex-wrap gap-4 mb-6">
-              {DOWNLOAD_BUTTONS.map(({ label }) => (
-                <button
+              {DOWNLOAD_BUTTONS.map(({ label, href }) => (
+                <a
                   key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-disabled="true"
-                  title="Coming soon"
+                  tabIndex={-1}
+                  title="Coming soon — release pending"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -502,9 +508,10 @@ export default function Home() {
                     fontSize: "14px",
                     fontWeight: 600,
                     borderRadius: "4px",
-                    border: "none",
+                    textDecoration: "none",
                     cursor: "not-allowed",
                     opacity: 0.6,
+                    pointerEvents: "none",
                   }}
                 >
                   {label}
@@ -519,7 +526,7 @@ export default function Home() {
                   >
                     Soon
                   </span>
-                </button>
+                </a>
               ))}
             </div>
             <a
