@@ -494,6 +494,7 @@ export default function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-disabled="true"
+                  tabIndex={-1}
                   title="Coming soon — release pending"
                   style={{
                     display: "inline-flex",
