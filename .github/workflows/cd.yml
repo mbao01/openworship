@@ -120,6 +120,28 @@ jobs:
           name: scripture-index
           path: apps/desktop/resources/
 
+      # Apple Clang 16+ (macOS 14/15 GitHub runners) enforces a strict rule: an
+      # always_inline function annotated with __attribute__((target("i8mm"))) may
+      # only be inlined into a caller that *also* carries an explicit target("i8mm")
+      # annotation, even when the calling TU is compiled with -mcpu=...+i8mm.
+      # whisper.cpp/ggml calls vmmlaq_s32 (always_inline + target("i8mm")) from
+      # ggml_vec_dot_q4_0_q8_0 which lacks that annotation — triggering a hard
+      # compile error on aarch64.
+      #
+      # Undefining __ARM_FEATURE_MATMUL_INT8 prevents the i8mm code paths from
+      # being compiled at all, sidestepping the mismatch entirely.  All i8mm usage
+      # in ggml is guarded by #if defined(__ARM_FEATURE_MATMUL_INT8), so this only
+      # disables i8mm integer-matrix-multiply paths; dotprod and other ARM
+      # optimisations remain active.  Apple's Accelerate framework covers the main
+      # BLAS hot paths regardless, so end-user transcription performance is
+      # unaffected in practice.
+      #
+      # whisper-rs-sys ≥ 0.15 build.rs forwards CMAKE_* env vars to cmake via
+      # config.define(), making CMAKE_C_FLAGS the correct injection point.
+      - name: Disable ggml ARM i8mm intrinsics (Apple Clang 16+ always_inline fix)
+        if: matrix.platform == 'macos-latest'
+        run: echo "CMAKE_C_FLAGS=-U__ARM_FEATURE_MATMUL_INT8" >> "$GITHUB_ENV"
+
       - name: Build and publish Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
