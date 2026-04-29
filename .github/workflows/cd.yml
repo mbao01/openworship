@@ -151,6 +151,13 @@ jobs:
           # The matching public key must be set in tauri.conf.json plugins.updater.pubkey.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # Sentry crash reporting — VITE_SENTRY_DSN must be added as a GitHub
+          # Actions repository secret. VITE_APP_VERSION is derived from the tag
+          # so it requires no secret. Both are embedded at Vite build time.
+          # If VITE_SENTRY_DSN is not set the app builds fine but crash reports
+          # are silently disabled (see apps/web/src/lib/sentry.ts).
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_APP_VERSION: ${{ github.ref_name }}
         with:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
