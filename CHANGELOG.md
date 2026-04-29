@@ -2,6 +2,41 @@
 
 All notable changes to OpenWorship are documented here.
 
+## [0.4.0] - 2026-04-29
+
+### Added
+
+- **PowerPoint and PDF slide import**: Import `.pptx` and `.pdf` files directly into service projects. Slides are extracted, thumbnailed, and available as displayable items in the live queue. (#117)
+- **Offline mode indicator**: Status bar now surfaces STT/cloud connectivity state with graceful degradation UX — operators see a clear indicator when running without network rather than silent failures. (#124)
+- **Ghost-type hint on tour Step 2**: Animated placeholder text on the scripture search input guides new operators through their first search during onboarding. (#118)
+- **Opt-in crash reporting**: Sentry crash and error reporting integrated into the React frontend. Disabled by default — operators enable it via Settings → Privacy. Release version is tagged on every captured error. (#133)
+
+### Changed
+
+- **AssetRenderer migrated to `owmedia://` protocol**: Custom Tauri protocol handler replaces the previous blob-URL approach, enabling byte-range requests (RFC 7233) so video can stream and seek without full file reloads. (#114)
+- **`useDebounce` hook extracted**: 9 inline `setTimeout` patterns across the codebase replaced with a shared `useDebounce` hook. (#116)
+- **ArtifactsPage refactored**: The 2421-line monolithic component split into focused sub-components. (#121)
+- **Tour Steps 2/3 auto-advance via tour-store**: Tour now advances automatically when the user completes the expected action, reducing manual "Next" clicks. Step 5 popover anchor fixed. (#119)
+- **Zod runtime validation on all Tauri commands**: Every Tauri API response is now validated against a Zod schema at runtime. Type mismatches surface as explicit errors instead of silent undefined values. (#129, #130)
+- **Dependency consolidation**: `zip` consolidated to 4.x, `quick-xml` to 0.38.x — duplicate transitive versions removed from the dependency tree. (#132)
+
+### Performance
+
+- **CoreAudio property listener replaces polling**: The `device_watcher` module now uses macOS `AudioObjectAddPropertyListener` instead of a 500 ms poll loop, reducing idle CPU usage on macOS. (#120)
+
+### Fixed
+
+- **Startup panic: tokio runtime missing**: Fixed crash on startup when the async runtime was not yet initialized when the device watcher tried to spawn. (#126)
+- **Startup panic: blocking socket in async context**: Fixed `set_nonblocking` not called before passing the socket handle across thread boundary. (#128)
+- **Zod validation error prefix and primitive handling**: Error messages now include command name prefix; primitive response types (string, number, boolean) handled correctly by `validated-invoke`. (#130)
+
+### Infrastructure
+
+- **Windows code signing wired into CD**: GitHub Actions CD pipeline now passes `TAURI_SIGNING_WINDOWS_CERTIFICATE` and password to the Tauri build. Signing activates automatically once the `WINDOWS_CERTIFICATE` repo secret is provisioned. (#131)
+- **Sentry DSN wired into CD**: `VITE_SENTRY_DSN` (from GitHub secret) and `VITE_APP_VERSION` (from git tag) are now passed to the Vite build in every tagged release. (#133)
+- **macOS Hardened Runtime entitlements and notarization script**: `setup-apple-signing.sh` automates certificate import, and `entitlements.plist` configures Hardened Runtime for App Store / Gatekeeper notarization. (#122, #123)
+- **Frontend test coverage**: Increased from 20% to 64.7%. (#125)
+
 ## [0.3.1.1] - 2026-04-09
 
 ### Changed
