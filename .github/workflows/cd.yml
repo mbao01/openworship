@@ -22,6 +22,10 @@ jobs:
   generate-embedding-index:
     runs-on: ubuntu-22.04
     name: Build scripture embedding index
+    # ort-sys links statically against ORT 1.20.0 by default which can
+    # take 60-120 min. We pre-install the ORT shared library and use
+    # ORT_PREFER_DYNAMIC_LINK=1 so linking takes seconds instead.
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +38,25 @@ jobs:
         with:
           workspaces: .
           cache-targets: "true"
+
+      # ort-sys 2.0.0-rc.9 expects ORT 1.20.0. Cache the official shared-library
+      # release from GitHub so we can link dynamically (fast) instead of static-
+      # linking against the huge pre-built static archive (slow).
+      - name: Cache ONNX Runtime 1.20.0 shared library
+        id: ort-bin-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/lib/onnxruntime
+          key: onnxruntime-1.20.0-linux-x64
+
+      - name: Download ONNX Runtime 1.20.0
+        if: steps.ort-bin-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/lib/onnxruntime
+          curl -fsSL https://github.com/microsoft/onnxruntime/releases/download/v1.20.0/onnxruntime-linux-x64-1.20.0.tgz \
+            -o /tmp/ort.tgz
+          tar -xzf /tmp/ort.tgz -C ~/.local/lib/onnxruntime --strip-components=1
+          rm /tmp/ort.tgz
 
       - name: Cache fastembed ONNX model
         uses: actions/cache@v4
@@ -51,6 +74,12 @@ jobs:
       - name: Build embedding index (all translations)
         if: steps.index-cache.outputs.cache-hit != 'true'
         run: |
+          # Point ort-sys at the pre-installed ORT 1.20.0 shared library so it
+          # skips the default static-archive download/link (which takes 60-120 min).
+          # ORT_PREFER_DYNAMIC_LINK=1 emits -lonnxruntime instead of a static link.
+          export ORT_LIB_LOCATION="$HOME/.local/lib/onnxruntime"
+          export ORT_PREFER_DYNAMIC_LINK=1
+          export LD_LIBRARY_PATH="$HOME/.local/lib/onnxruntime/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           cargo run -p ow-embed-builder --release -- --translation KJV
           cargo run -p ow-embed-builder --release -- --translation WEB
           cargo run -p ow-embed-builder --release -- --translation BSB
@@ -99,7 +128,8 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            libasound2-dev
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
