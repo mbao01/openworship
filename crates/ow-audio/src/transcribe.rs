@@ -125,14 +125,16 @@ impl Transcriber for WhisperTranscriber {
             .full(params, input)
             .map_err(|e| anyhow::anyhow!("Whisper transcription error: {e}"))?;
 
-        let n = self.state.full_n_segments().map_err(|e| anyhow::anyhow!("{e}"))?;
+        let n = self.state.full_n_segments();
         let mut out = String::new();
         for i in 0..n {
-            if let Ok(seg) = self.state.full_get_segment_text(i) {
-                let trimmed = seg.trim();
-                if !is_hallucination(trimmed) {
-                    out.push_str(trimmed);
-                    out.push(' ');
+            if let Some(seg) = self.state.get_segment(i) {
+                if let Ok(text) = seg.to_str() {
+                    let trimmed = text.trim();
+                    if !is_hallucination(trimmed) {
+                        out.push_str(trimmed);
+                        out.push(' ');
+                    }
                 }
             }
         }

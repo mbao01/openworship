@@ -22,7 +22,7 @@ cpal = "0.15"
 ringbuf = "0.4"
 
 # Optional: only compiled when the `whisper` feature is enabled.
-whisper-rs = { version = "0.14", optional = true }
+whisper-rs = { version = "0.16", optional = true }
 
 # Optional: only compiled when the `deepgram` feature is enabled.
 tokio-tungstenite = { workspace = true, optional = true, features = ["native-tls"] }
