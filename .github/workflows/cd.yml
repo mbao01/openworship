@@ -22,6 +22,9 @@ jobs:
   generate-embedding-index:
     runs-on: ubuntu-22.04
     name: Build scripture embedding index
+    # fastembed compiles ONNX Runtime from C++ source on cache miss —
+    # can take 60-120 min. Cap at 150 min to prevent runaway builds.
+    timeout-minutes: 150
 
     steps:
       - uses: actions/checkout@v4
