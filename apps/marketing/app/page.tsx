@@ -52,7 +52,7 @@ const DOWNLOAD_BUTTONS = [
 
 const FOOTER_LINKS = [
   { label: "GitHub", href: "https://github.com/mbao01/openworship" },
-  { label: "Documentation", href: "#" },
+  { label: "Documentation", href: "https://github.com/mbao01/openworship#readme" },
   { label: "License: MIT", href: "https://github.com/mbao01/openworship/blob/main/LICENSE" },
 ] as const;
 
